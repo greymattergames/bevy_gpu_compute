@@ -35,7 +35,7 @@ pub fn update_pipeline(
             let shader_module = shader_module_from_wgsl_string(&wgsl.code(), &render_device);
             let compute_pipeline =
                 render_device.create_compute_pipeline(&ComputePipelineDescriptor {
-                    label: Some("Gpu Acceleration Bevy Pipeline"),
+                    label: Some("Gpu Acceleration Bevy Pipeline"), //todo, name this after the specific compute task
                     layout: Some(&pipeline_layout_resource.0), // Use the pipeline layout instead of None
                     module: &shader_module,
                     entry_point: Some(wgsl.entry_point_function_name()),
