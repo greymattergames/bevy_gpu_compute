@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use bevy::{
-    prelude::Resource,
+    prelude::{Component, Resource},
     render::render_resource::{BindGroupLayout, Buffer},
 };
 
@@ -56,3 +56,7 @@ pub struct AllCollidablesThisFrame(pub Vec<PerCollidableDataRequiredByGpu>);
 
 #[derive(Resource)]
 pub struct MaxBatchSize(pub usize);
+
+#[derive(Component)]
+///Flag component
+pub struct GpuAccBevy {}

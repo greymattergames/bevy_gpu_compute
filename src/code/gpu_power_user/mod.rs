@@ -1,7 +1,9 @@
 pub mod entity_metadata;
 pub mod get_collidables;
+pub mod input_spec;
+pub mod iteration_space_dependent_resources;
+pub mod output_spec;
 pub mod plugin;
-pub mod population_dependent_resources;
 pub mod resources;
 pub mod single_batch;
 pub mod wgsl_processable_types;

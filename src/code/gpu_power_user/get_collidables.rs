@@ -9,7 +9,7 @@ use crate::code::{
 };
 
 use super::{
-    population_dependent_resources::resources::IterationSpace,
+    iteration_space_dependent_resources::resources::IterationSpace,
     resources::{AllCollidablesThisFrame, MaxDetectableCollisionsScale},
     single_batch::convert_collidables_to_wgsl_types::PerCollidableDataRequiredByGpu,
 };

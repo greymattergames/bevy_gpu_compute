@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::code::gpu_power_user::{
     custom_schedule::BatchedCollisionDetectionSchedule,
-    population_dependent_resources::batch_size_dependent_resources::{
+    iteration_space_dependent_resources::batch_size_dependent_resources::{
         pipeline::update::update_pipeline, update_wgsl_consts::update_wgsl_consts,
     },
 };
@@ -20,8 +20,8 @@ use super::{
     initialize_batch::initialize_batch,
     read_results_from_gpu::read_results_from_gpu,
     resources::{
-        CollidablesBatch, ResultsCountFromGpu, SingleBatchBindGroup, SingleBatchBuffers,
-        WgslIdToMetadataMap, WgslInputData,
+        BindGroup, CollidablesBatch, ResultsCountFromGpu, SingleBatchBuffers, WgslIdToMetadataMap,
+        WgslInputData,
     },
 };
 
@@ -56,7 +56,7 @@ impl Plugin for GpuCollisionSingleBatchRunnerPlugin {
 
 fn setup_single_batch_resources(mut commands: Commands) {
     commands.insert_resource(SingleBatchBuffers::default());
-    commands.insert_resource(SingleBatchBindGroup(None));
+    commands.insert_resource(BindGroup(None));
     commands.insert_resource(WgslInputData::default());
     commands.insert_resource(CollidablesBatch(Vec::new()));
     commands.insert_resource(ResultsCountFromGpu(0));

@@ -5,7 +5,7 @@ use bevy::{
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::code::gpu_power_user::{
-    population_dependent_resources::batch_size_dependent_resources::resources::MaxNumResultsToReceiveFromGpu,
+    iteration_space_dependent_resources::resources::MaxNumGpuOutputItemsPerOutputType,
     wgsl_processable_types::{WgslCollisionResult, WgslCounter},
 };
 
@@ -14,7 +14,7 @@ use super::resources::{SingleBatchBuffers, WgslInputData};
 pub fn create_buffers(
     data: Res<WgslInputData>,
     render_device: Res<RenderDevice>,
-    max_num_results_to_receive: Res<MaxNumResultsToReceiveFromGpu>,
+    max_num_outputs: Res<MaxNumGpuOutputItemsPerOutputType>,
     mut buffers: ResMut<SingleBatchBuffers>,
 ) {
     // input buffers

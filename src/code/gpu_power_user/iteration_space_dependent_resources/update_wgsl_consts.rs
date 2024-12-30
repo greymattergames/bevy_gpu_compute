@@ -1,14 +1,13 @@
 use bevy::prelude::{DetectChanges, Res, ResMut};
 
 use crate::code::{
-    gpu_power_user::{
-        population_dependent_resources::resources::{IterationSpace, WorkgroupSizes},
-        resources::MaxDetectableCollisionsScale,
-    },
+    gpu_power_user::resources::MaxDetectableCollisionsScale,
     helpers::math::max_collisions::max_collisions,
 };
 
-use super::resources::{MaxNumGpuOutputItemsPerOutputType, NumGpuWorkgroupsRequired};
+use super::resources::{
+    IterationSpace, MaxNumGpuOutputItemsPerOutputType, NumGpuWorkgroupsRequired, WorkgroupSizes,
+};
 
 pub fn update_wgsl_consts(
     iteration_space: Res<IterationSpace>,

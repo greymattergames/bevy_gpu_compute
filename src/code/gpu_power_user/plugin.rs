@@ -5,7 +5,7 @@ use bevy::render::renderer::RenderDevice;
 use super::get_collidables::get_collidables;
 use super::resources::{
     AllCollidablesThisFrame, BindGroupLayoutsResource, CounterStagingBuffer, MaxBatchSize,
-    MaxDetectableCollisionsScale, PipelineLayoutResource, WgslFile, WorkgroupSize,
+    MaxDetectableCollisionsScale, PipelineLayoutResource,
 };
 use super::single_batch::plugin::GpuCollisionSingleBatchRunnerPlugin;
 use super::wgsl_processable_types::{WgslCollisionResult, WgslCounter};
@@ -14,11 +14,7 @@ pub struct GpuAccelerationBevyPowerUserPlugin {}
 
 impl GpuAccelerationBevyPowerUserPlugin {
     pub fn new() -> Self {
-        Self {
-            // todo, have not tested other values
-            // todo, need to add this to config or come up with an automatic way to determine this
-            workgroup_sizes: 64,
-        }
+        Self {}
     }
 }
 
