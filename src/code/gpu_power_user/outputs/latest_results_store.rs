@@ -1,14 +1,25 @@
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+};
+
+use bevy::prelude::Component;
+use bytemuck::Pod;
+
+use super::output_spec::OutputSpecs;
+
+#[derive(Component)]
 pub struct LatestResultsStore {
-    results: HashMap<String, Box<dyn Any + Send + Sync>>,
+    pub results: HashMap<String, Box<dyn Any + Send + Sync>>,
     type_registry: HashMap<String, TypeId>,
 }
 
 impl LatestResultsStore {
-    pub fn new(specs: &GpuAccBevyComputeTaskOutputSpecs) -> Self {
+    pub fn new(specs: &OutputSpecs) -> Self {
         let type_registry = specs
             .specs
             .iter()
-            .map(|(k, (_, type_id))| (k.clone(), *type_id))
+            .map(|(k, spec)| (k.clone(), spec.type_id))
             .collect();
 
         Self {

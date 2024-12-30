@@ -1,51 +1,105 @@
+use core::task;
+
 use bevy::{
     core_pipeline::core_2d::graph::input,
-    prelude::{Res, ResMut},
-    render::renderer::RenderDevice,
+    ecs::batching::BatchingStrategy,
+    prelude::{Component, Query, Res, ResMut},
+    render::{render_resource::BindGroup, renderer::RenderDevice},
 };
 
-use crate::code::gpu_power_user::resources::BindGroupLayoutsResource;
-
-use super::resources::{BindGroup, SingleBatchBuffers};
+use crate::code::gpu_power_user::{
+    bind_group_layouts::BindGroupLayouts,
+    buffers::misc_components::{InputBuffers, OutputBuffers, OutputCountBuffers},
+    inputs::input_specs::InputSpecs,
+    outputs::output_spec::OutputSpecs,
+    resources::TaskLabel,
+};
 
 /**
  * Binding the buffers to the corresponding wgsl code
  */
-pub fn create_bind_group(
+
+#[derive(Component)]
+pub struct BindGroupComponent(pub Option<BindGroup>);
+
+pub fn create_bind_groups(
+    mut tasks: Query<(
+        &TaskLabel,
+        &OutputSpecs,
+        &InputSpecs,
+        &BindGroupLayouts,
+        &InputBuffers,
+        &OutputCountBuffers,
+        &OutputBuffers,
+        &mut BindGroupComponent,
+    )>,
     render_device: Res<RenderDevice>,
-    bind_group_layouts: Res<BindGroupLayoutsResource>,
-    input_buffers: Res<BevyGpuAccelerationInputBuffers>,
-    output_buffers: Res<BevyGpuAccelerationOutputBuffers>,
-    mut bind_group_res: ResMut<BindGroup>,
 ) {
-    let bindings = Vec::new();
-    let mut count: u32 = 0;
-    for input_buffer in input_buffers.iter() {
-        bindings.push(wgpu::BindGroupEntry {
-            binding: if input_buffer.binding_number.is_some() {
-                count = input_buffer.binding_number.unwrap();
-                input_buffer.binding_number.unwrap()
-            } else {
-                count
+    tasks
+        .par_iter_mut()
+        .batching_strategy(BatchingStrategy::default())
+        .for_each(
+            |(
+                task_label,
+                output_specs,
+                input_specs,
+                bind_group_layouts,
+                input_buffers,
+                output_count_buffers,
+                output_buffers,
+                mut bind_group_res,
+            )| {
+                create_bind_group_single_task(
+                    task_label,
+                    &render_device,
+                    bind_group_layouts,
+                    input_specs,
+                    output_specs,
+                    input_buffers,
+                    output_count_buffers,
+                    output_buffers,
+                    &mut bind_group_res,
+                );
             },
-            resource: input_buffer.buffer.as_ref().unwrap().as_entire_binding(),
-        });
-        count += 1;
-    }
-    for output_buffer in output_buffers.iter() {
+        )
+}
+
+fn create_bind_group_single_task(
+    task_label: &TaskLabel, //when this changes
+    render_device: &Res<RenderDevice>,
+    bind_group_layouts: &BindGroupLayouts, // when this changes
+    input_specs: &InputSpecs,              // when binding number changes
+    output_specs: &OutputSpecs, // when binding number changes, or include count or count binding number
+    input_buffers: &InputBuffers,
+    output_count_buffers: &OutputCountBuffers,
+    output_buffers: &OutputBuffers,
+    mut bind_group_component: &mut BindGroupComponent,
+) {
+    // todo only run when necessary
+    let mut bindings = Vec::new();
+    for (label, spec) in input_specs.specs.iter() {
+        let buffer = input_buffers.0.get(label).unwrap();
         bindings.push(wgpu::BindGroupEntry {
-            binding: if output_buffer.binding_number.is_some() {
-                count = output_buffer.binding_number.unwrap();
-                output_buffer.binding_number.unwrap()
-            } else {
-                count
-            },
-            resource: output_buffer.buffer.as_ref().unwrap().as_entire_binding(),
+            binding: spec.binding_number,
+            resource: buffer.as_entire_binding(),
         });
-        count += 1;
     }
-    bind_group_res.0 = Some(render_device.create_bind_group(
-        Some("Bevy GPU Acceleration Bind Group"),
+    for (label, spec) in output_specs.specs.iter() {
+        let output_buffer = output_buffers.0.get(label).unwrap();
+        bindings.push(wgpu::BindGroupEntry {
+            binding: spec.binding_number,
+            resource: output_buffer.as_entire_binding(),
+        });
+        if spec.include_count {
+            let count_buffer = output_count_buffers.0.get(label).unwrap();
+            bindings.push(wgpu::BindGroupEntry {
+                binding: spec.count_binding_number.unwrap(),
+                resource: count_buffer.as_entire_binding(),
+            });
+        }
+    }
+    bind_group_component.0 = Some(render_device.create_bind_group(
+        task_label.0.as_str(),
         &bind_group_layouts.0,
         &bindings,
     ));

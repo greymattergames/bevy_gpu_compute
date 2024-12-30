@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::Resource,
+    prelude::{Component, Resource},
     render::render_resource::{BindGroup, Buffer},
 };
 
@@ -47,10 +47,7 @@ impl Default for WgslInputData {
     }
 }
 
-#[derive(Resource)]
-pub struct CollidablesBatch(pub Vec<PerCollidableDataRequiredByGpu>);
-
-#[derive(Resource)]
-pub struct ResultsCountFromGpu(pub usize);
+#[derive(Component)]
+pub struct OutputCountsFromGpu(pub HashMap<&String, usize>);
 #[derive(Resource)]
 pub struct WgslIdToMetadataMap(pub Vec<CollidableMetadata>);

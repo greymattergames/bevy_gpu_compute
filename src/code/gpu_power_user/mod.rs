@@ -1,9 +1,13 @@
+pub mod bind_group_layouts;
+pub mod buffers;
 pub mod entity_metadata;
 pub mod get_collidables;
 pub mod input_spec;
+pub mod inputs;
 pub mod iteration_space_dependent_resources;
-pub mod output_spec;
+pub mod outputs;
 pub mod plugin;
 pub mod resources;
 pub mod single_batch;
+pub mod wgsl_code;
 pub mod wgsl_processable_types;

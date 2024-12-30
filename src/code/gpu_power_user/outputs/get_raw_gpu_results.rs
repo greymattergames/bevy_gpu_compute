@@ -1,38 +1,21 @@
-use std::any::Any;
-
 use bevy::{
-    prelude::{Res, ResMut},
+    prelude::Res,
     render::renderer::{RenderDevice, RenderQueue},
 };
 use bytemuck::Pod;
 use pollster::FutureExt;
-use wgpu::{Buffer, BufferView};
+use wgpu::Buffer;
 
-use crate::code::gpu_power_user::{
-    output_spec::{BufferViewConverter, FromBytes},
-    resources::CounterStagingBuffer,
-    wgsl_processable_types::{WgslCollisionResult, WgslCounter},
-};
+use crate::code::gpu_power_user::wgsl_processable_types::WgslCounter;
 
-use super::resources::{ResultsCountFromGpu, SingleBatchBuffers};
-
-pub fn get_results_counts_from_gpu(
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    buffers: Res<SingleBatchBuffers>,
-    counter_staging_buffer: Res<CounterStagingBuffer>,
-    mut results_count_from_gpu: ResMut<ResultsCountFromGpu>,
-) {
-    let count: Option<u32> =
-        get_raw_gpu_result_single(render_device, render_queue, output_buffer, staging_buffer);
-    results_count_from_gpu.0 = count.unwrap();
-}
+use super::buffer_view_converter::BufferViewConverter;
 
 pub fn get_raw_gpu_result_vec<T: 'static + Pod>(
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    output_buffer: Buffer,
-    staging_buffer: Buffer,
+    render_device: &Res<RenderDevice>,
+    render_queue: &Res<RenderQueue>,
+    output_buffer: &Buffer,
+    staging_buffer: &Buffer,
+    total_byte_size: u64,
     // buffer_view_converter: Box<dyn Fn(&[u8]) -> Box<dyn Any + Send + Sync> + Send + Sync>,
 ) -> Option<Vec<T>> {
     let mut encoder = render_device.create_command_encoder(&Default::default());
@@ -41,7 +24,8 @@ pub fn get_raw_gpu_result_vec<T: 'static + Pod>(
         0,
         &staging_buffer,
         0,
-        std::mem::size_of::<WgslCounter>() as u64,
+        // std::mem::size_of::<WgslCounter>() as u64,
+        total_byte_size,
     );
     render_queue.submit(std::iter::once(encoder.finish()));
 
@@ -67,10 +51,11 @@ pub fn get_raw_gpu_result_vec<T: 'static + Pod>(
 }
 
 pub fn get_raw_gpu_result_single<T: 'static + Pod>(
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    output_buffer: Buffer,
-    staging_buffer: Buffer,
+    render_device: &Res<RenderDevice>,
+    render_queue: &Res<RenderQueue>,
+    output_buffer: &Buffer,
+    staging_buffer: &Buffer,
+    total_byte_size: u64,
     // buffer_view_converter: Box<dyn Fn(&[u8]) -> Box<dyn Any + Send + Sync> + Send + Sync>,
 ) -> Option<T> {
     let mut encoder = render_device.create_command_encoder(&Default::default());
@@ -79,7 +64,9 @@ pub fn get_raw_gpu_result_single<T: 'static + Pod>(
         0,
         &staging_buffer,
         0,
-        std::mem::size_of::<WgslCounter>() as u64,
+        // std::mem::size_of::<WgslCounter>() as u64,
+        // std::mem::size_of::<WgslCounter>() as u64,
+        total_byte_size,
     );
     render_queue.submit(std::iter::once(encoder.finish()));
 

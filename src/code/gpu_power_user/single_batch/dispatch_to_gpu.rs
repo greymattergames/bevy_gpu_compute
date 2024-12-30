@@ -1,25 +1,53 @@
 use bevy::{
-    prelude::{Res, ResMut},
+    ecs::batching::BatchingStrategy,
+    prelude::{Query, Res, ResMut},
     render::renderer::{RenderDevice, RenderQueue},
 };
 
 use crate::code::gpu_power_user::{
     iteration_space_dependent_resources::{
         pipeline::cache::{PipelineCache, PipelineKey},
-        resources::{IterationSpace, MaxNumGpuOutputItemsPerOutputType, NumGpuWorkgroupsRequired},
+        workgroup_sizes::NumGpuWorkgroupsRequired,
     },
-    resources::WgslCode,
+    wgsl_code::WgslCode,
 };
 
-use super::resources::BindGroup;
+use super::create_bind_group::BindGroupComponent;
 
 pub fn dispatch_to_gpu(
+    mut tasks: Query<(
+        &BindGroupComponent,
+        &NumGpuWorkgroupsRequired,
+        &WgslCode,
+        &mut PipelineCache,
+    )>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
-    mut compute_pipeline_cache: ResMut<PipelineCache>,
-    bind_group: Res<BindGroup>,
-    num_gpu_workgroups_required: Res<NumGpuWorkgroupsRequired>,
-    wgsl_code: Res<WgslCode>,
+) {
+    tasks
+        .par_iter_mut()
+        .batching_strategy(BatchingStrategy::default())
+        .for_each(
+            |(bind_group, num_gpu_workgroups_required, wgsl_code, mut pipeline_cache)| {
+                dispatch_to_gpu_single_task(
+                    &render_device,
+                    &render_queue,
+                    bind_group,
+                    num_gpu_workgroups_required,
+                    wgsl_code,
+                    &mut pipeline_cache,
+                );
+            },
+        );
+}
+
+fn dispatch_to_gpu_single_task(
+    render_device: &Res<RenderDevice>,
+    render_queue: &Res<RenderQueue>,
+    bind_group: &BindGroupComponent,
+    num_gpu_workgroups_required: &NumGpuWorkgroupsRequired,
+    wgsl_code: &WgslCode,
+    compute_pipeline_cache: &mut PipelineCache,
 ) {
     let mut encoder = render_device.create_command_encoder(&Default::default());
     {

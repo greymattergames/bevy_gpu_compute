@@ -1,7 +1,9 @@
 use core::task;
 use std::{
     any::{Any, TypeId},
+    cmp::min,
     collections::HashMap,
+    f64::MIN,
     process::Output,
     sync::{Arc, Mutex},
 };
@@ -17,15 +19,15 @@ use pollster::FutureExt;
 use wgpu::Buffer;
 
 use crate::code::gpu_power_user::{
-    iteration_space_dependent_resources::resources::MaxNumGpuOutputItemsPerOutputType,
-    output_spec::{GpuAccBevyComputeTaskOutputSpec, GpuAccBevyComputeTaskOutputSpecs},
-    resources::GpuAccBevy,
+    buffers::misc_components::{OutputBuffers, OutputStagingBuffers},
+    iteration_space_dependent_resources::max_num_outputs_per_type::MaxNumGpuOutputItemsPerOutputType,
+    resources::GpuAcceleratedBevy,
     wgsl_processable_types::WgslCollisionResult,
 };
 
 use super::{
-    get_results_count_from_gpu::get_raw_gpu_result_vec,
-    resources::{LatestResultsStore, OutputBuffers, OutputCountsFromGpu, OutputStagingBuffers},
+    get_raw_gpu_results::get_raw_gpu_result_vec, latest_results_store::LatestResultsStore,
+    misc_components::OutputCountsFromGpu, output_spec::OutputSpecs,
 };
 
 /**
@@ -40,11 +42,11 @@ pub fn read_results_from_gpu(
             &OutputStagingBuffers,
             &OutputCountsFromGpu,
             &MaxNumGpuOutputItemsPerOutputType,
-            &GpuAccBevyComputeTaskOutputSpecs,
+            &OutputSpecs,
         ),
-        With<GpuAccBevy>,
+        With<GpuAcceleratedBevy>,
     >,
-    mut task_mut: Query<(Entity, &mut LatestResultsStore), With<GpuAccBevy>>,
+    mut task_mut: Query<(Entity, &mut LatestResultsStore), With<GpuAcceleratedBevy>>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
 ) {
@@ -62,27 +64,34 @@ pub fn read_results_from_gpu(
                 max_outputs,
                 output_specs,
             )| {
-                output_specs
-                    .specs
-                    .iter()
-                    .for_each(|(label, (item_bytes, type_id))| {
-                        let out_buffer = output_buffers.0.get(label).unwrap();
-                        let staging_buffer = output_staging_buffers.0.get(label).unwrap();
-                        let result: Box<dyn Any + Send + Sync> = handle_buffer_type(
-                            type_id,
-                            render_device.clone(),
-                            render_queue.clone(),
-                            **out_buffer,
-                            **staging_buffer,
-                        );
-
-                        let mut results_per_task = results_per_task.lock().unwrap();
-                        if let Some(task_results) = results_per_task.get_mut(&entity) {
-                            task_results.push((label.clone(), result));
+                output_specs.specs.iter().for_each(|(label, spec)| {
+                    let out_buffer = output_buffers.0.get(label).unwrap();
+                    let staging_buffer = output_staging_buffers.0.get(label).unwrap();
+                    let total_byte_size = min(
+                        if let Some(Some(c)) = output_counts.0.get(label) {
+                            c * spec.item_bytes
                         } else {
-                            results_per_task.insert(entity, vec![(label.clone(), result)]);
-                        }
-                    });
+                            usize::MAX
+                        },
+                        max_outputs.get(label) * spec.item_bytes,
+                    );
+
+                    let result: Box<dyn Any + Send + Sync> = handle_buffer_type(
+                        spec.type_id,
+                        &render_device,
+                        &render_queue,
+                        out_buffer,
+                        staging_buffer,
+                        total_byte_size,
+                    );
+
+                    let mut results_per_task = results_per_task.lock().unwrap();
+                    if let Some(task_results) = results_per_task.get_mut(&entity) {
+                        task_results.push((label.clone(), result));
+                    } else {
+                        results_per_task.insert(entity, vec![(label.clone(), result)]);
+                    }
+                });
             },
         );
     for mut task in task_mut.iter_mut() {
@@ -99,10 +108,11 @@ pub fn read_results_from_gpu(
 // Helper function to handle type dispatch
 fn handle_buffer_type(
     type_id: TypeId,
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    output_buffer: Buffer,
-    staging_buffer: Buffer,
+    render_device: &Res<RenderDevice>,
+    render_queue: &Res<RenderQueue>,
+    output_buffer: &Buffer,
+    staging_buffer: &Buffer,
+    total_byte_size: usize,
 ) -> Box<dyn Any + Send + Sync> {
     // You'll need to maintain a registry of types and their handlers
     // Here's a macro-based approach:
@@ -114,6 +124,7 @@ fn handle_buffer_type(
                     render_queue,
                     output_buffer,
                     staging_buffer,
+                    total_byte_size as u64,
                 );
                 return Box::new(result);
             }
@@ -123,7 +134,6 @@ fn handle_buffer_type(
     // Register known types
     handle_type!(WgslCollisionResult);
     handle_type!(u128);
-    handle_type!(NonPodType);
     panic!("Unregistered type ID: {:?}", type_id);
 }
 

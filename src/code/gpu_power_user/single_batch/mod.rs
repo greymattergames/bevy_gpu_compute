@@ -1,10 +1,4 @@
-pub mod convert_collidables_to_wgsl_types;
 pub mod create_bind_group;
-pub mod create_buffers;
 pub mod dispatch_to_gpu;
-pub mod get_results_count_from_gpu;
-pub mod last_results_store;
+pub mod outputs_spec;
 pub mod plugin;
-pub mod read_results_from_gpu;
-pub mod resources;
-pub mod type_registration_system;

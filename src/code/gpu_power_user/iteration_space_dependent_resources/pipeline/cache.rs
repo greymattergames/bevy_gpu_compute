@@ -1,4 +1,7 @@
-use bevy::{prelude::Resource, render::render_resource::ComputePipeline};
+use bevy::{
+    prelude::{Component, Resource},
+    render::render_resource::ComputePipeline,
+};
 
 use crate::code::helpers::ecs::lru_cache::LruCache;
 
@@ -9,7 +12,7 @@ pub struct PipelineKey {
     pub wgsl_hash: u64,
 }
 
-#[derive(Resource)]
+#[derive(Component)]
 pub struct PipelineCache {
     pub cache: LruCache<PipelineKey, ComputePipeline>,
 }
