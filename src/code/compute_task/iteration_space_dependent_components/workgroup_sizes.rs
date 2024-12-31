@@ -26,7 +26,7 @@ impl WorkgroupSizes {
     pub fn num_dimmensions(&self) -> usize {
         self.num_dimmensions
     }
-    pub fn from_iter_space(iter_space: Ref<IterationSpace>) -> Self {
+    pub fn from_iter_space(iter_space: &Ref<IterationSpace>) -> Self {
         let num_dimmensions = iter_space.num_dimmensions();
         if num_dimmensions == 3 {
             Self {

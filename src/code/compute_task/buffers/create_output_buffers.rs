@@ -2,16 +2,21 @@ use std::any::{Any, TypeId};
 
 use bevy::{
     ecs::batching::BatchingStrategy,
-    prelude::{DetectChanges, Query, Ref, Res, ResMut, With},
+    prelude::{DetectChanges, Entity, Event, EventReader, Query, Ref, Res, ResMut, With},
     render::{render_resource::Buffer, renderer::RenderDevice},
 };
 use bytemuck::Pod;
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::code::compute_task::{
-    inputs::{input_data::InputData, input_spec::InputSpecs},
-    iteration_space_dependent_resources::max_num_outputs_per_type::MaxNumGpuOutputItemsPerOutputType,
-    outputs::output_spec::{OutputSpec, OutputSpecs},
+    component::TaskName,
+    events::{GpuComputeTaskChangeEvent, MaxOutputVectorLengthsChangedEvent},
+    iteration_space_dependent_components::max_output_vector_lengths::MaxOutputVectorLengths,
+    outputs::{
+        output_data::OutputData,
+        output_metadata_spec::{OutputVectorMetadata, OutputVectorMetadataSpec},
+        output_spec::OutputVectorTypesSpec,
+    },
     resources::GpuAcceleratedBevy,
     wgsl_processable_types::{WgslCollisionResult, WgslCounter},
 };
@@ -21,8 +26,9 @@ use super::components::{InputBuffers, OutputBuffers, OutputCountBuffers, OutputS
 pub fn create_output_buffers(
     mut tasks: Query<
         (
-            Ref<OutputSpecs>,
-            Ref<MaxNumGpuOutputItemsPerOutputType>,
+            &TaskName,
+            &OutputVectorMetadataSpec,
+            Ref<MaxOutputVectorLengths>,
             &mut OutputBuffers,
             &mut OutputStagingBuffers,
             &mut OutputCountBuffers,
@@ -30,105 +36,125 @@ pub fn create_output_buffers(
         ),
         With<GpuAcceleratedBevy>,
     >,
+    mut output_limits_change_event_listener: EventReader<MaxOutputVectorLengthsChangedEvent>,
     render_device: &Res<RenderDevice>,
 ) {
-    tasks
-        .par_iter_mut()
+    for (ev, _) in output_limits_change_event_listener
+        .par_read()
         .batching_strategy(BatchingStrategy::default())
-        .for_each(
-            |(
-                output_specs,
+    {
+        let task = tasks.get_mut(ev.entity().clone());
+        if let Ok((
+            task_name,
+            output_spec,
+            max_num_outputs,
+            mut buffers,
+            mut staging_buffers,
+            mut count_buffers,
+            mut count_staging_buffers,
+        )) = task
+        {
+            buffers.0.clear();
+            staging_buffers.0.clear();
+            count_buffers.0.clear();
+            count_staging_buffers.0.clear();
+            create_output_buffers_single_task(
+                task_name,
+                render_device,
+                output_spec,
                 max_num_outputs,
-                mut buffers,
-                mut staging_buffers,
-                mut count_buffers,
-                mut count_staging_buffers,
-            )| {
-                if output_specs.is_changed() || max_num_outputs.is_changed() {
-                    buffers.0.clear();
-                    staging_buffers.0.clear();
-                    count_buffers.0.clear();
-                    count_staging_buffers.0.clear();
-                    create_output_buffers_single_task(
-                        render_device,
-                        output_specs,
-                        max_num_outputs,
-                        &mut buffers,
-                        &mut staging_buffers,
-                        &mut count_buffers,
-                        &mut count_staging_buffers,
-                    );
-                }
-            },
-        );
+                &mut buffers,
+                &mut staging_buffers,
+                &mut count_buffers,
+                &mut count_staging_buffers,
+            );
+        }
+    }
 }
 
 fn create_output_buffers_single_task(
+    task_name: &TaskName,
     render_device: &Res<RenderDevice>,
-    output_specs: Ref<OutputSpecs>,
-    max_num_outputs: Ref<MaxNumGpuOutputItemsPerOutputType>,
+    output_spec: &OutputVectorMetadataSpec,
+    max_num_outputs: Ref<MaxOutputVectorLengths>,
     mut buffers: &mut OutputBuffers,
     mut staging_buffers: &mut OutputStagingBuffers,
     mut count_buffers: &mut OutputCountBuffers,
     mut count_staging_buffers: &mut OutputStagingBuffers,
 ) {
-    for (label, output_spec) in output_specs.specs.iter() {
-        create_output_buffer_single_output(
-            render_device,
-            label,
-            output_spec,
-            max_num_outputs.get(&label),
-            &mut buffers,
-            &mut staging_buffers,
-            &mut count_buffers,
-            &mut count_staging_buffers,
-        );
+    for (i, output_spec) in output_spec.get_all_metadata().iter().enumerate() {
+        if let Some(spec) = output_spec {
+            create_output_buffer_single_output(
+                render_device,
+                task_name,
+                i,
+                spec,
+                max_num_outputs.get(i),
+                &mut buffers,
+                &mut staging_buffers,
+                &mut count_buffers,
+                &mut count_staging_buffers,
+            );
+        }
     }
 }
 
 fn create_output_buffer_single_output(
     render_device: &Res<RenderDevice>,
-    output_label: &String,
-    output_spec: &OutputSpec,
+    task_name: &TaskName,
+    output_index: usize,
+    output_spec: &OutputVectorMetadata,
     max_num_outputs: usize,
     mut buffers: &mut OutputBuffers,
     mut staging_buffers: &mut OutputStagingBuffers,
     mut count_buffers: &mut OutputCountBuffers,
     mut count_staging_buffers: &mut OutputStagingBuffers,
 ) {
-    let results_size = output_spec.item_bytes as u64 * max_num_outputs as u64;
-    let results_buffer = render_device.create_buffer(&BufferDescriptor {
-        label: Some(&output_label),
-        size: results_size,
+    let output_size = output_spec.get_bytes() as u64 * max_num_outputs as u64;
+    let output_buffer = render_device.create_buffer(&BufferDescriptor {
+        label: Some(&format!("{:}-output-{:}", task_name.get(), output_index)),
+        size: output_size,
         usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         mapped_at_creation: false,
     });
-    buffers.0.insert(output_label.clone(), results_buffer);
-    let results_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some(&format!("{:} Staging", output_label)),
-        size: results_size,
+    buffers.0.insert(output_index.clone(), output_buffer);
+    let output_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some(&format!(
+            "{:}-output-staging-{:}",
+            task_name.get(),
+            output_index
+        )),
+        size: output_size,
         usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
     staging_buffers
         .0
-        .insert(output_label.clone(), results_staging_buffer);
-    if output_spec.include_count {
+        .insert(output_index.clone(), output_staging_buffer);
+    if output_spec.get_include_count() {
         let counter = WgslCounter { count: 0 };
         let counter_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some(&format!("{:} Counter", output_label)),
+            label: Some(&format!(
+                "{:}-output-counter-{:}",
+                task_name.get(),
+                output_index
+            )),
             contents: bytemuck::cast_slice(&[counter]),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
         });
-        count_buffers.0.insert(output_label.clone(), counter_buffer);
+        count_buffers.0.insert(output_index.clone(), counter_buffer);
         let counter_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(&format!("{:} Counter Staging", output_label)),
+            label: Some(&format!(
+                "{:}-output-counter-staging-{:}",
+                task_name.get(),
+                output_index
+            )),
             size: std::mem::size_of::<WgslCounter>() as u64,
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         count_staging_buffers
             .0
-            .insert(output_label.clone(), counter_staging_buffer);
+            .insert(output_index.clone(), counter_staging_buffer);
     }
 }

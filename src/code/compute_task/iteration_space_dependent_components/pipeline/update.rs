@@ -2,14 +2,17 @@ use std::hash::Hash;
 
 use bevy::{
     ecs::batching::BatchingStrategy,
-    prelude::{Changed, DetectChanges, Entity, Query, Res, ResMut},
+    prelude::{Changed, DetectChanges, Entity, Event, EventReader, Query, Res, ResMut},
     render::renderer::RenderDevice,
 };
 use wgpu::ComputePipelineDescriptor;
 
 use crate::code::compute_task::{
-    component::GpuComputeTask, inputs::input_spec::InputVectorTypesSpec,
-    outputs::output_spec::OutputVectorTypesSpec, pipeline_layout::PipelineLayout,
+    component::TaskName,
+    events::{GpuComputeTaskChangeEvent, WgslCodeChangedEvent},
+    inputs::input_spec::InputVectorTypesSpec,
+    outputs::output_spec::OutputVectorTypesSpec,
+    pipeline_layout::PipelineLayout,
     wgsl_code::WgslCode,
 };
 
@@ -18,35 +21,34 @@ use super::{
     shader_module::shader_module_from_wgsl_string,
 };
 
-pub fn update_pipeline<I: InputVectorTypesSpec, O: OutputVectorTypesSpec>(
+pub fn update_pipeline(
     mut tasks: Query<
-        (
-            &GpuComputeTask<I, O>,
-            &WgslCode,
-            &PipelineLayout,
-            &mut PipelineCache,
-        ),
+        (&TaskName, &WgslCode, &PipelineLayout, &mut PipelineCache),
         Changed<WgslCode>,
     >,
+    mut wgsl_code_changed_event_reader: EventReader<WgslCodeChangedEvent>,
     render_device: Res<RenderDevice>,
 ) {
-    tasks
-        .par_iter_mut()
+    for (ev, _) in wgsl_code_changed_event_reader
+        .par_read()
         .batching_strategy(BatchingStrategy::default())
-        .for_each(|(task, wgsl, pipeline_layout, mut pipeline_cache)| {
+    {
+        let task = tasks.get_mut(ev.entity().clone());
+        if let Ok((task_name, wgsl, pipeline_layout, mut pipeline_cache)) = task {
             update_pipeline_for_wgsl_code(
                 wgsl,
-                task,
+                task_name,
                 &render_device,
                 &pipeline_layout,
                 &mut pipeline_cache,
             );
-        });
+        }
+    }
 }
 
 fn update_pipeline_for_wgsl_code(
     wgsl: &WgslCode,
-    task: &GpuComputeTask,
+    task_name: &TaskName,
     render_device: &Res<RenderDevice>,
     pipeline_layout: &PipelineLayout,
     pipeline_cache: &mut PipelineCache,
@@ -58,9 +60,9 @@ fn update_pipeline_for_wgsl_code(
         return;
     } else {
         let shader_module =
-            shader_module_from_wgsl_string(&task.name(), &wgsl.code(), &render_device);
+            shader_module_from_wgsl_string(&task_name.get(), &wgsl.code(), &render_device);
         let compute_pipeline = render_device.create_compute_pipeline(&ComputePipelineDescriptor {
-            label: Some(&task.name()),
+            label: Some(&task_name.get()),
             layout: Some(&pipeline_layout.0),
             module: &shader_module,
             entry_point: Some(wgsl.entry_point_function_name()),

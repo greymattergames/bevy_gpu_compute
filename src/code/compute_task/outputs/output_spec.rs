@@ -36,42 +36,21 @@ use std::marker::PhantomData;
 use bevy::prelude::Component;
 use bytemuck::Pod;
 
-pub struct OutputVectorMetadata {
-    pub bytes: usize,
-    pub binding_number: u32,
-    pub include_count: bool,
-    pub count_binding_number: Option<u32>,
-}
-
 pub trait OutputVectorTypesSpec {
+    type Output0: Pod + Send + Sync;
     type Output1: Pod + Send + Sync;
     type Output2: Pod + Send + Sync;
     type Output3: Pod + Send + Sync;
     type Output4: Pod + Send + Sync;
     type Output5: Pod + Send + Sync;
-    type Output6: Pod + Send + Sync;
-
-    const OUTPUT1_METADATA: Option<OutputVectorMetadata>;
-    const OUTPUT2_METADATA: Option<OutputVectorMetadata>;
-    const OUTPUT3_METADATA: Option<OutputVectorMetadata>;
-    const OUTPUT4_METADATA: Option<OutputVectorMetadata>;
-    const OUTPUT5_METADATA: Option<OutputVectorMetadata>;
-    const OUTPUT6_METADATA: Option<OutputVectorMetadata>;
 }
 
 pub struct BlankOutputVectorTypesSpec {}
 impl OutputVectorTypesSpec for BlankOutputVectorTypesSpec {
+    type Output0 = ();
     type Output1 = ();
     type Output2 = ();
     type Output3 = ();
     type Output4 = ();
     type Output5 = ();
-    type Output6 = ();
-
-    const OUTPUT1_METADATA: Option<OutputVectorMetadata> = None;
-    const OUTPUT2_METADATA: Option<OutputVectorMetadata> = None;
-    const OUTPUT3_METADATA: Option<OutputVectorMetadata> = None;
-    const OUTPUT4_METADATA: Option<OutputVectorMetadata> = None;
-    const OUTPUT5_METADATA: Option<OutputVectorMetadata> = None;
-    const OUTPUT6_METADATA: Option<OutputVectorMetadata> = None;
 }

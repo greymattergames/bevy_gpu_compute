@@ -45,17 +45,17 @@ pub fn get_raw_gpu_result_vec<O: OutputVectorTypesSpec>(
         let data = slice.get_mapped_range();
         let data2: &[u8] = &data;
         if output_vector_index == 0 {
-            output_data.set_output1_from_bytes(data2);
+            output_data.set_output0_from_bytes(data2);
         } else if output_vector_index == 1 {
-            output_data.set_output2_from_bytes(data2);
+            output_data.set_output1_from_bytes(data2);
         } else if output_vector_index == 2 {
-            output_data.set_output3_from_bytes(data2);
+            output_data.set_output2_from_bytes(data2);
         } else if output_vector_index == 3 {
-            output_data.set_output4_from_bytes(data2);
+            output_data.set_output3_from_bytes(data2);
         } else if output_vector_index == 4 {
-            output_data.set_output5_from_bytes(data2);
+            output_data.set_output4_from_bytes(data2);
         } else if output_vector_index == 5 {
-            output_data.set_output6_from_bytes(data2);
+            output_data.set_output5_from_bytes(data2);
         }
         drop(data);
         staging_buffer.unmap();
@@ -63,7 +63,7 @@ pub fn get_raw_gpu_result_vec<O: OutputVectorTypesSpec>(
     }
 }
 
-pub fn get_raw_gpu_result_single<T: 'static + Pod>(
+pub fn get_raw_gpu_result_counter<T: 'static + Pod>(
     render_device: &Res<RenderDevice>,
     render_queue: &Res<RenderQueue>,
     output_buffer: &Buffer,
@@ -92,8 +92,13 @@ pub fn get_raw_gpu_result_single<T: 'static + Pod>(
 
     let result = if receiver.block_on().unwrap().is_ok() {
         let data = slice.get_mapped_range();
-        let converter = BufferViewConverter::new(&*data);
-        let result = converter.get::<T>();
+        let transformed_data = &*data;
+        if transformed_data.len() != std::mem::size_of::<T>() {
+            return None;
+        }
+        let result = Some(bytemuck::pod_read_unaligned(transformed_data));
+        // let converter = BufferViewConverter::new(&*data);
+        // let result = converter.get::<T>();
         drop(data);
         result
     } else {

@@ -7,13 +7,13 @@ use bevy::{
 use sysinfo::{MemoryRefreshKind, RefreshKind, System};
 
 use super::{
-    iteration_space_dependent_resources::max_num_outputs_per_type::MaxNumGpuOutputItemsPerOutputType,
-    outputs::output_spec::OutputSpecs,
+    iteration_space_dependent_components::max_output_vector_lengths::MaxOutputVectorLengths,
+    outputs::output_metadata_spec::OutputVectorMetadataSpec,
 };
 
 pub fn verify_enough_memory(
-    tasks: Query<(&OutputSpecs, &MaxNumGpuOutputItemsPerOutputType)>,
-    sys_info: Res<SystemInfo>,
+    tasks: Query<(&OutputVectorMetadataSpec, &MaxOutputVectorLengths)>,
+    // sys_info: Res<SystemInfo>,
 ) {
     let total_bytes = tasks
         .iter()
@@ -42,10 +42,18 @@ pub fn verify_enough_memory(
 }
 
 fn get_max_output_bytes_single_task(
-    output_specs: &OutputSpecs,
-    max_num_outputs: &MaxNumGpuOutputItemsPerOutputType,
+    output_specs: &OutputVectorMetadataSpec,
+    max_num_outputs: &MaxOutputVectorLengths,
 ) -> usize {
-    output_specs.specs.iter().fold(0, |sum, (label, spec)| {
-        sum + max_num_outputs.get(label) * spec.item_bytes
-    })
+    output_specs
+        .get_all_metadata()
+        .iter()
+        .enumerate()
+        .fold(0, |sum, (i, spec)| {
+            if let Some(s) = spec {
+                sum + max_num_outputs.get(i) * s.get_bytes()
+            } else {
+                sum
+            }
+        })
 }

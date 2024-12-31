@@ -1,20 +1,35 @@
 use std::{any::Any, collections::HashMap};
 
 use bevy::{
-    prelude::{Commands, DespawnRecursiveExt, Entity, Event, Ref, ResMut, Resource},
+    ecs::batching::BatchingStrategy,
+    prelude::{
+        Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Ref,
+        ResMut, Resource,
+    },
     reflect::{PartialReflect, Tuple},
     state::commands,
 };
+use futures::future::Either;
 
 use super::{
     compute_task::{
-        component::GpuComputeTask,
-        inputs::{input_data::InputData, input_spec::InputSpecs},
-        iteration_space_dependent_resources::{
-            iteration_space::IterationSpace,
-            max_num_outputs_per_type::MaxNumGpuOutputItemsPerOutputType,
+        component::{GpuComputeTask, TaskName, TaskRunId},
+        events::{
+            GpuComputeTaskChangeEvent, InputDataChangeEvent, IterationSpaceChangedEvent,
+            MaxOutputVectorLengthsChangedEvent, WgslCodeChangedEvent,
         },
-        outputs::output_spec::OutputSpecs,
+        inputs::{
+            input_data::InputData, input_metadata_spec::InputVectorMetadataSpec,
+            input_spec::InputVectorTypesSpec,
+        },
+        iteration_space_dependent_components::{
+            iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputVectorLengths,
+        },
+        outputs::{
+            output_data::OutputData, output_metadata_spec::OutputVectorMetadataSpec,
+            output_spec::OutputVectorTypesSpec,
+        },
+        task_commands::TaskCommands,
         wgsl_code::WgslCode,
     },
     to_vec_tuple::ToVecTuple,
@@ -23,7 +38,7 @@ use super::{
 #[derive(Resource)]
 pub struct GpuCompute {
     task_run_counter: u128,
-    tasks: HashMap<String, Entity>,
+    tasks: HashMap<String, TaskCommands>,
     to_delete: Vec<Entity>,
 }
 impl Default for GpuCompute {
@@ -37,12 +52,8 @@ impl Default for GpuCompute {
 }
 
 pub trait GpuComputeBevyTaskType {
-    type InType: Tuple;
-    type OutType: Tuple;
-}
-#[derive(Event)]
-pub struct GpuTaskFinishedEvent<T: GpuComputeBevyTaskType> {
-    pub results: T::OutType,
+    type InType: Component + InputVectorTypesSpec + 'static + Send + Sync;
+    type OutType: OutputVectorTypesSpec + 'static + Send + Sync;
 }
 impl GpuCompute {
     pub fn new() -> Self {
@@ -54,69 +65,38 @@ impl GpuCompute {
     }
 
     /// spawns all components needed for the task to run, and returns the name given to the task
-    pub fn register_task<T: GpuComputeBevyTaskType>(
+    pub fn create_task<T: GpuComputeBevyTaskType>(
+        &mut self,
         commands: &mut Commands,
         name: &String,
         iteration_space: IterationSpace,
         wgsl: WgslCode,
-        inputs: InputSpecs,
-        outputs: OutputSpecs,
-        max_num_outputs: MaxNumGpuOutputItemsPerOutputType,
-    ) -> String {
+        // input_vector_types_spec: T::InType,
+        // output_vector_types_spec: T::OutType,
+        input_vector_metadata_spec: InputVectorMetadataSpec,
+        output_vector_metadata_spec: OutputVectorMetadataSpec,
+        max_num_outputs: MaxOutputVectorLengths,
+    ) -> TaskCommands {
+        let task = GpuComputeTask::<T::InType, T::OutType>::new();
         let entity_commands = commands.spawn((
-            GpuComputeTask::new(name.clone()),
+            task,
+            TaskName::new(name),
             iteration_space,
             wgsl,
-            inputs,
-            outputs,
+            input_vector_metadata_spec,
+            output_vector_metadata_spec,
             max_num_outputs,
         ));
         let entity = entity_commands.id();
-        name.clone()
+        let task_commands = TaskCommands::new(entity);
+        self.tasks.insert(name.clone(), task_commands.clone());
+        task_commands
     }
-    pub fn delete_task<T: GpuComputeBevyTaskType>(&mut self, name: String) {
-        let entity = self.tasks.get(&name).unwrap().clone();
-        self.tasks.remove(&name);
-        self.to_delete.push(entity);
-    }
-    pub fn alter_task<T: GpuComputeBevyTaskType>(name: String) {
-        todo!("alter_task")
-    }
-    /// registers the input data to run in the next round, returns a unique id to identify the run
-    pub fn run<T: GpuComputeBevyTaskType, U: ToVecTuple<T::InType> + Tuple>(
-        &mut self,
-        task_name: String,
-        spec: T::InType,
-        inputs: U,
-        commands: &mut Commands,
-    ) -> u128 {
-        self.task_run_counter += 1;
-        let mut entity = commands.entity(self.tasks.get(&task_name).unwrap().clone());
-        let vv: Vec<usize> = vec![0, 1, 3, 4];
-        for i in vv.iter() {
-            let field: &dyn PartialReflect = inputs.field(*i).unwrap();
-            // get T::InType for the tuple index
-            
-            let value = field.try_downcast_ref<>().unwrap();
+    pub fn task(&self, name: &String) -> &TaskCommands {
+        if let Some(tc) = self.tasks.get(name) {
+            &tc
+        } else {
+            panic!("task not found")
         }
-        let input_data = entity.entry::<InputData>();
-        input_data
-            .and_modify(|data| {
-                data.data = inputs.to_vec_tuple();
-            })
-            // Otherwise insert a default value
-            .or_insert(Level(0));
-        self.task_run_counter
     }
-}
-
-//todo, register this system
-pub fn delete_tasks_system(commands: &mut Commands, gpu_compute: ResMut<GpuCompute>) {
-    for entity in gpu_compute.to_delete.iter() {
-        commands.entity(*entity).despawn_recursive();
-    }
-}
-
-pub struct GpuComputeTaskMutator {
-    //todo
 }

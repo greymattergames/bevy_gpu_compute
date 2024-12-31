@@ -16,20 +16,20 @@ use wgpu::{Buffer, BufferView};
 
 use crate::code::compute_task::{
     buffers::components::{OutputCountBuffers, OutputCountStagingBuffers},
-    resources::{GpuAcceleratedBevy, TaskLabel},
+    component::TaskName,
+    resources::GpuAcceleratedBevy,
     wgsl_processable_types::{WgslCollisionResult, WgslCounter},
 };
 
 use super::{
-    get_raw_gpu_results::get_raw_gpu_result_single, misc_components::OutputCountsFromGpu,
-    output_spec::OutputSpecs,
+    get_raw_gpu_results::get_raw_gpu_result_counter, misc_components::OutputCountsFromGpu,
+    output_metadata_spec::OutputVectorMetadataSpec,
 };
 
 pub fn get_results_counts(
     mut tasks: Query<
         (
-            &TaskLabel,
-            &OutputSpecs,
+            &OutputVectorMetadataSpec,
             &OutputCountBuffers,
             &OutputCountStagingBuffers,
             &mut OutputCountsFromGpu,
@@ -39,23 +39,19 @@ pub fn get_results_counts(
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
 ) {
+    //todo, when should this run?
+    //after dispatch before main results read
     tasks
         .par_iter_mut()
         .batching_strategy(BatchingStrategy::default())
         .for_each(
-            |(
-                task,
-                output_specs,
-                count_buffer,
-                count_staging_buffer,
-                mut results_count_from_gpu,
-            )| {
+            |(output_specs, count_buffers, count_staging_buffers, mut results_count_from_gpu)| {
                 get_results_counts_single_task(
                     output_specs,
                     &render_device,
                     &render_queue,
-                    &count_buffer.0.get(&task.0).unwrap(),
-                    &count_staging_buffer.0.get(&task.0).unwrap(),
+                    &count_buffers,
+                    &count_staging_buffers,
                     &mut results_count_from_gpu,
                 );
             },
@@ -63,27 +59,35 @@ pub fn get_results_counts(
 }
 
 fn get_results_counts_single_task(
-    output_specs: &OutputSpecs,
+    output_specs: &OutputVectorMetadataSpec,
     render_device: &Res<RenderDevice>,
     render_queue: &Res<RenderQueue>,
-    count_buffer: &Buffer,
-    count_staging_buffer: &Buffer,
+    count_buffers: &OutputCountBuffers,
+    count_staging_buffers: &OutputCountStagingBuffers,
     results_count_from_gpu: &mut OutputCountsFromGpu,
 ) {
-    let local_res_counts: Arc<Mutex<HashMap<String, Option<usize>>>> =
-        Arc::new(Mutex::new(HashMap::new()));
-    output_specs.specs.par_iter().for_each(|(key, _)| {
-        let count = get_results_counts_single_output_type(
-            &render_device,
-            &render_queue,
-            count_buffer,
-            count_staging_buffer,
-        );
-        local_res_counts
-            .lock()
-            .unwrap()
-            .insert(key.to_string(), Some(count as usize));
-    });
+    let local_res_counts: Arc<Mutex<Vec<Option<usize>>>> = Arc::new(Mutex::new(Vec::new()));
+    output_specs
+        .get_all_metadata()
+        .iter()
+        .enumerate()
+        .for_each(|(i, spec)| {
+            if let Some(s) = spec {
+                if s.get_include_count() {
+                    let count = get_results_counts_single_output_type(
+                        &render_device,
+                        &render_queue,
+                        &count_buffers.0[i],
+                        &count_staging_buffers.0[i],
+                    );
+                    local_res_counts.lock().unwrap().push(Some(count as usize));
+                } else {
+                    local_res_counts.lock().unwrap().push(None);
+                }
+            } else {
+                local_res_counts.lock().unwrap().push(None);
+            }
+        });
     results_count_from_gpu.0 = local_res_counts.lock().unwrap().clone();
 }
 
@@ -93,7 +97,7 @@ fn get_results_counts_single_output_type(
     count_buffer: &Buffer,
     count_staging_buffer: &Buffer,
 ) -> u32 {
-    let count = get_raw_gpu_result_single::<WgslCounter>(
+    let count = get_raw_gpu_result_counter::<WgslCounter>(
         &render_device,
         &render_queue,
         &count_buffer,

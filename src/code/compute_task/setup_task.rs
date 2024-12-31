@@ -1,6 +1,9 @@
-fn create_persistent_gpu_resources(mut commands: Commands, render_device: Res<RenderDevice>) {
-    let wgsl_file = std::fs::read_to_string("src/gpu_collision_detection/collision.wgsl").unwrap();
-    commands.insert_resource(WgslFile(wgsl_file));
+use bevy::{
+    prelude::{Commands, Res},
+    render::renderer::RenderDevice,
+};
+
+pub fn setup_task(mut commands: Commands, render_device: Res<RenderDevice>) {
     let counter_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Counter Staging Buffer"),
         size: std::mem::size_of::<WgslCounter>() as u64,

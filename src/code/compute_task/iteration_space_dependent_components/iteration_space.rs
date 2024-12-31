@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 
 use bevy::prelude::Component;
 
-#[derive(Component, Hash)]
+#[derive(Component, Hash, Copy, Clone)]
 /// tuple is organized in the order (x, y, z)
 pub struct IterationSpace {
     pub x: usize,

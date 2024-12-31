@@ -5,7 +5,6 @@ pub mod compute_task;
 pub mod config;
 pub mod helpers;
 pub mod manager_resource;
-pub mod t3;
-pub mod task_spec;
+pub mod plugin;
 pub mod to_vec_tuple;
 pub mod usage_example;

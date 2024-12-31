@@ -1,9 +1,71 @@
 use bevy::prelude::{Entity, Event};
 
+use crate::code::manager_resource::GpuComputeBevyTaskType;
+
+use super::outputs::{output_data::OutputData, output_spec::OutputVectorTypesSpec};
+
+
+//! app.add_event::<ComputeTaskNameChangeEvent>();
+
+pub trait GpuComputeTaskChangeEvent {
+    fn new(entity: Entity)-> Self;
+    fn entity(&self) -> Entity;
+}
 #[derive(Event)]
-pub struct ComputeTaskNameChangeEvent {
-    pub entity: Entity,
-    pub new_name: String,
+pub struct InputDataChangeEvent {
+    entity: Entity,
+}
+impl GpuComputeTaskChangeEvent for InputDataChangeEvent {
+    fn new(entity: Entity) -> Self {
+        InputDataChangeEvent { entity }
+    }
+    fn entity(&self) -> Entity {
+        self.entity
+    }
 }
 
-app.add_event::<ComputeTaskNameChangeEvent>();
+#[derive(Event)]
+pub struct MaxOutputVectorLengthsChangedEvent {
+    entity: Entity,
+}
+impl GpuComputeTaskChangeEvent for MaxOutputVectorLengthsChangedEvent {
+    fn new(entity: Entity) -> Self {
+        MaxOutputVectorLengthsChangedEvent { entity }
+    }
+    fn entity(&self) -> Entity {
+        self.entity
+    }
+}
+
+#[derive(Event)]
+pub struct IterationSpaceChangedEvent {
+    entity: Entity
+}
+impl GpuComputeTaskChangeEvent for IterationSpaceChangedEvent {
+    fn new (entity: Entity) -> Self {
+        IterationSpaceChangedEvent { entity }
+    }
+    fn entity(&self) -> Entity {
+        self.entity
+    }
+}
+
+#[derive(Event)]
+pub struct WgslCodeChangedEvent {
+    entity: Entity,
+}
+impl GpuComputeTaskChangeEvent for WgslCodeChangedEvent {
+    fn new (entity: Entity) -> Self {
+        WgslCodeChangedEvent { entity }
+    }
+    fn entity(&self) -> Entity {
+        self.entity
+    }
+}
+
+
+#[derive(Event)]
+pub struct GpuComputeTaskSuccessEvent<T: OutputVectorTypesSpec> {
+    pub id: u128,
+    pub data: OutputData<T>,
+}

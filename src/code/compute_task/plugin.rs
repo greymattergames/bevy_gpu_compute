@@ -18,6 +18,12 @@ impl GpuAccelerationBevyPowerUserPlugin {
     }
 }
 
+
+//!
+//! 
+// We have a set chain of systems that runs whenever new data is added, 
+// how can we allow users to add this chain to a custom schedule?
+
 impl Plugin for GpuAccelerationBevyPowerUserPlugin {
     fn build(&self, app: &mut App) {
         let max_detectable_collisions_scale = self.max_detectable_collisions_scale;

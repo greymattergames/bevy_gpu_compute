@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use crate::code::compute_task::{
-    iteration_space_dependent_resources::{
+    iteration_space_dependent_components::{
         pipeline::cache::{PipelineCache, PipelineKey},
         workgroup_sizes::NumGpuWorkgroupsRequired,
     },

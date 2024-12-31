@@ -10,9 +10,9 @@ use bevy::{
 use crate::code::compute_task::{
     bind_group_layouts::BindGroupLayouts,
     buffers::components::{InputBuffers, OutputBuffers, OutputCountBuffers},
-    inputs::input_spec::InputSpecs,
-    outputs::output_spec::OutputSpecs,
-    resources::TaskLabel,
+    component::TaskName,
+    inputs::input_metadata_spec::InputVectorMetadataSpec,
+    outputs::output_metadata_spec::{OutputVectorMetadata, OutputVectorMetadataSpec},
 };
 
 /**
@@ -24,9 +24,9 @@ pub struct BindGroupComponent(pub Option<BindGroup>);
 
 pub fn create_bind_groups(
     mut tasks: Query<(
-        &TaskLabel,
-        &OutputSpecs,
-        &InputSpecs,
+        &TaskName,
+        &OutputVectorMetadataSpec,
+        &InputVectorMetadataSpec,
         &BindGroupLayouts,
         &InputBuffers,
         &OutputCountBuffers,
@@ -35,12 +35,13 @@ pub fn create_bind_groups(
     )>,
     render_device: Res<RenderDevice>,
 ) {
+    // must run for every run of each task
     tasks
         .par_iter_mut()
         .batching_strategy(BatchingStrategy::default())
         .for_each(
             |(
-                task_label,
+                task_name,
                 output_specs,
                 input_specs,
                 bind_group_layouts,
@@ -50,7 +51,7 @@ pub fn create_bind_groups(
                 mut bind_group_res,
             )| {
                 create_bind_group_single_task(
-                    task_label,
+                    task_name,
                     &render_device,
                     bind_group_layouts,
                     input_specs,
@@ -65,42 +66,42 @@ pub fn create_bind_groups(
 }
 
 fn create_bind_group_single_task(
-    task_label: &TaskLabel, //when this changes
+    task_name: &TaskName, //when this changes
     render_device: &Res<RenderDevice>,
     bind_group_layouts: &BindGroupLayouts, // when this changes
-    input_specs: &InputSpecs,              // when binding number changes
-    output_specs: &OutputSpecs, // when binding number changes, or include count or count binding number
+    input_specs: &InputVectorMetadataSpec, // when binding number changes
+    output_specs: &OutputVectorMetadataSpec, // when binding number changes, or include count or count binding number
     input_buffers: &InputBuffers,
     output_count_buffers: &OutputCountBuffers,
     output_buffers: &OutputBuffers,
     mut bind_group_component: &mut BindGroupComponent,
 ) {
-    // todo only run when necessary
     let mut bindings = Vec::new();
-    for (label, spec) in input_specs.specs.iter() {
-        let buffer = input_buffers.0.get(label).unwrap();
-        bindings.push(wgpu::BindGroupEntry {
-            binding: spec.binding_number,
-            resource: buffer.as_entire_binding(),
-        });
-    }
-    for (label, spec) in output_specs.specs.iter() {
-        let output_buffer = output_buffers.0.get(label).unwrap();
-        bindings.push(wgpu::BindGroupEntry {
-            binding: spec.binding_number,
-            resource: output_buffer.as_entire_binding(),
-        });
-        if spec.include_count {
-            let count_buffer = output_count_buffers.0.get(label).unwrap();
+    for (i, spec) in input_specs.get_all_metadata().iter().enumerate() {
+        if let Some(s) = spec {
+            let buffer = input_buffers.0.get(i).unwrap();
             bindings.push(wgpu::BindGroupEntry {
-                binding: spec.count_binding_number.unwrap(),
-                resource: count_buffer.as_entire_binding(),
+                binding: s.get_binding_number(),
+                resource: buffer.as_entire_binding(),
             });
         }
     }
-    bind_group_component.0 = Some(render_device.create_bind_group(
-        task_label.0.as_str(),
-        &bind_group_layouts.0,
-        &bindings,
-    ));
+    for (i, spec) in output_specs.get_all_metadata().iter().enumerate() {
+        if let Some(s) = spec {
+            let output_buffer = output_buffers.0.get(i).unwrap();
+            bindings.push(wgpu::BindGroupEntry {
+                binding: s.get_binding_number(),
+                resource: output_buffer.as_entire_binding(),
+            });
+            if s.get_include_count() {
+                let count_buffer = output_count_buffers.0.get(i).unwrap();
+                bindings.push(wgpu::BindGroupEntry {
+                    binding: s.get_count_binding_number().unwrap(),
+                    resource: count_buffer.as_entire_binding(),
+                });
+            }
+        }
+    }
+    bind_group_component.0 =
+        Some(render_device.create_bind_group(task_name.get(), &bind_group_layouts.0, &bindings));
 }
