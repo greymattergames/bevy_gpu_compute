@@ -22,14 +22,3 @@ impl Default for SysInfo {
         }
     }
 }
-
-#[derive(Debug, Clone, Component)]
-pub struct CollisionTask {
-    pub sensor_entity: Entity,
-    pub entity: Entity,
-}
-#[derive(Component)]
-pub struct Sensor {}
-
-#[derive(Resource)]
-pub struct NumEntitiesSpawned(pub usize);

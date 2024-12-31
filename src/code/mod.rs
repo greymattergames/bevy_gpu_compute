@@ -1,4 +1,9 @@
-pub mod colliding_pair;
-pub mod gpu_easy;
-pub mod gpu_power_user;
+pub mod collision_detection_performance_test;
+pub mod collision_detection_plugin;
+pub mod components_and_resources;
+pub mod compute_task;
+pub mod config;
 pub mod helpers;
+pub mod manager_resource;
+pub mod to_vec_tuple;
+pub mod usage_example;
