@@ -15,7 +15,7 @@ use bevy::{
 };
 use futures::future::Either;
 
-use crate::code::manager_resource::GpuComputeBevyTaskType;
+use crate::code::manager_resource::{GpuAcceleratedBevyRunIds, GpuComputeBevyTaskType};
 
 use super::{
     component::TaskRunId,
@@ -23,10 +23,11 @@ use super::{
         GpuComputeTaskChangeEvent, InputDataChangeEvent, IterationSpaceChangedEvent,
         MaxOutputVectorLengthsChangedEvent, WgslCodeChangedEvent,
     },
-    inputs::input_data::InputData,
+    inputs::input_data::{InputData, TypeErasedInputData},
     iteration_space_dependent_components::{
         iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputVectorLengths,
     },
+    outputs::output_data::{OutputData, TypeErasedOutputData},
     wgsl_code::WgslCode,
 };
 #[derive(Clone, Debug)]
@@ -77,13 +78,26 @@ impl TaskCommands {
         &self,
         commands: &mut Commands,
         inputs: InputData<T::InType>,
-        mut task_run_ids: Query<&mut TaskRunId>,
+        mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
     ) -> u128 {
         let mut entity_commands = commands.entity(self.entity);
-        entity_commands.insert(inputs);
+        let id = task_run_ids.get_next();
+        entity_commands.insert(TypeErasedInputData::new(inputs));
+        entity_commands.insert(TaskRunId(id));
         commands.send_event(InputDataChangeEvent::new(self.entity));
-        let mut tri = task_run_ids.get_mut(self.entity).unwrap();
-        tri.0 += 1;
-        tri.0
+        id
+    }
+
+    pub fn result<T: GpuComputeBevyTaskType>(
+        &self,
+        run_id: u128,
+        out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
+    ) -> Option<OutputData<T::OutType>> {
+        for (task_run_id, type_erased_data) in out_datas.iter() {
+            if task_run_id.0 == run_id {
+                return type_erased_data.clone().into_typed::<T::OutType>().ok();
+            }
+        }
+        None
     }
 }

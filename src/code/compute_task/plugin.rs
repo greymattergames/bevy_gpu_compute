@@ -18,10 +18,7 @@ impl GpuAccelerationBevyPowerUserPlugin {
     }
 }
 
-
-//!
-//! 
-// We have a set chain of systems that runs whenever new data is added, 
+// We have a set chain of systems that runs whenever new data is added,
 // how can we allow users to add this chain to a custom schedule?
 
 impl Plugin for GpuAccelerationBevyPowerUserPlugin {

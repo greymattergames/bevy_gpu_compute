@@ -18,7 +18,7 @@ use super::{
     },
     outputs::{
         misc_components::OutputCountsFromGpu,
-        output_data::OutputData,
+        output_data::{OutputData, TypeErasedOutputData},
         output_spec::{BlankOutputVectorTypesSpec, OutputVectorTypesSpec},
     },
     resources::GpuAcceleratedBevy,
@@ -60,6 +60,7 @@ impl TaskName {
     GpuAcceleratedBevyBuffers,
     BindGroupComponent,
     InputData<BlankInputVectorTypesSpec>,
+    TypeErasedOutputData,
     OutputCountsFromGpu,
 )]
 

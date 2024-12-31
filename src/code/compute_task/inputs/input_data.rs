@@ -5,6 +5,10 @@ use bytemuck::Pod;
 
 use super::input_spec::{BlankInputVectorTypesSpec, InputVectorTypesSpec};
 
+trait InputDataTrait: Send + Sync {
+    fn input_bytes(&self, index: usize) -> Option<&[u8]>;
+}
+
 #[derive(Component)]
 pub struct InputData<T: InputVectorTypesSpec> {
     input0: Option<Vec<T::Input0>>,
@@ -110,7 +114,10 @@ impl<T: InputVectorTypesSpec> InputData<T> {
             None
         }
     }
-    pub fn input_bytes(&self, index: usize) -> Option<&[u8]> {
+}
+
+impl<T: InputVectorTypesSpec + 'static + Send + Sync> InputDataTrait for InputData<T> {
+    fn input_bytes(&self, index: usize) -> Option<&[u8]> {
         match index {
             0 => self.input0_bytes(),
             1 => self.input1_bytes(),
@@ -120,5 +127,21 @@ impl<T: InputVectorTypesSpec> InputData<T> {
             5 => self.input5_bytes(),
             _ => None,
         }
+    }
+}
+
+#[derive(Component)]
+pub struct TypeErasedInputData {
+    inner: Box<dyn InputDataTrait>,
+}
+
+impl TypeErasedInputData {
+    pub fn new<T: InputVectorTypesSpec + 'static + Send + Sync>(input_data: InputData<T>) -> Self {
+        Self {
+            inner: Box::new(input_data),
+        }
+    }
+    pub fn input_bytes(&self, index: usize) -> Option<&[u8]> {
+        self.inner.input_bytes(index)
     }
 }

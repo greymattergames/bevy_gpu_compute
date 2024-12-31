@@ -9,10 +9,10 @@ use bytemuck::Pod;
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::code::compute_task::{
-    component::{ TaskName},
+    component::TaskName,
     events::{GpuComputeTaskChangeEvent, InputDataChangeEvent},
     inputs::{
-        input_data::InputData,
+        input_data::{InputData, TypeErasedInputData},
         input_metadata_spec::InputVectorMetadataSpec,
         input_spec::{self, InputVectorTypesSpec},
     },
@@ -21,10 +21,10 @@ use crate::code::compute_task::{
 
 use super::components::InputBuffers;
 
-pub fn create_input_buffers<I: InputVectorTypesSpec + 'static + Sync + Send>(
+pub fn create_input_buffers(
     mut tasks: Query<(
         &TaskName,
-        &InputData<I>,
+        &TypeErasedInputData,
         &InputVectorMetadataSpec,
         &mut InputBuffers,
     )>,
@@ -37,7 +37,6 @@ pub fn create_input_buffers<I: InputVectorTypesSpec + 'static + Sync + Send>(
     {
         let task = tasks.get_mut(ev.entity().clone());
         if let Ok((task_name, input_data, input_spec, mut buffers)) = task {
-            //todo, change these to work off of events
             buffers.0.clear();
             create_input_buffers_single_task(
                 &task_name.get(),
@@ -50,10 +49,10 @@ pub fn create_input_buffers<I: InputVectorTypesSpec + 'static + Sync + Send>(
     }
 }
 
-fn create_input_buffers_single_task<I: InputVectorTypesSpec + 'static + Sync + Send>(
+fn create_input_buffers_single_task(
     task_name: &str,
     render_device: &Res<RenderDevice>,
-    input_data: &InputData<I>,
+    input_data: &TypeErasedInputData,
     input_spec: &InputVectorMetadataSpec,
     mut buffers: &mut InputBuffers,
 ) {

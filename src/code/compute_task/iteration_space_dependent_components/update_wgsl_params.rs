@@ -20,7 +20,7 @@ use super::{
     workgroup_sizes::{NumGpuWorkgroupsRequired, WorkgroupSizes},
 };
 
-pub fn update_wgsl_consts(
+pub fn update_wgsl_params(
     mut tasks: Query<
         (
             Ref<IterationSpace>,

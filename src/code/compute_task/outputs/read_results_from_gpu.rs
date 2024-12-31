@@ -1,4 +1,4 @@
-use core::task;
+use core::{panic, task};
 use std::{
     any::{Any, TypeId},
     cmp::min,
@@ -11,7 +11,7 @@ use std::{
 use bevy::{
     asset::UnknownTyped,
     ecs::{batching::BatchingStrategy, query::QueryData},
-    prelude::{Entity, EventWriter, Query, Res, ResMut, With},
+    prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, With},
     render::renderer::{RenderDevice, RenderQueue},
 };
 use bytemuck::Pod;
@@ -31,8 +31,10 @@ use crate::code::{
 };
 
 use super::{
-    get_raw_gpu_results::get_raw_gpu_result_vec, misc_components::OutputCountsFromGpu,
-    output_data::OutputData, output_metadata_spec::OutputVectorMetadataSpec,
+    get_raw_gpu_results::get_raw_gpu_result_vec,
+    misc_components::OutputCountsFromGpu,
+    output_data::{OutputData, TypeErasedOutputData},
+    output_metadata_spec::OutputVectorMetadataSpec,
     output_spec::OutputVectorTypesSpec,
 };
 
@@ -40,7 +42,7 @@ use super::{
  *   We put this all into a single system instead of passing with resources because we cannot pass the buffer slice around without lifetimes
  * The way the WGSL code works we can guarantee no duplicate collision detections WITHIN THE SAME FRAME due to entity ordering (as long as the batcher doesn't mess up the order when splitting up the data), but a collision detected as (entity1, entity2) in one frame may be detected as (entity2, entity1) in the next frame.
  * */
-pub fn read_results_from_gpu<O: OutputVectorTypesSpec + 'static + Send + Sync>(
+pub fn read_results_from_gpu(
     mut task: Query<
         (
             Entity,
@@ -50,18 +52,16 @@ pub fn read_results_from_gpu<O: OutputVectorTypesSpec + 'static + Send + Sync>(
             &OutputCountsFromGpu,
             &MaxOutputVectorLengths,
             &OutputVectorMetadataSpec,
-            // &mut OutputData<O>,
+            &mut TypeErasedOutputData,
         ),
         With<GpuAcceleratedBevy>,
     >,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
-    mut output_data_event_writter: EventWriter<GpuComputeTaskSuccessEvent<O>>,
+    mut commands: Commands,
+    mut success_event_writer: EventWriter<GpuComputeTaskSuccessEvent>,
 ) {
-    //todo, when should this run?
-    // after the get results counters
-    let events: Arc<Mutex<Vec<GpuComputeTaskSuccessEvent<O>>>> = Arc::new(Mutex::new(Vec::new()));
-
+    let events: Arc<Mutex<Vec<GpuComputeTaskSuccessEvent>>> = Arc::new(Mutex::new(Vec::new()));
     task.par_iter_mut()
         .batching_strategy(BatchingStrategy::default())
         .for_each(
@@ -73,7 +73,10 @@ pub fn read_results_from_gpu<O: OutputVectorTypesSpec + 'static + Send + Sync>(
                 output_counts,
                 max_outputs,
                 output_spec,
+                mut out_data,
             )| {
+                let mut type_erased_output = TypeErasedOutputData::empty();
+
                 output_spec
                     .get_all_metadata()
                     .iter()
@@ -90,24 +93,28 @@ pub fn read_results_from_gpu<O: OutputVectorTypesSpec + 'static + Send + Sync>(
                                 },
                                 max_outputs.get(i) * m.get_bytes(),
                             );
-                            let mut output_data = OutputData::<O>::empty();
-                            get_raw_gpu_result_vec::<O>(
-                                i,
-                                &mut output_data,
+
+                            let raw_bytes = get_raw_gpu_result_vec(
                                 &render_device,
                                 &render_queue,
                                 &out_buffer,
                                 staging_buffer,
                                 total_byte_size as u64,
                             );
-                            let event = GpuComputeTaskSuccessEvent {
-                                id: run_id.0,
-                                data: output_data,
-                            };
-                            events.lock().unwrap().push(event);
+                            if let Some(raw_bytes) = raw_bytes {
+                                type_erased_output.set_output_from_bytes(i, raw_bytes);
+                            } else {
+                                panic!("Failed to read output from GPU");
+                            }
                         }
                     });
+                *out_data = type_erased_output;
+                events
+                    .lock()
+                    .unwrap()
+                    .push(GpuComputeTaskSuccessEvent { id: run_id.0 });
             },
         );
-    output_data_event_writter.send_batch(events.lock().unwrap().drain(..));
+    let events = events.lock().unwrap();
+    success_event_writer.send_batch(events.into());
 }

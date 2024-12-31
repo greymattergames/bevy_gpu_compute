@@ -6,5 +6,6 @@ pub mod config;
 pub mod helpers;
 pub mod manager_resource;
 pub mod plugin;
+pub mod schedules;
 pub mod to_vec_tuple;
 pub mod usage_example;

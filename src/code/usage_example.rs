@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bevy::{
     log::tracing_subscriber::filter::targets::Iter,
-    prelude::{Commands, Component, EventReader, Query, Res, ResMut},
+    prelude::{Commands, Component, EventReader, Query, Res, ResMut, Resource},
     reflect::Tuple,
     render::gpu_component_array_buffer,
 };
@@ -23,12 +23,13 @@ use super::{
             iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputVectorLengths,
         },
         outputs::{
+            output_data::TypeErasedOutputData,
             output_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorMetadataSpec},
             output_spec::OutputVectorTypesSpec,
         },
         wgsl_code::WgslCode,
     },
-    manager_resource::{GpuCompute, GpuComputeBevyTaskType},
+    manager_resource::{GpuAcceleratedBevyRunIds, GpuCompute, GpuComputeBevyTaskType},
 };
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -62,10 +63,8 @@ impl GpuComputeBevyTaskType for ExampleTaskType {
 fn system(
     commands: &mut Commands,
     mut gpu_compute: ResMut<GpuCompute>,
-    mut example_task_event_reader: EventReader<
-        GpuComputeTaskSuccessEvent<<ExampleTaskType as GpuComputeBevyTaskType>::OutType>,
-    >,
-    mut task_run_ids: Query<&mut TaskRunId>,
+
+    mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
 ) {
     let task_name = "example task".to_string();
     let initial_iteration_space = IterationSpace {
@@ -117,7 +116,6 @@ fn system(
     // example of deletion
     task.delete(commands);
     // example of alteration
-    // todo make per-task
     task.set_iteration_space(commands, IterationSpace { x: 10, y: 10, z: 1 });
     // example of running the compute task
 
@@ -125,14 +123,27 @@ fn system(
     input_data.set_input0(vec![0.3]);
     input_data.set_input1(vec![[0u8; 10]]);
     input_data.set_input2(vec![0]);
-    // todo, make per-task
-    let run_id = task.run::<ExampleTaskType>(commands, input_data, task_run_ids);
+    let cross_task_run_id = task.run::<ExampleTaskType>(commands, input_data, task_run_ids);
+}
 
-    for results in example_task_event_reader.read() {
-        // todo handle the resuts
-        if results.id == run_id {
-            // todo handle the results
-            let result_1 = results.data.get_output1();
+#[derive(Resource)]
+struct RunID(pub u128);
+fn example_results_handling_system(
+    mut gpu_compute: ResMut<GpuCompute>,
+    mut event_reader: EventReader<GpuComputeTaskSuccessEvent>,
+    out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
+    specific_run_id: Res<RunID>,
+) {
+    let task = gpu_compute.task(&"example task".to_string());
+    for ev in event_reader.read() {
+        if ev.id == specific_run_id.0 {
+            // this ensures that the results exist
+            let results = task.result::<ExampleTaskType>(specific_run_id.0, out_datas);
+            if let Some(results) = results {
+                let result_1: Vec<[f64; 2]> = results.get_output1().unwrap().into();
+                let result_0 = results.get_output0();
+                // handle
+            }
         }
     }
 }

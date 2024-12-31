@@ -23,7 +23,7 @@ use crate::code::compute_task::{
 
 use super::components::{InputBuffers, OutputBuffers, OutputCountBuffers, OutputStagingBuffers};
 
-pub fn create_output_buffers(
+pub fn  create_output_buffers(
     mut tasks: Query<
         (
             &TaskName,

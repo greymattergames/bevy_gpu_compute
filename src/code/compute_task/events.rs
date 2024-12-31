@@ -4,11 +4,8 @@ use crate::code::manager_resource::GpuComputeBevyTaskType;
 
 use super::outputs::{output_data::OutputData, output_spec::OutputVectorTypesSpec};
 
-
-//! app.add_event::<ComputeTaskNameChangeEvent>();
-
 pub trait GpuComputeTaskChangeEvent {
-    fn new(entity: Entity)-> Self;
+    fn new(entity: Entity) -> Self;
     fn entity(&self) -> Entity;
 }
 #[derive(Event)]
@@ -39,10 +36,10 @@ impl GpuComputeTaskChangeEvent for MaxOutputVectorLengthsChangedEvent {
 
 #[derive(Event)]
 pub struct IterationSpaceChangedEvent {
-    entity: Entity
+    entity: Entity,
 }
 impl GpuComputeTaskChangeEvent for IterationSpaceChangedEvent {
-    fn new (entity: Entity) -> Self {
+    fn new(entity: Entity) -> Self {
         IterationSpaceChangedEvent { entity }
     }
     fn entity(&self) -> Entity {
@@ -55,7 +52,7 @@ pub struct WgslCodeChangedEvent {
     entity: Entity,
 }
 impl GpuComputeTaskChangeEvent for WgslCodeChangedEvent {
-    fn new (entity: Entity) -> Self {
+    fn new(entity: Entity) -> Self {
         WgslCodeChangedEvent { entity }
     }
     fn entity(&self) -> Entity {
@@ -63,9 +60,8 @@ impl GpuComputeTaskChangeEvent for WgslCodeChangedEvent {
     }
 }
 
-
 #[derive(Event)]
-pub struct GpuComputeTaskSuccessEvent<T: OutputVectorTypesSpec> {
+pub struct GpuComputeTaskSuccessEvent {
     pub id: u128,
-    pub data: OutputData<T>,
+    // pub data: OutputData<T>,
 }

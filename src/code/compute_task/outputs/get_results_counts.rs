@@ -26,7 +26,7 @@ use super::{
     output_metadata_spec::OutputVectorMetadataSpec,
 };
 
-pub fn get_results_counts(
+pub fn get_results_counts_from_gpu(
     mut tasks: Query<
         (
             &OutputVectorMetadataSpec,
