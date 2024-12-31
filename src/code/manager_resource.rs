@@ -2,14 +2,14 @@ use std::{any::Any, collections::HashMap};
 
 use bevy::{
     prelude::{Commands, DespawnRecursiveExt, Entity, Event, Ref, ResMut, Resource},
-    reflect::Tuple,
+    reflect::{PartialReflect, Tuple},
     state::commands,
 };
 
 use super::{
     compute_task::{
         component::GpuComputeTask,
-        inputs::{input_data::InputData, input_specs::InputSpecs},
+        inputs::{input_data::InputData, input_spec::InputSpecs},
         iteration_space_dependent_resources::{
             iteration_space::IterationSpace,
             max_num_outputs_per_type::MaxNumGpuOutputItemsPerOutputType,
@@ -83,20 +83,29 @@ impl GpuCompute {
         todo!("alter_task")
     }
     /// registers the input data to run in the next round, returns a unique id to identify the run
-    pub fn run<T: GpuComputeBevyTaskType, U: ToVecTuple<T::InType>>(
+    pub fn run<T: GpuComputeBevyTaskType, U: ToVecTuple<T::InType> + Tuple>(
         &mut self,
         task_name: String,
+        spec: T::InType,
         inputs: U,
         commands: &mut Commands,
     ) -> u128 {
         self.task_run_counter += 1;
-        let mut entity = commands.entity(self.tasks.get(&task_name).unwrap().clone())
+        let mut entity = commands.entity(self.tasks.get(&task_name).unwrap().clone());
+        let vv: Vec<usize> = vec![0, 1, 3, 4];
+        for i in vv.iter() {
+            let field: &dyn PartialReflect = inputs.field(*i).unwrap();
+            // get T::InType for the tuple index
+            
+            let value = field.try_downcast_ref<>().unwrap();
+        }
         let input_data = entity.entry::<InputData>();
-        input_data.and_modify(|data| {
-            data.data = inputs.to_vec_tuple();
-        })
-        // Otherwise insert a default value
-        .or_insert(Level(0));
+        input_data
+            .and_modify(|data| {
+                data.data = inputs.to_vec_tuple();
+            })
+            // Otherwise insert a default value
+            .or_insert(Level(0));
         self.task_run_counter
     }
 }

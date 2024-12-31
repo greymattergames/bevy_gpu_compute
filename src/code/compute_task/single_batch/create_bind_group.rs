@@ -10,7 +10,7 @@ use bevy::{
 use crate::code::compute_task::{
     bind_group_layouts::BindGroupLayouts,
     buffers::components::{InputBuffers, OutputBuffers, OutputCountBuffers},
-    inputs::input_specs::InputSpecs,
+    inputs::input_spec::InputSpecs,
     outputs::output_spec::OutputSpecs,
     resources::TaskLabel,
 };

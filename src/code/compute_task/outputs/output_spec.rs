@@ -36,72 +36,42 @@ use std::marker::PhantomData;
 use bevy::prelude::Component;
 use bytemuck::Pod;
 
-// This holds type information for a specific output
-pub struct OutputSpec {
-    pub item_bytes: usize,
-    pub type_id: TypeId,
+pub struct OutputVectorMetadata {
+    pub bytes: usize,
     pub binding_number: u32,
     pub include_count: bool,
     pub count_binding_number: Option<u32>,
 }
 
-// Modified to hold type information
-#[derive(Component)]
-pub struct OutputSpecs {
-    /// Maps a label to a tuple of (item_bytes, type_id, binding_number)
-    pub specs: HashMap<String, OutputSpec>,
+pub trait OutputVectorTypesSpec {
+    type Output1: Pod + Send + Sync;
+    type Output2: Pod + Send + Sync;
+    type Output3: Pod + Send + Sync;
+    type Output4: Pod + Send + Sync;
+    type Output5: Pod + Send + Sync;
+    type Output6: Pod + Send + Sync;
+
+    const OUTPUT1_METADATA: Option<OutputVectorMetadata>;
+    const OUTPUT2_METADATA: Option<OutputVectorMetadata>;
+    const OUTPUT3_METADATA: Option<OutputVectorMetadata>;
+    const OUTPUT4_METADATA: Option<OutputVectorMetadata>;
+    const OUTPUT5_METADATA: Option<OutputVectorMetadata>;
+    const OUTPUT6_METADATA: Option<OutputVectorMetadata>;
 }
-impl Default for OutputSpecs {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
-// Builder-style API for users to register their types
-impl OutputSpecs {
-    pub fn new() -> Self {
-        Self {
-            specs: HashMap::new(),
-        }
-    }
+pub struct BlankOutputVectorTypesSpec {}
+impl OutputVectorTypesSpec for BlankOutputVectorTypesSpec {
+    type Output1 = ();
+    type Output2 = ();
+    type Output3 = ();
+    type Output4 = ();
+    type Output5 = ();
+    type Output6 = ();
 
-    pub fn register<T: Pod + 'static>(
-        &mut self,
-        label: &str,
-        binding_number: u32,
-        include_counter: bool,
-        counter_binding_number: Option<u32>,
-    ) {
-        let item_bytes = std::mem::size_of::<T>();
-        self.specs.insert(label.to_string(), OutputSpec {
-            item_bytes,
-            type_id: TypeId::of::<Vec<T>>(),
-            binding_number,
-            include_count: include_counter,
-            count_binding_number: counter_binding_number,
-        });
-    }
-    pub fn validate_data(
-        &self,
-        // output_data: &OutputData
-        //
-    ) -> Result<(), String> {
-        todo!("Implement this, below is how it is implement for input data");
-        // for (label, spec) in self.specs.iter() {
-        //     let data = output_data
-        //         .data
-        //         .get(label)
-        //         .ok_or_else(|| format!("Missing input data for label: {}", label))?;
-
-        //     if data.type_id() != spec.type_id {
-        //         return Err(format!(
-        //             "Type mismatch for {}: expected {:?}, got {:?}",
-        //             label,
-        //             spec.type_id,
-        //             data.type_id()
-        //         ));
-        //     }
-        // }
-        // Ok(())
-    }
+    const OUTPUT1_METADATA: Option<OutputVectorMetadata> = None;
+    const OUTPUT2_METADATA: Option<OutputVectorMetadata> = None;
+    const OUTPUT3_METADATA: Option<OutputVectorMetadata> = None;
+    const OUTPUT4_METADATA: Option<OutputVectorMetadata> = None;
+    const OUTPUT5_METADATA: Option<OutputVectorMetadata> = None;
+    const OUTPUT6_METADATA: Option<OutputVectorMetadata> = None;
 }

@@ -5,8 +5,10 @@ use super::{
         GpuAcceleratedBevyBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
         OutputCountStagingBuffers, OutputStagingBuffers,
     },
-    events::ComputeTaskNameChangeEvent,
-    inputs::{input_data::InputData, input_specs::InputSpecs},
+    inputs::{
+        input_data::InputData,
+        input_spec::{BlankInputVectorTypesSpec, InputVectorTypesSpec},
+    },
     iteration_space_dependent_resources::{
         iteration_space::IterationSpace,
         max_num_outputs_per_type::MaxNumGpuOutputItemsPerOutputType,
@@ -14,18 +16,26 @@ use super::{
         workgroup_sizes::{NumGpuWorkgroupsRequired, WorkgroupSizes},
     },
     outputs::{
-        latest_results_store::LatestResultsStore, misc_components::OutputCountsFromGpu,
-        output_spec::OutputSpecs,
+        misc_components::OutputCountsFromGpu,
+        output_data::OutputData,
+        output_spec::{BlankOutputVectorTypesSpec, OutputVectorTypesSpec},
     },
     resources::GpuAcceleratedBevy,
     single_batch::create_bind_group::BindGroupComponent,
 };
 
 #[derive(Component)]
+pub struct TaskName(pub String);
+impl Default for TaskName {
+    fn default() -> Self {
+        TaskName("unitialized task".to_string())
+    }
+}
+
+#[derive(Component)]
 #[require(
+    TaskName,
     GpuAcceleratedBevy,
-    InputSpecs,
-    OutputSpecs,
     IterationSpace,
     WorkgroupSizes,
     MaxNumGpuOutputItemsPerOutputType,
@@ -33,32 +43,21 @@ use super::{
     PipelineCache,
     GpuAcceleratedBevyBuffers,
     BindGroupComponent,
-    InputData,
+    InputData<BlankInputVectorTypesSpec>,
+    OutputData<BlankOutputVectorTypesSpec>,
     OutputCountsFromGpu,
-    LatestResultsStore
 )]
 
-pub struct GpuComputeTask {
-    name: String,
+pub struct GpuComputeTask<I: InputVectorTypesSpec, O: OutputVectorTypesSpec> {
+    input_spec: I,
+    output_spec: O,
 }
 
-impl GpuComputeTask {
-    pub fn new(name: String) -> Self {
-        Self { name }
-    }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-    pub fn name_mut(
-        &mut self,
-        entity: Entity,
-        mut event_writer: EventWriter<ComputeTaskNameChangeEvent>,
-    ) -> &mut String {
-        // send a change event
-        event_writer.send(ComputeTaskNameChangeEvent {
-            entity,
-            new_name: self.name.clone(),
-        });
-        &mut self.name
+impl<I: InputVectorTypesSpec, O: OutputVectorTypesSpec> GpuComputeTask<I, O> {
+    pub fn new(input_spec: I, output_spec: O) -> Self {
+        Self {
+            input_spec,
+            output_spec,
+        }
     }
 }

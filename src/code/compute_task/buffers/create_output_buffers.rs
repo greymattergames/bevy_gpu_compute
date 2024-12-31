@@ -9,7 +9,7 @@ use bytemuck::Pod;
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::code::compute_task::{
-    inputs::{input_data::InputData, input_specs::InputSpecs},
+    inputs::{input_data::InputData, input_spec::InputSpecs},
     iteration_space_dependent_resources::max_num_outputs_per_type::MaxNumGpuOutputItemsPerOutputType,
     outputs::output_spec::{OutputSpec, OutputSpecs},
     resources::GpuAcceleratedBevy,

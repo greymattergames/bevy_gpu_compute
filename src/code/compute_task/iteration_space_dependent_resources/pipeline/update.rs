@@ -8,7 +8,9 @@ use bevy::{
 use wgpu::ComputePipelineDescriptor;
 
 use crate::code::compute_task::{
-    pipeline_layout::PipelineLayout, resources::TaskLabel, wgsl_code::WgslCode,
+    component::GpuComputeTask, inputs::input_spec::InputVectorTypesSpec,
+    outputs::output_spec::OutputVectorTypesSpec, pipeline_layout::PipelineLayout,
+    wgsl_code::WgslCode,
 };
 
 use super::{
@@ -16,9 +18,14 @@ use super::{
     shader_module::shader_module_from_wgsl_string,
 };
 
-pub fn update_pipeline(
+pub fn update_pipeline<I: InputVectorTypesSpec, O: OutputVectorTypesSpec>(
     mut tasks: Query<
-        (&TaskLabel, &WgslCode, &PipelineLayout, &mut PipelineCache),
+        (
+            &GpuComputeTask<I, O>,
+            &WgslCode,
+            &PipelineLayout,
+            &mut PipelineCache,
+        ),
         Changed<WgslCode>,
     >,
     render_device: Res<RenderDevice>,
@@ -26,10 +33,10 @@ pub fn update_pipeline(
     tasks
         .par_iter_mut()
         .batching_strategy(BatchingStrategy::default())
-        .for_each(|(label, wgsl, pipeline_layout, mut pipeline_cache)| {
+        .for_each(|(task, wgsl, pipeline_layout, mut pipeline_cache)| {
             update_pipeline_for_wgsl_code(
                 wgsl,
-                label,
+                task,
                 &render_device,
                 &pipeline_layout,
                 &mut pipeline_cache,
@@ -39,7 +46,7 @@ pub fn update_pipeline(
 
 fn update_pipeline_for_wgsl_code(
     wgsl: &WgslCode,
-    label: &TaskLabel,
+    task: &GpuComputeTask,
     render_device: &Res<RenderDevice>,
     pipeline_layout: &PipelineLayout,
     pipeline_cache: &mut PipelineCache,
@@ -50,9 +57,10 @@ fn update_pipeline_for_wgsl_code(
     if pipeline_cache.cache.contains_key(&key) {
         return;
     } else {
-        let shader_module = shader_module_from_wgsl_string(&label.0, &wgsl.code(), &render_device);
+        let shader_module =
+            shader_module_from_wgsl_string(&task.name(), &wgsl.code(), &render_device);
         let compute_pipeline = render_device.create_compute_pipeline(&ComputePipelineDescriptor {
-            label: Some(&label.0),
+            label: Some(&task.name()),
             layout: Some(&pipeline_layout.0),
             module: &shader_module,
             entry_point: Some(wgsl.entry_point_function_name()),

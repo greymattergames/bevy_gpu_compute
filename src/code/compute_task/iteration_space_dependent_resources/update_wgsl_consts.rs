@@ -6,7 +6,7 @@ use bevy::{
 };
 
 use crate::code::{
-    compute_task::{outputs::output_spec::OutputSpecs, resources::GpuAcceleratedBevy},
+    compute_task::{outputs::output_spec::OutputVectorTypesSpec, resources::GpuAcceleratedBevy},
     helpers::math::max_collisions::max_collisions,
 };
 
@@ -20,7 +20,7 @@ pub fn update_wgsl_consts(
     mut tasks: Query<
         (
             Ref<IterationSpace>,
-            &OutputSpecs,
+            &OutputVectorTypesSpec,
             &mut WorkgroupSizes,
             &mut MaxNumGpuOutputItemsPerOutputType,
             &mut NumGpuWorkgroupsRequired,
