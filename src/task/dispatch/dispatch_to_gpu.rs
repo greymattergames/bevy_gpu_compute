@@ -6,7 +6,9 @@ use bevy::{
 
 use crate::task::{
     compute_pipeline::cache::{PipelineKey, PipelineLruCache},
-    iteration_space::gpu_workgroup_space::GpuWorkgroupSpace,
+    task_specification::{
+        gpu_workgroup_space::GpuWorkgroupSpace, task_specification::TaskUserSpecification,
+    },
     wgsl_code::WgslCode,
 };
 
@@ -14,9 +16,8 @@ use super::create_bind_group::BindGroupComponent;
 
 pub fn dispatch_to_gpu(
     mut tasks: Query<(
+        &TaskUserSpecification,
         &BindGroupComponent,
-        &GpuWorkgroupSpace,
-        &WgslCode,
         &mut PipelineLruCache,
     )>,
     render_device: Res<RenderDevice>,
@@ -25,18 +26,16 @@ pub fn dispatch_to_gpu(
     tasks
         .par_iter_mut()
         .batching_strategy(BatchingStrategy::default())
-        .for_each(
-            |(bind_group, num_gpu_workgroups_required, wgsl_code, mut pipeline_cache)| {
-                dispatch_to_gpu_single_task(
-                    &render_device,
-                    &render_queue,
-                    bind_group,
-                    num_gpu_workgroups_required,
-                    wgsl_code,
-                    &mut pipeline_cache,
-                );
-            },
-        );
+        .for_each(|(task_spec, bind_group, mut pipeline_cache)| {
+            dispatch_to_gpu_single_task(
+                &render_device,
+                &render_queue,
+                bind_group,
+                task_spec.gpu_workgroup_space(),
+                task_spec.wgsl_code(),
+                &mut pipeline_cache,
+            );
+        });
 }
 
 fn dispatch_to_gpu_single_task(

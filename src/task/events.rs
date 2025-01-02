@@ -1,16 +1,14 @@
 use bevy::prelude::{Entity, Event};
 
 use super::{
-    inputs::input_vector_metadata_spec::InputVectorMetadataSpec,
-    outputs::definitions::output_vector_metadata_spec::OutputVectorMetadataSpec,
+    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
+    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
 };
 
 #[derive(Event)]
 pub struct GpuAcceleratedTaskCreatedEvent {
     pub entity: Entity,
     pub task_name: String,
-    pub input_vector_metadata_spec: InputVectorMetadataSpec,
-    pub output_vector_metadata_spec: OutputVectorMetadataSpec,
 }
 
 pub trait GpuComputeTaskChangeEvent {

@@ -14,59 +14,29 @@ use super::{
         input_data::InputData, input_vector_types_spec::InputVectorTypesSpec,
         type_erased_input_data::TypeErasedInputData,
     },
-    iteration_space::iteration_space::IterationSpace,
     outputs::definitions::{
-        max_output_vector_lengths::MaxOutputVectorLengths, output_data::OutputData,
+        max_output_vector_lengths::MaxOutputVectorLengths,
+        output_data::OutputData,
+        output_vector_metadata_spec::{self, OutputVectorsMetadataSpec},
         output_vector_types_spec::OutputVectorTypesSpec,
         type_erased_output_data::TypeErasedOutputData,
     },
     task_components::task_run_id::TaskRunId,
+    task_specification::{
+        iteration_space::IterationSpace, task_specification::TaskUserSpecification,
+    },
     wgsl_code::WgslCode,
 };
 #[derive(Clone, Debug)]
 pub struct TaskCommands {
-    entity: Entity,
+    pub entity: Entity,
 }
 impl TaskCommands {
     pub fn new(entity: Entity) -> Self {
         TaskCommands { entity }
     }
-
     pub fn delete(&self, commands: &mut Commands) {
         commands.entity(self.entity).despawn_recursive();
-    }
-
-    pub fn set_iteration_space(
-        &self,
-        commands: &mut Commands,
-        new_iteration_space: IterationSpace,
-    ) {
-        self.alter_task::<IterationSpaceOrMaxOutVecLengthChangedEvent, _>(
-            commands,
-            new_iteration_space,
-        );
-    }
-    pub fn set_max_output_vector_lengths(
-        &self,
-        commands: &mut Commands,
-        new_max_output_vector_lengths: MaxOutputVectorLengths,
-    ) {
-        self.alter_task::<IterationSpaceOrMaxOutVecLengthChangedEvent, _>(
-            commands,
-            new_max_output_vector_lengths,
-        );
-    }
-    pub fn set_wgsl_code(&self, commands: &mut Commands, new_wgsl_code: WgslCode) {
-        self.alter_task::<WgslCodeChangedEvent, _>(commands, new_wgsl_code);
-    }
-    fn alter_task<E: Event + GpuComputeTaskChangeEvent, T: Component>(
-        &self,
-        commands: &mut Commands,
-        new_component: T,
-    ) {
-        let mut entity_commands = commands.entity(self.entity);
-        entity_commands.insert(new_component);
-        commands.send_event(E::new(self.entity));
     }
 
     /// registers the input data to run in the next round, returns a unique id to identify the run

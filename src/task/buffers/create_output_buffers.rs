@@ -9,10 +9,11 @@ use crate::task::{
     events::{GpuComputeTaskChangeEvent, IterationSpaceOrMaxOutVecLengthChangedEvent},
     outputs::definitions::{
         max_output_vector_lengths::MaxOutputVectorLengths,
-        output_vector_metadata_spec::{OutputVectorMetadata, OutputVectorMetadataSpec},
+        output_vector_metadata_spec::{OutputVectorMetadata, OutputVectorsMetadataSpec},
         wgsl_counter::WgslCounter,
     },
     task_components::task_name::TaskName,
+    task_specification::task_specification::TaskUserSpecification,
 };
 
 use super::components::{
@@ -22,8 +23,7 @@ use super::components::{
 pub fn create_output_buffers(
     mut tasks: Query<(
         &TaskName,
-        &OutputVectorMetadataSpec,
-        Ref<MaxOutputVectorLengths>,
+        Ref<TaskUserSpecification>,
         &mut OutputBuffers,
         &mut OutputStagingBuffers,
         &mut OutputCountBuffers,
@@ -41,8 +41,7 @@ pub fn create_output_buffers(
         let task = tasks.get_mut(ev.entity().clone());
         if let Ok((
             task_name,
-            output_spec,
-            max_output_vector_lengths,
+            task_spec,
             mut buffers,
             mut staging_buffers,
             mut count_buffers,
@@ -56,8 +55,8 @@ pub fn create_output_buffers(
             create_output_buffers_single_task(
                 task_name,
                 &render_device,
-                output_spec,
-                max_output_vector_lengths,
+                task_spec.output_vectors_metadata_spec(),
+                task_spec.max_output_vector_lengths(),
                 &mut buffers,
                 &mut staging_buffers,
                 &mut count_buffers,
@@ -70,8 +69,8 @@ pub fn create_output_buffers(
 fn create_output_buffers_single_task(
     task_name: &TaskName,
     render_device: &RenderDevice,
-    output_spec: &OutputVectorMetadataSpec,
-    max_output_vector_lengths: Ref<MaxOutputVectorLengths>,
+    output_spec: &OutputVectorsMetadataSpec,
+    max_output_vector_lengths: &MaxOutputVectorLengths,
     mut buffers: &mut OutputBuffers,
     mut staging_buffers: &mut OutputStagingBuffers,
     mut count_buffers: &mut OutputCountBuffers,

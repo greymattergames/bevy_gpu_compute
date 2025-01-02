@@ -5,12 +5,15 @@ use bevy::{
 
 use crate::ram_limit::RamLimit;
 
-use super::task_components::task_max_output_bytes::TaskMaxOutputBytes;
+use super::{
+    task_components::task_max_output_bytes::TaskMaxOutputBytes,
+    task_specification::task_specification::TaskUserSpecification,
+};
 
-pub fn verify_have_enough_memory(tasks: Query<&TaskMaxOutputBytes>, ram_limit: Res<RamLimit>) {
-    let total_bytes = tasks
-        .iter()
-        .fold(0, |sum, output_bytes| sum + output_bytes.get());
+pub fn verify_have_enough_memory(tasks: Query<&TaskUserSpecification>, ram_limit: Res<RamLimit>) {
+    let total_bytes = tasks.iter().fold(0, |sum, task_spec| {
+        sum + task_spec.task_max_output_bytes().get()
+    });
     let available_memory = ram_limit.total_mem;
     if total_bytes as f32 > available_memory as f32 * 0.9 {
         log::error!(

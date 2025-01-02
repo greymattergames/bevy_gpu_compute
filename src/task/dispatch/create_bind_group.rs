@@ -6,9 +6,10 @@ use bevy::{
 
 use crate::task::{
     buffers::components::{InputBuffers, OutputBuffers, OutputCountBuffers},
-    inputs::input_vector_metadata_spec::InputVectorMetadataSpec,
-    outputs::definitions::output_vector_metadata_spec::OutputVectorMetadataSpec,
+    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
+    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_components::{bind_group_layouts::BindGroupLayouts, task_name::TaskName},
+    task_specification::task_specification::TaskUserSpecification,
 };
 
 /**
@@ -31,8 +32,7 @@ pub struct BindGroupComponent(pub Option<BindGroup>);
 pub fn create_bind_groups(
     mut tasks: Query<(
         &TaskName,
-        &OutputVectorMetadataSpec,
-        &InputVectorMetadataSpec,
+        &TaskUserSpecification,
         &BindGroupLayouts,
         &InputBuffers,
         &OutputCountBuffers,
@@ -48,8 +48,7 @@ pub fn create_bind_groups(
         .for_each(
             |(
                 task_name,
-                output_specs,
-                input_specs,
+                task_spec,
                 bind_group_layouts,
                 input_buffers,
                 output_count_buffers,
@@ -60,8 +59,8 @@ pub fn create_bind_groups(
                     task_name,
                     &render_device,
                     bind_group_layouts,
-                    input_specs,
-                    output_specs,
+                    task_spec.input_vectors_metadata_spec(),
+                    task_spec.output_vectors_metadata_spec(),
                     input_buffers,
                     output_count_buffers,
                     output_buffers,
@@ -74,9 +73,9 @@ pub fn create_bind_groups(
 fn create_bind_group_single_task(
     task_name: &TaskName, //when this changes
     render_device: &RenderDevice,
-    bind_group_layouts: &BindGroupLayouts, // when this changes
-    input_specs: &InputVectorMetadataSpec, // when binding number changes
-    output_specs: &OutputVectorMetadataSpec, // when binding number changes, or include count or count binding number
+    bind_group_layouts: &BindGroupLayouts,  // when this changes
+    input_specs: &InputVectorsMetadataSpec, // when binding number changes
+    output_specs: &OutputVectorsMetadataSpec, // when binding number changes, or include count or count binding number
     input_buffers: &InputBuffers,
     output_count_buffers: &OutputCountBuffers,
     output_buffers: &OutputBuffers,

@@ -3,8 +3,6 @@ use bevy::{
     prelude::{IntoSystemConfigs, SystemSet},
 };
 
-use crate::task::iteration_space::update_on_iteration_space_changes::update_gpu_params_on_iteration_space_or_max_output_lengths_change;
-
 use super::task::{
     buffers::{
         create_input_buffers::create_input_buffers, create_output_buffers::create_output_buffers,
@@ -35,11 +33,7 @@ struct GpuAcceleratedBevyReadSet;
 
 pub fn compose_task_runner_systems()
 -> NodeConfigs<Box<dyn bevy::prelude::System<In = (), Out = ()>>> {
-    let respond_to_task_alteration = (
-        update_gpu_params_on_iteration_space_or_max_output_lengths_change,
-        update_pipelines_on_wgsl_change,
-        verify_have_enough_memory,
-    )
+    let respond_to_task_alteration = (update_pipelines_on_wgsl_change, verify_have_enough_memory)
         .in_set(GpuAcceleratedBevyRespondToTaskMutSet);
     let respond_to_new_inputs = (create_input_buffers, create_output_buffers)
         .in_set(GpuAcceleratedBevyRespondToInputsMutSet);

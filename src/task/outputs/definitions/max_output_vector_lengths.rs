@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use bevy::prelude::Component;
 
-#[derive(Component, Debug)]
+#[derive(Debug)]
 /**
 ### These vectors lengths are very important for overall performance, the lower the better
 #### But if they are too low they will cut off valid output data

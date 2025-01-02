@@ -2,19 +2,21 @@ use std::collections::HashMap;
 
 use bevy::prelude::{Commands, Resource};
 
+use crate::task::task_specification::task_specification::TaskUserSpecification;
+
 use super::task::{
     events::{
         GpuAcceleratedTaskCreatedEvent, GpuComputeTaskChangeEvent,
         IterationSpaceOrMaxOutVecLengthChangedEvent, WgslCodeChangedEvent,
     },
-    inputs::input_vector_metadata_spec::InputVectorMetadataSpec,
-    iteration_space::iteration_space::IterationSpace,
+    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
     outputs::definitions::{
         max_output_vector_lengths::MaxOutputVectorLengths,
-        output_vector_metadata_spec::OutputVectorMetadataSpec,
+        output_vector_metadata_spec::OutputVectorsMetadataSpec,
     },
     task_commands::TaskCommands,
     task_components::{task::GpuAcceleratedBevyTask, task_name::TaskName},
+    task_specification::iteration_space::IterationSpace,
     wgsl_code::WgslCode,
 };
 
@@ -42,30 +44,16 @@ impl GpuAcceleratedBevy {
         &mut self,
         commands: &mut Commands,
         name: &String,
-        iteration_space: IterationSpace,
-        wgsl: WgslCode,
-        input_vectors_metadata_spec: InputVectorMetadataSpec,
-        output_vectors_metadata_spec: OutputVectorMetadataSpec,
-        max_output_vectors_lengths: MaxOutputVectorLengths,
+        spec: TaskUserSpecification,
     ) -> TaskCommands {
         let task = GpuAcceleratedBevyTask::new();
-        let entity_commands = commands.spawn((
-            task,
-            TaskName::new(name),
-            iteration_space,
-            wgsl,
-            input_vectors_metadata_spec,
-            output_vectors_metadata_spec,
-            max_output_vectors_lengths,
-        ));
+        let entity_commands = commands.spawn((task, spec, TaskName::new(name)));
         let entity = entity_commands.id();
         let task_commands = TaskCommands::new(entity);
         self.tasks.insert(name.clone(), task_commands.clone());
         commands.send_event(GpuAcceleratedTaskCreatedEvent {
             entity,
             task_name: name.clone(),
-            input_vector_metadata_spec: input_vectors_metadata_spec.clone(),
-            output_vector_metadata_spec: output_vectors_metadata_spec.clone(),
         });
         commands.send_event(IterationSpaceOrMaxOutVecLengthChangedEvent::new(entity));
         commands.send_event(WgslCodeChangedEvent::new(entity));

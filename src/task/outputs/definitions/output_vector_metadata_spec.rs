@@ -7,7 +7,7 @@ pub struct OutputVectorMetadataDefinition {
     pub include_count: bool,
     pub count_binding_number: Option<u32>,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct OutputVectorMetadata {
     bytes: usize,
     binding_number: u32,
@@ -43,8 +43,8 @@ impl OutputVectorMetadata {
     }
 }
 
-#[derive(Component, Clone, Copy)]
-pub struct OutputVectorMetadataSpec {
+#[derive(Clone, Copy, Debug)]
+pub struct OutputVectorsMetadataSpec {
     output0: Option<OutputVectorMetadata>,
     output1: Option<OutputVectorMetadata>,
     output2: Option<OutputVectorMetadata>,
@@ -52,9 +52,15 @@ pub struct OutputVectorMetadataSpec {
     output4: Option<OutputVectorMetadata>,
     output5: Option<OutputVectorMetadata>,
 }
-impl OutputVectorMetadataSpec {
-    pub fn new() -> Self {
-        OutputVectorMetadataSpec {
+impl Default for OutputVectorsMetadataSpec {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+impl OutputVectorsMetadataSpec {
+    pub fn empty() -> Self {
+        OutputVectorsMetadataSpec {
             output0: None,
             output1: None,
             output2: None,

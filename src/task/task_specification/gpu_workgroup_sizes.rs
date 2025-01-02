@@ -2,7 +2,6 @@ use bevy::prelude::{Component, Ref};
 
 use super::iteration_space::IterationSpace;
 
-#[derive(Component)]
 /// Defaults should generally not be altered. Based on this resource: https://developer.arm.com/documentation/101897/0303/Compute-shading/Workgroup-sizes
 pub struct GpuWorkgroupSizes {
     x: usize,
@@ -26,7 +25,7 @@ impl GpuWorkgroupSizes {
     pub fn num_dimmensions(&self) -> usize {
         self.num_dimmensions
     }
-    pub fn from_iter_space(iter_space: &Ref<IterationSpace>) -> Self {
+    pub fn from_iter_space(iter_space: &IterationSpace) -> Self {
         let num_dimmensions = iter_space.num_dimmensions();
         if num_dimmensions == 3 {
             Self {

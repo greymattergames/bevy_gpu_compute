@@ -8,11 +8,14 @@ use bevy::{
 };
 use wgpu::Buffer;
 
-use crate::task::buffers::components::{OutputCountBuffers, OutputCountStagingBuffers};
+use crate::task::{
+    buffers::components::{OutputCountBuffers, OutputCountStagingBuffers},
+    task_specification::task_specification::TaskUserSpecification,
+};
 
 use super::{
     definitions::{
-        gpu_output_counts::GpuOutputCounts, output_vector_metadata_spec::OutputVectorMetadataSpec,
+        gpu_output_counts::GpuOutputCounts, output_vector_metadata_spec::OutputVectorsMetadataSpec,
         wgsl_counter::WgslCounter,
     },
     helpers::get_gpu_output_counter_value::get_gpu_output_counter_value,
@@ -20,7 +23,7 @@ use super::{
 
 pub fn read_gpu_output_counts(
     mut tasks: Query<(
-        &OutputVectorMetadataSpec,
+        &TaskUserSpecification,
         &OutputCountBuffers,
         &OutputCountStagingBuffers,
         &mut GpuOutputCounts,
@@ -33,9 +36,9 @@ pub fn read_gpu_output_counts(
         .par_iter_mut()
         .batching_strategy(BatchingStrategy::default())
         .for_each(
-            |(output_specs, count_buffers, count_staging_buffers, mut results_count_from_gpu)| {
+            |(task_spec, count_buffers, count_staging_buffers, mut results_count_from_gpu)| {
                 read_gpu_output_counts_single_task(
-                    output_specs,
+                    task_spec.output_vectors_metadata_spec(),
                     &render_device,
                     &render_queue,
                     &count_buffers,
@@ -47,7 +50,7 @@ pub fn read_gpu_output_counts(
 }
 
 fn read_gpu_output_counts_single_task(
-    output_specs: &OutputVectorMetadataSpec,
+    output_specs: &OutputVectorsMetadataSpec,
     render_device: &RenderDevice,
     render_queue: &RenderQueue,
     count_buffers: &OutputCountBuffers,

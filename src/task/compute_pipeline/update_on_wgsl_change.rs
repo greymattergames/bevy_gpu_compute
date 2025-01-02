@@ -9,6 +9,7 @@ use wgpu::ComputePipelineDescriptor;
 use crate::task::{
     events::{GpuComputeTaskChangeEvent, WgslCodeChangedEvent},
     task_components::task_name::TaskName,
+    task_specification::task_specification::TaskUserSpecification,
     wgsl_code::WgslCode,
 };
 
@@ -19,15 +20,12 @@ use super::{
 };
 
 pub fn update_pipelines_on_wgsl_change(
-    mut tasks: Query<
-        (
-            &TaskName,
-            &WgslCode,
-            &PipelineLayoutComponent,
-            &mut PipelineLruCache,
-        ),
-        Changed<WgslCode>,
-    >,
+    mut tasks: Query<(
+        &TaskName,
+        &TaskUserSpecification,
+        &PipelineLayoutComponent,
+        &mut PipelineLruCache,
+    )>,
     mut wgsl_code_changed_event_reader: EventReader<WgslCodeChangedEvent>,
     render_device: Res<RenderDevice>,
 ) {
@@ -36,9 +34,9 @@ pub fn update_pipelines_on_wgsl_change(
         .batching_strategy(BatchingStrategy::default())
     {
         let task = tasks.get_mut(ev.entity().clone());
-        if let Ok((task_name, wgsl, pipeline_layout, mut pipeline_cache)) = task {
+        if let Ok((task_name, task_spec, pipeline_layout, mut pipeline_cache)) = task {
             update_single_pipeline(
-                wgsl,
+                task_spec.wgsl_code(),
                 task_name,
                 &render_device,
                 &pipeline_layout,

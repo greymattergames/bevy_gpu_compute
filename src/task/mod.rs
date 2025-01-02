@@ -3,7 +3,7 @@ pub mod compute_pipeline;
 pub mod dispatch;
 pub mod events;
 pub mod inputs;
-pub mod iteration_space;
+pub mod task_specification;
 pub mod outputs;
 pub mod setup_tasks;
 pub mod task_commands;

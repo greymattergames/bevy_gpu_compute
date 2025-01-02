@@ -26,8 +26,8 @@ impl InputVectorMetadata {
     }
 }
 
-#[derive(Component, Clone, Copy)]
-pub struct InputVectorMetadataSpec {
+#[derive(Clone, Copy)]
+pub struct InputVectorsMetadataSpec {
     input0: Option<InputVectorMetadata>,
     input1: Option<InputVectorMetadata>,
     input2: Option<InputVectorMetadata>,
@@ -35,9 +35,16 @@ pub struct InputVectorMetadataSpec {
     input4: Option<InputVectorMetadata>,
     input5: Option<InputVectorMetadata>,
 }
-impl InputVectorMetadataSpec {
-    pub fn new() -> Self {
-        InputVectorMetadataSpec {
+
+impl Default for InputVectorsMetadataSpec {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+impl InputVectorsMetadataSpec {
+    pub fn empty() -> Self {
+        InputVectorsMetadataSpec {
             input0: None,
             input1: None,
             input2: None,

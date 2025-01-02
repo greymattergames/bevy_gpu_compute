@@ -9,10 +9,11 @@ use wgpu::{BufferUsages, util::BufferInitDescriptor};
 use crate::task::{
     events::{GpuComputeTaskChangeEvent, InputDataChangeEvent},
     inputs::{
-        input_vector_metadata_spec::InputVectorMetadataSpec,
+        input_vector_metadata_spec::InputVectorsMetadataSpec,
         type_erased_input_data::TypeErasedInputData,
     },
     task_components::task_name::TaskName,
+    task_specification::task_specification::TaskUserSpecification,
 };
 
 use super::components::InputBuffers;
@@ -21,7 +22,7 @@ pub fn create_input_buffers(
     mut tasks: Query<(
         &TaskName,
         &TypeErasedInputData,
-        &InputVectorMetadataSpec,
+        &TaskUserSpecification,
         &mut InputBuffers,
     )>,
     mut input_data_change_event_listener: EventReader<InputDataChangeEvent>,
@@ -32,13 +33,13 @@ pub fn create_input_buffers(
         .batching_strategy(BatchingStrategy::default())
     {
         let task = tasks.get_mut(ev.entity().clone());
-        if let Ok((task_name, input_data, input_spec, mut buffers)) = task {
+        if let Ok((task_name, input_data, task_spec, mut buffers)) = task {
             buffers.0.clear();
             create_input_buffers_single_task(
                 &task_name.get(),
                 &render_device,
                 &input_data,
-                &input_spec,
+                &task_spec.input_vectors_metadata_spec(),
                 &mut buffers,
             );
         }
@@ -49,7 +50,7 @@ fn create_input_buffers_single_task(
     task_name: &str,
     render_device: &RenderDevice,
     input_data: &TypeErasedInputData,
-    input_spec: &InputVectorMetadataSpec,
+    input_spec: &InputVectorsMetadataSpec,
     buffers: &mut InputBuffers,
 ) {
     buffers.0.clear();

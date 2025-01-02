@@ -15,12 +15,13 @@ use crate::task::{
     buffers::components::{OutputBuffers, OutputStagingBuffers},
     events::GpuComputeTaskSuccessEvent,
     task_components::task_run_id::TaskRunId,
+    task_specification::task_specification::TaskUserSpecification,
 };
 
 use super::{
     definitions::{
         gpu_output_counts::GpuOutputCounts, max_output_vector_lengths::MaxOutputVectorLengths,
-        output_vector_metadata_spec::OutputVectorMetadataSpec,
+        output_vector_metadata_spec::OutputVectorsMetadataSpec,
         type_erased_output_data::TypeErasedOutputData,
     },
     helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec,
@@ -36,8 +37,7 @@ pub fn read_gpu_task_outputs(
         &OutputBuffers,
         &OutputStagingBuffers,
         &GpuOutputCounts,
-        &MaxOutputVectorLengths,
-        &OutputVectorMetadataSpec,
+        &TaskUserSpecification,
         &mut TypeErasedOutputData,
     )>,
     render_device: Res<RenderDevice>,
@@ -55,13 +55,13 @@ pub fn read_gpu_task_outputs(
                 output_buffers,
                 output_staging_buffers,
                 output_counts,
-                max_output_vector_lengths,
-                output_spec,
+                task_spec,
                 mut out_data,
             )| {
                 let mut type_erased_output = TypeErasedOutputData::empty();
 
-                output_spec
+                task_spec
+                    .output_vectors_metadata_spec()
                     .get_all_metadata()
                     .iter()
                     .enumerate()
@@ -75,7 +75,7 @@ pub fn read_gpu_task_outputs(
                                 } else {
                                     usize::MAX
                                 },
-                                max_output_vector_lengths.get(i) * m.get_bytes(),
+                                task_spec.max_output_vector_lengths().get(i) * m.get_bytes(),
                             );
 
                             let raw_bytes = get_gpu_output_as_bytes_vec(

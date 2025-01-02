@@ -1,11 +1,8 @@
-use bevy::prelude::Component;
-
 use crate::task::outputs::definitions::{
     max_output_vector_lengths::MaxOutputVectorLengths,
-    output_vector_metadata_spec::OutputVectorMetadataSpec,
+    output_vector_metadata_spec::OutputVectorsMetadataSpec,
 };
 
-#[derive(Component)]
 pub struct TaskMaxOutputBytes(usize);
 
 impl Default for TaskMaxOutputBytes {
@@ -19,7 +16,7 @@ impl TaskMaxOutputBytes {
     }
     pub fn from_max_lengths_and_spec(
         max_output_vector_lengths: &MaxOutputVectorLengths,
-        output_vector_metadata_spec: &OutputVectorMetadataSpec,
+        output_vector_metadata_spec: &OutputVectorsMetadataSpec,
     ) -> Self {
         let max_output_bytes = output_vector_metadata_spec
             .get_all_metadata()

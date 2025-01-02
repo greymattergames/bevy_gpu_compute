@@ -8,13 +8,13 @@ use crate::task::{
     compute_pipeline::cache::PipelineLruCache,
     dispatch::create_bind_group::BindGroupComponent,
     inputs::{input_data::InputData, input_vector_types_spec::BlankInputVectorTypesSpec},
-    iteration_space::{
-        gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
-        iteration_space::IterationSpace,
-    },
     outputs::definitions::{
         gpu_output_counts::GpuOutputCounts, max_output_vector_lengths::MaxOutputVectorLengths,
         type_erased_output_data::TypeErasedOutputData,
+    },
+    task_specification::{
+        gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
+        iteration_space::IterationSpace, task_specification::TaskUserSpecification,
     },
 };
 
@@ -31,11 +31,7 @@ By default this means once per frame
 #[require(
     TaskName,
     TaskRunId,
-    TaskMaxOutputBytes,
-    IterationSpace,
-    GpuWorkgroupSizes,
-    MaxOutputVectorLengths,
-    GpuWorkgroupSpace,
+    TaskUserSpecification,
     PipelineLruCache,
     // buffers
     OutputBuffers,

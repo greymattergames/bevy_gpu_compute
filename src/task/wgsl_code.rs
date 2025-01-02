@@ -2,11 +2,20 @@ use std::hash::{Hash, Hasher};
 
 use bevy::prelude::Component;
 
-#[derive(Component, Clone)]
+#[derive(Clone)]
 pub struct WgslCode {
     code: String,
     entry_point_function_name: String,
     pub code_hash: u64,
+}
+impl Default for WgslCode {
+    fn default() -> Self {
+        Self {
+            code: "".to_string(),
+            entry_point_function_name: "".to_string(),
+            code_hash: 0,
+        }
+    }
 }
 
 impl WgslCode {

@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 
 use bevy::prelude::Component;
 
-#[derive(Component, Hash, Copy, Clone)]
+#[derive(Hash, Copy, Clone)]
 /**
 Repersenents the max values of the iterators in wgsl for each dimmension.
 

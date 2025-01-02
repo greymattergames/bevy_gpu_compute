@@ -3,7 +3,6 @@ use bevy::prelude::Component;
 /**
  * Dependent on IterationSpace and WorkgroupSizes
  */
-#[derive(Component)]
 pub struct GpuWorkgroupSpace {
     pub x: u32,
     pub y: u32,

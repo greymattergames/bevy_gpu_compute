@@ -1,6 +1,8 @@
 use bevy::prelude::{Commands, Component, EventReader, Query, Res, ResMut, Resource};
 use bytemuck::{Pod, Zeroable};
 
+use crate::task::task_specification::task_specification::TaskUserSpecification;
+
 use super::{
     resource::GpuAcceleratedBevy,
     run_ids::GpuAcceleratedBevyRunIds,
@@ -8,19 +10,19 @@ use super::{
         events::GpuComputeTaskSuccessEvent,
         inputs::{
             input_data::InputData,
-            input_vector_metadata_spec::{InputVectorMetadataDefinition, InputVectorMetadataSpec},
+            input_vector_metadata_spec::{InputVectorMetadataDefinition, InputVectorsMetadataSpec},
             input_vector_types_spec::InputVectorTypesSpec,
         },
-        iteration_space::iteration_space::IterationSpace,
         outputs::definitions::{
             max_output_vector_lengths::MaxOutputVectorLengths,
             output_vector_metadata_spec::{
-                OutputVectorMetadataDefinition, OutputVectorMetadataSpec,
+                OutputVectorMetadataDefinition, OutputVectorsMetadataSpec,
             },
             output_vector_types_spec::OutputVectorTypesSpec,
             type_erased_output_data::TypeErasedOutputData,
         },
         task_components::task_run_id::TaskRunId,
+        task_specification::iteration_space::IterationSpace,
         wgsl_code::WgslCode,
     },
 };
@@ -48,11 +50,9 @@ impl OutputVectorTypesSpec for ExampleTaskOutputType {
     type Output5 = Unused;
 }
 
-fn system(
+fn create_task_example_system(
     mut commands: Commands,
     mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
-
-    mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
 ) {
     let task_name = "example task".to_string();
     let initial_iteration_space = IterationSpace::new(100, 10, 1);
@@ -80,25 +80,49 @@ fn system(
         None,
         None,
     ];
-    let task = gpu_acc_bevy.create_task(
-        &mut commands,
-        &task_name,
-        initial_iteration_space,
-        WgslCode::from_file("./collision.wgsl", "main".to_string()), // SHOULD be alterable
-        InputVectorMetadataSpec::from_input_vector_types_spec::<ExampleTaskInputType>(
+    let task_spec = TaskUserSpecification::new(
+        InputVectorsMetadataSpec::from_input_vector_types_spec::<ExampleTaskInputType>(
             input_definitions,
         ),
         // todo, ensure that this conforms with the provided input type, right now depends on which binding numbers are set
-        OutputVectorMetadataSpec::from_output_vector_types_spec::<ExampleTaskOutputType>(
+        OutputVectorsMetadataSpec::from_output_vector_types_spec::<ExampleTaskOutputType>(
             output_definitions,
         ),
+        initial_iteration_space,
         MaxOutputVectorLengths::new(vec![10, 30, 100]),
+        WgslCode::from_file("./collision.wgsl", "main".to_string()), // SHOULD be alterable
     );
+    let task = gpu_acc_bevy.create_task(&mut commands, &task_name, task_spec);
+}
+fn delete_task_example_system(
+    mut commands: Commands,
+    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
+) {
+    let task = gpu_acc_bevy.task(&"example task".to_string());
     // example of deletion
     task.delete(&mut commands);
+}
+fn alter_task_example_system(
+    mut commands: Commands,
+    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
+    mut task_specifications: Query<&mut TaskUserSpecification>,
+) {
+    let task = gpu_acc_bevy.task(&"example task".to_string());
     // example of alteration
-    task.set_iteration_space(&mut commands, IterationSpace::new_unsafe(10, 10, 1));
-    // example of running the compute task
+    if let Ok(mut spec) = task_specifications.get_mut(task.entity) {
+        spec.set_iteration_space(
+            &mut commands,
+            task.entity,
+            IterationSpace::new_unsafe(10, 10, 1),
+        );
+    }
+}
+fn run_task_example_system(
+    mut commands: Commands,
+    mut gpu_compute: ResMut<GpuAcceleratedBevy>,
+    mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
+) {
+    let task = gpu_compute.task(&"example task".to_string());
     let mut input_data = InputData::<ExampleTaskInputType>::empty();
     input_data.set_input0(vec![0.3]);
     input_data.set_input1(vec![[0u8; 10]]);
@@ -109,7 +133,7 @@ fn system(
 #[derive(Resource)]
 struct RunID(pub u128);
 
-fn example_results_handling_system_using_events(
+fn handle_results_example_system_with_assurance_of_run_success(
     mut gpu_compute: ResMut<GpuAcceleratedBevy>,
     mut event_reader: EventReader<GpuComputeTaskSuccessEvent>,
     out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
@@ -128,7 +152,7 @@ fn example_results_handling_system_using_events(
         }
     }
 }
-fn example_results_handling_system_without_events(
+fn handle_results_example_system_no_assurances(
     mut gpu_compute: ResMut<GpuAcceleratedBevy>,
     out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
     specific_run_id: Res<RunID>,

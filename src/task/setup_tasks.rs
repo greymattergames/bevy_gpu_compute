@@ -1,6 +1,6 @@
 use bevy::{
     log,
-    prelude::{Commands, EventReader, Res},
+    prelude::{Commands, EventReader, Query, Res},
     render::{render_resource::BindGroupLayout, renderer::RenderDevice},
 };
 use wgpu::PipelineLayout;
@@ -8,24 +8,27 @@ use wgpu::PipelineLayout;
 use super::{
     compute_pipeline::pipeline_layout::PipelineLayoutComponent,
     events::GpuAcceleratedTaskCreatedEvent,
-    inputs::input_vector_metadata_spec::InputVectorMetadataSpec,
-    outputs::definitions::output_vector_metadata_spec::OutputVectorMetadataSpec,
+    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
+    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_components::bind_group_layouts::BindGroupLayouts,
+    task_specification::task_specification::TaskUserSpecification,
 };
 
 pub fn setup_new_tasks(
     mut commands: Commands,
     mut event_reader: EventReader<GpuAcceleratedTaskCreatedEvent>,
+    specs: Query<&TaskUserSpecification>,
     render_device: Res<RenderDevice>,
 ) {
     log::info!("Setting up new tasks");
     event_reader.read().for_each(|ev| {
         let mut e_c = commands.entity(ev.entity);
+        let spec = specs.get(ev.entity).unwrap();
         let bind_group_layouts = get_bind_group_layouts(
             &ev.task_name,
             &render_device,
-            &ev.input_vector_metadata_spec,
-            &ev.output_vector_metadata_spec,
+            &spec.input_vectors_metadata_spec(),
+            &spec.output_vectors_metadata_spec(),
         );
         let pipeline_layout =
             get_pipeline_layout(&ev.task_name, &render_device, &bind_group_layouts);
@@ -52,8 +55,8 @@ fn get_pipeline_layout(
 fn get_bind_group_layouts(
     task_name: &str,
     render_device: &RenderDevice,
-    input_spec: &InputVectorMetadataSpec,
-    output_spec: &OutputVectorMetadataSpec,
+    input_spec: &InputVectorsMetadataSpec,
+    output_spec: &OutputVectorsMetadataSpec,
 ) -> BindGroupLayout {
     let mut layouts = Vec::new();
     input_spec.get_all_metadata().iter().for_each(|spec| {
