@@ -1,6 +1,6 @@
-use crate::task::outputs::definitions::{
-    max_output_vector_lengths::MaxOutputVectorLengths,
-    output_vector_metadata_spec::OutputVectorsMetadataSpec,
+use crate::task::{
+    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
+    task_specification::max_output_vector_lengths::MaxOutputVectorLengths,
 };
 
 pub struct TaskMaxOutputBytes(usize);

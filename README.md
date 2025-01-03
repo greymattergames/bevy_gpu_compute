@@ -2,6 +2,12 @@
 
 wrapper code to remove boilerplate involved with game mechanics, physics engines, collision detection, and other systems typically run on the CPU
 
+# GOALS:
+
+-simplify GPU acceleration so that GPU-specific concepts don't have to be learned: - bind groups, buffers, pipelines, wgsl, etc.
+
+![alt text](image.png)
+
 # TODO:
 
 We need to trigger changes to the task IMMEDIATELY upon mutation by the TaskCommands, so that, for example the user can alter one part and then immediately see the update WorkgroupSizes based on that...

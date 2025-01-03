@@ -9,8 +9,7 @@ use crate::task::{
     dispatch::create_bind_group::BindGroupComponent,
     inputs::{input_data::InputData, input_vector_types_spec::BlankInputVectorTypesSpec},
     outputs::definitions::{
-        gpu_output_counts::GpuOutputCounts, max_output_vector_lengths::MaxOutputVectorLengths,
-        type_erased_output_data::TypeErasedOutputData,
+        gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
     },
     task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,

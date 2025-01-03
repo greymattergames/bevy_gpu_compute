@@ -20,8 +20,7 @@ use crate::task::{
 
 use super::{
     definitions::{
-        gpu_output_counts::GpuOutputCounts, max_output_vector_lengths::MaxOutputVectorLengths,
-        output_vector_metadata_spec::OutputVectorsMetadataSpec,
+        gpu_output_counts::GpuOutputCounts, output_vector_metadata_spec::OutputVectorsMetadataSpec,
         type_erased_output_data::TypeErasedOutputData,
     },
     helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec,

@@ -41,5 +41,6 @@ pub fn get_gpu_output_counter_value(
     log::info!("Reading GPU output counter value - map completed");
     staging_buffer.unmap();
     log::info!("Reading GPU output counter value - unmap staging completed");
+    log::info!("Gpu counter result: {:?}", result);
     result
 }

@@ -1,7 +1,9 @@
 use bevy::prelude::{Commands, Component, EventReader, Query, Res, ResMut, Resource};
 use bytemuck::{Pod, Zeroable};
 
-use crate::task::task_specification::task_specification::TaskUserSpecification;
+use crate::task::task_specification::{
+    max_output_vector_lengths::MaxOutputVectorLengths, task_specification::TaskUserSpecification,
+};
 
 use super::{
     resource::GpuAcceleratedBevy,
@@ -14,7 +16,6 @@ use super::{
             input_vector_types_spec::InputVectorTypesSpec,
         },
         outputs::definitions::{
-            max_output_vector_lengths::MaxOutputVectorLengths,
             output_vector_metadata_spec::{
                 OutputVectorMetadataDefinition, OutputVectorsMetadataSpec,
             },

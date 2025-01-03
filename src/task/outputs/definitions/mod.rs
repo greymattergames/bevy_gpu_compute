@@ -1,5 +1,4 @@
 pub mod gpu_output_counts;
-pub mod max_output_vector_lengths;
 pub mod output_data;
 pub mod output_vector_metadata_spec;
 pub mod output_vector_types_spec;

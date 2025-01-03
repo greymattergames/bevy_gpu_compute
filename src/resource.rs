@@ -10,10 +10,7 @@ use super::task::{
         IterationSpaceOrMaxOutVecLengthChangedEvent, WgslCodeChangedEvent,
     },
     inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
-    outputs::definitions::{
-        max_output_vector_lengths::MaxOutputVectorLengths,
-        output_vector_metadata_spec::OutputVectorsMetadataSpec,
-    },
+    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_commands::TaskCommands,
     task_components::{task::GpuAcceleratedBevyTask, task_name::TaskName},
     task_specification::iteration_space::IterationSpace,

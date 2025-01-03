@@ -6,10 +6,7 @@ use crate::task::{
         WgslCodeChangedEvent,
     },
     inputs::input_vector_metadata_spec::{self, InputVectorsMetadataSpec},
-    outputs::definitions::{
-        max_output_vector_lengths::MaxOutputVectorLengths,
-        output_vector_metadata_spec::OutputVectorsMetadataSpec,
-    },
+    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_components::task_max_output_bytes::TaskMaxOutputBytes,
     task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
@@ -17,6 +14,8 @@ use crate::task::{
     },
     wgsl_code::WgslCode,
 };
+
+use super::max_output_vector_lengths::MaxOutputVectorLengths;
 
 /**
 These all used to be separate components, but this limited the user api, for example the user could not update the iteration space and then retrieve the resulting correct GpuWorkgroupSpace/Sizes in the same frame, since these updates were handled in separate systems.
@@ -60,9 +59,11 @@ impl TaskUserSpecification {
         let mut task = TaskUserSpecification::default();
         task.input_vectors_metadata_spec = input_vector_metadata_spec;
         task.output_vectors_metadata_spec = output_vector_metadata_spec;
-        task.set_iteration_space_no_event(iteration_space);
-        task.set_max_output_vector_lengths_no_event(max_output_vector_lengths);
-        task.set_wgsl_code_no_event(wgsl_code);
+        task.iteration_space = iteration_space;
+        task.max_output_vector_lengths = max_output_vector_lengths;
+        task.wgsl_code = wgsl_code;
+        task.update_on_iter_space_or_max_output_lengths_change();
+
         task
     }
     // getters

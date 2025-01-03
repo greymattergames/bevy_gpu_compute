@@ -15,7 +15,6 @@ use super::{
         type_erased_input_data::TypeErasedInputData,
     },
     outputs::definitions::{
-        max_output_vector_lengths::MaxOutputVectorLengths,
         output_data::OutputData,
         output_vector_metadata_spec::{self, OutputVectorsMetadataSpec},
         output_vector_types_spec::OutputVectorTypesSpec,

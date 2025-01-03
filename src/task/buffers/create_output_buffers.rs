@@ -8,12 +8,14 @@ use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 use crate::task::{
     events::{GpuComputeTaskChangeEvent, IterationSpaceOrMaxOutVecLengthChangedEvent},
     outputs::definitions::{
-        max_output_vector_lengths::MaxOutputVectorLengths,
         output_vector_metadata_spec::{OutputVectorMetadata, OutputVectorsMetadataSpec},
         wgsl_counter::WgslCounter,
     },
     task_components::task_name::TaskName,
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::{
+        max_output_vector_lengths::MaxOutputVectorLengths,
+        task_specification::TaskUserSpecification,
+    },
 };
 
 use super::components::{
