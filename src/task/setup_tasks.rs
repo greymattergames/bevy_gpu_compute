@@ -96,8 +96,8 @@ fn create_bind_group_layout_entry(
                 read_only: is_input,
             },
             has_dynamic_offset: false,
-            min_binding_size: None,
+            min_binding_size: None, //todo, this should be pre-calculated for performance reasons
         },
-        count: None,
+        count: None, //only for textures
     }
 }
