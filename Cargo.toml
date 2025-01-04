@@ -12,6 +12,7 @@ approx = "0.5.1"
 # regular
 bevy = { version = "0.15"}
 proc-macro-lib = { path = "./proc_macro_lib" }
+proc-macro-test = { path = "./proc_macro_test" } 
 bytemuck = "1.20.0"
 futures = "0.3.31"
 pollster = "0.4.0"
