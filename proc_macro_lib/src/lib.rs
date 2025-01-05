@@ -1,403 +1,365 @@
-#![feature(proc_macro_quote)]
-use proc_macro::TokenStream;
-use quote::{ToTokens, quote};
-use syn::{
-    Block, Data, DeriveInput, Expr, Fields, FnArg, GenericArgument, Ident, ItemFn, Pat,
-    PathArguments, Stmt, Type, parse_macro_input,
+use proc_macro::TokenStream as TokenStream1;
+use proc_macro_error::{abort, proc_macro_error};
+use proc_macro2::{
+    Delimiter, Group, Ident, Spacing, Span, TokenStream, TokenTree, token_stream::IntoIter,
 };
+use quote::{format_ident, quote};
 
-extern crate proc_macro;
-
-// Proc macro implementation for ComputeShader
-#[proc_macro_attribute]
-pub fn compute_shader(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemFn);
-    let fn_name = &input.sig.ident;
-
-    // Extract function parameters and their types
-    let params: Vec<(Ident, Type)> = input
-        .sig
-        .inputs
-        .iter()
-        .filter_map(|arg| {
-            if let FnArg::Typed(pat_type) = arg {
-                if let Pat::Ident(pat_ident) = &*pat_type.pat {
-                    Some((pat_ident.ident.clone(), (*pat_type.ty).clone()))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    // Generate WGSL code
-    let mut wgsl = String::new();
-
-    // Add struct definitions
-    for (name, ty) in &params {
-        if ty_implements_trait(ty, "ComputeInput") {
-            wgsl.push_str(&format!(
-                "
-                @group(0) @binding({binding_num})
-                var<storage, read> {name}: {wgsl_type};
-            ",
-                binding_num = get_binding_num(name),
-                name = name,
-                wgsl_type = get_wgsl_type(ty)
-            ));
-        }
-    }
-
-    // Transform the function body into WGSL
-    let wgsl_body = transform_rust_to_wgsl(&input.block);
-
-    // Generate the complete WGSL shader
-    wgsl.push_str(&format!(
-        "
-        @compute @workgroup_size(64, 1, 1)
-        fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
-            {wgsl_body}
-        }}
-    "
-    ));
-
-    // Store the generated WGSL for runtime use
-    quote! {
-        const WGSL_CODE: &str = #wgsl;
-
-        #input
-
-        impl ComputeShader for #fn_name {
-            fn get_wgsl_code() -> &'static str {
-                WGSL_CODE
-            }
-        }
-        impl WGSLShader for #fn_name {
-            fn wgsl_code() -> String {
-                String::from(#wgsl)
-            }
-        }
-    }
-    .into()
+#[proc_macro]
+#[proc_macro_error]
+pub fn wgsl(stream: TokenStream1) -> TokenStream1 {
+    wgsl2(stream.into()).into()
 }
 
-// Helper functions for the proc macro implementation
-fn transform_rust_to_wgsl(block: &Block) -> String {
-    let mut output = String::new();
+fn open(d: Delimiter) -> char {
+    match d {
+        Delimiter::Parenthesis => '(',
+        Delimiter::Brace => '{',
+        Delimiter::Bracket => '[',
+        Delimiter::None => ' ',
+    }
+}
 
-    for stmt in &block.stmts {
-        match stmt {
-            Stmt::Local(local) => {
-                // Handle variable declarations
-                let pat_ident = if let Pat::Ident(ident) = &local.pat {
-                    &ident.ident
+fn close(d: Delimiter) -> char {
+    match d {
+        Delimiter::Parenthesis => ')',
+        Delimiter::Brace => '}',
+        Delimiter::Bracket => ']',
+        Delimiter::None => ' ',
+    }
+}
+
+/// Convert to `wgsl` and return if we think this uses `naga_oil` or not.
+/// This has to format in a certain way to make `naga_oil` work:
+///
+/// * Linebreaks after `;` and `}`.
+/// * Linebreaks before `#`.
+/// * No space after `#`.
+/// * No spaces before and after `:`.
+fn to_wgsl_string(
+    stream: TokenStream,
+    spans: &mut Vec<(usize, Span)>,
+    string: &mut String,
+) -> bool {
+    let mut first = true;
+    let mut uses_naga_oil = false;
+    for token in stream {
+        match token {
+            TokenTree::Group(g) if first && g.delimiter() == Delimiter::Bracket => (),
+            TokenTree::Ident(i) => {
+                spans.push((string.len(), i.span()));
+                string.push_str(&i.to_string());
+                string.push(' ');
+            }
+            TokenTree::Punct(p) => {
+                spans.push((string.len(), p.span()));
+                if p.as_char() == ';' {
+                    string.push(p.as_char());
+                    string.push('\n');
+                } else if p.as_char() == '#' {
+                    // new line and no spaces for naga_oil
+                    string.push('\n');
+                    string.push(p.as_char());
+                    uses_naga_oil = true;
+                } else if p.as_char() == ':' {
+                    // bend over backwards for `naga_oil` :p
+                    match string.pop() {
+                        Some(' ') => (),
+                        Some(c) => string.push(c),
+                        None => (),
+                    }
+                    string.push(p.as_char());
+                    uses_naga_oil = true;
+                } else if p.spacing() == Spacing::Alone {
+                    string.push(p.as_char());
+                    string.push(' ');
                 } else {
-                    continue;
+                    string.push(p.as_char());
+                }
+            }
+            TokenTree::Literal(l) => {
+                spans.push((string.len(), l.span()));
+                string.push_str(&l.to_string());
+                string.push(' ');
+            }
+            TokenTree::Group(g) => {
+                spans.push((string.len(), g.delim_span().open()));
+                string.push(open(g.delimiter()));
+                if g.delimiter() == Delimiter::Brace {
+                    string.push('\n')
+                }
+                uses_naga_oil |= to_wgsl_string(g.stream(), spans, string);
+                spans.push((string.len(), g.delim_span().close()));
+                string.push(close(g.delimiter()));
+                if g.delimiter() == Delimiter::Brace {
+                    string.push('\n')
+                }
+            }
+        }
+        first = false;
+    }
+    uses_naga_oil
+}
+
+/// Remove duplicated `#`s from `# ident`s.
+fn sanitize_remaining(stream: IntoIter, ident: &Ident, items: &mut Vec<TokenTree>) {
+    let mut last_is_hash = false;
+    for tt in stream {
+        match &tt {
+            // ifndef
+            TokenTree::Punct(p) if p.as_char() == '#' => {
+                last_is_hash = true;
+                items.push(tt)
+            }
+            TokenTree::Ident(i) if last_is_hash && i == ident => {
+                last_is_hash = false;
+                let _ = items.pop();
+                items.push(tt)
+            }
+            TokenTree::Group(g) => {
+                last_is_hash = false;
+                let mut stream = Vec::new();
+                sanitize_remaining(g.stream().into_iter(), ident, &mut stream);
+                items.push(TokenTree::Group(Group::new(
+                    g.delimiter(),
+                    TokenStream::from_iter(stream),
+                )))
+            }
+            _ => {
+                last_is_hash = false;
+                items.push(tt)
+            }
+        }
+    }
+}
+
+fn is_naga_oil_name(name: &Ident) -> bool {
+    name == "define_import_path"
+        || name == "import"
+        || name == "if"
+        || name == "ifdef"
+        || name == "ifndef"
+        || name == "else"
+        || name == "endif"
+}
+
+/// Find the first instance of `#ident` and rewrite the macro as `__paste!(wgsl!())`.
+fn sanitize(stream: TokenStream) -> (TokenStream, Option<Ident>) {
+    let mut result = Vec::new();
+    let mut last_is_hash = false;
+    let mut iter = stream.into_iter();
+    let mut first = true;
+    while let Some(tt) = iter.next() {
+        match tt {
+            // ifndef
+            TokenTree::Group(g) if first && g.delimiter() == Delimiter::Bracket => {
+                result.push(TokenTree::Group(g));
+            }
+            TokenTree::Punct(p) if p.as_char() == '#' => {
+                last_is_hash = true;
+            }
+            // if is a naga_oil definition, write `#def`
+            #[cfg(feature = "naga_oil")]
+            TokenTree::Ident(ident) if last_is_hash && is_naga_oil_name(&ident) => {
+                last_is_hash = false;
+                result.push(TokenTree::Punct(proc_macro2::Punct::new(
+                    '#',
+                    Spacing::Joint,
+                )));
+                result.push(TokenTree::Ident(ident.clone()));
+            }
+            // If # ident, import it and remove duplicated `#`s.
+            TokenTree::Ident(ident) if last_is_hash => {
+                result.push(TokenTree::Ident(ident.clone()));
+                sanitize_remaining(iter, &ident, &mut result);
+                return (TokenStream::from_iter(result), Some(ident));
+            }
+            // Recursively look for `#`s.
+            TokenTree::Group(g) => {
+                let delim = g.delimiter();
+                let (stream, ident) = sanitize(g.stream());
+                result.push(TokenTree::Group(Group::new(delim, stream)));
+                if let Some(ident) = ident {
+                    sanitize_remaining(iter, &ident, &mut result);
+                    return (TokenStream::from_iter(result), Some(ident));
+                }
+            }
+            tt => {
+                last_is_hash = false;
+                result.push(tt)
+            }
+        }
+        first = false
+    }
+    (TokenStream::from_iter(result), None)
+}
+
+fn wgsl2(stream: TokenStream) -> TokenStream {
+    let (stream, pastes) = sanitize(stream);
+    if let Some(paste) = pastes {
+        let paste = format_ident!("__wgsl_paste_{}", paste);
+        return quote! {{use crate::*; #paste!(wgsl!(#stream))}};
+    }
+    let mut spans = Vec::new();
+    let mut source = String::new();
+    #[allow(unused_variables)]
+    let uses_naga_oil = to_wgsl_string(stream, &mut spans, &mut source);
+    #[cfg(feature = "naga_oil")]
+    if uses_naga_oil {
+        return quote! {#source};
+    }
+    match naga::front::wgsl::parse_str(&source) {
+        Ok(module) => {
+            match Validator::new(ValidationFlags::all(), Capabilities::all()).validate(&module) {
+                Ok(_) => quote! {#source},
+                Err(e) => {
+                    if let Some((span, _)) = e.spans().next() {
+                        let location = span.location(&source);
+                        let pos = match spans
+                            .binary_search_by_key(&(location.offset as usize), |x| x.0)
+                        {
+                            Ok(x) => x,
+                            Err(x) => x.saturating_sub(1),
+                        };
+                        abort!(spans[pos].1, "Wgsl Error: {}", e)
+                    }
+                    let e_str = e.to_string();
+                    quote! {compile_error!(#e_str)}
+                }
+            }
+        }
+        Err(e) => {
+            if let Some((span, _)) = e.labels().next() {
+                let location = span.location(&source);
+                let pos = match spans.binary_search_by_key(&(location.offset as usize), |x| x.0) {
+                    Ok(x) => x,
+                    Err(x) => x.saturating_sub(1),
                 };
-
-                if let Some(local_init) = &local.init {
-                    output.push_str(&format!(
-                        "let {} = {};\n",
-                        pat_ident,
-                        transform_expr(&local_init.expr)
-                    ));
-                }
+                abort!(spans[pos].1, "Wgsl Error: {}", e)
             }
-            Stmt::Expr(expr, _) => {
-                // Handle expressions
-                output.push_str(&format!("{};\n", transform_expr(&expr)));
-            }
-            _ => continue,
+            let e_str = e.to_string();
+            quote! {compile_error!(#e_str)}
         }
-    }
-
-    output
-}
-
-fn transform_expr(expr: &Expr) -> String {
-    match expr {
-        Expr::Binary(binary) => {
-            let op_str = match binary.op {
-                syn::BinOp::Add(_) => "+",
-                syn::BinOp::Sub(_) => "-",
-                syn::BinOp::Mul(_) => "*",
-                syn::BinOp::Div(_) => "/",
-                syn::BinOp::Rem(_) => "%",
-                syn::BinOp::And(_) => "&&",
-                syn::BinOp::Or(_) => "||",
-                syn::BinOp::BitXor(_) => "^",
-                syn::BinOp::BitAnd(_) => "&",
-                syn::BinOp::BitOr(_) => "|",
-                syn::BinOp::Shl(_) => "<<",
-                syn::BinOp::Shr(_) => ">>",
-                syn::BinOp::Eq(_) => "==",
-                syn::BinOp::Lt(_) => "<",
-                syn::BinOp::Le(_) => "<=",
-                syn::BinOp::Ne(_) => "!=",
-                syn::BinOp::Ge(_) => ">=",
-                syn::BinOp::Gt(_) => ">",
-                syn::BinOp::AddAssign(_) => "+=",
-                syn::BinOp::SubAssign(_) => "-=",
-                syn::BinOp::MulAssign(_) => "*=",
-                syn::BinOp::DivAssign(_) => "/=",
-                syn::BinOp::RemAssign(_) => "%=",
-                syn::BinOp::BitXorAssign(_) => "^=",
-                syn::BinOp::BitAndAssign(_) => "&=",
-                syn::BinOp::BitOrAssign(_) => "|=",
-                syn::BinOp::ShlAssign(_) => "<<=",
-                syn::BinOp::ShrAssign(_) => ">>=",
-                _ => "/* unsupported operator */",
-            };
-            format!(
-                "{} {} {}",
-                transform_expr(&binary.left),
-                op_str,
-                transform_expr(&binary.right)
-            )
-        }
-        Expr::Call(call) => {
-            let func = transform_expr(&call.func);
-            let args: Vec<String> = call.args.iter().map(|arg| transform_expr(arg)).collect();
-
-            // Special case for Vec::push
-            if func.ends_with(".push") {
-                return format!(
-                    "let idx = atomicAdd(&counter, 1u);\nif (idx < {}_length) {{\n    {}[idx] = {};\n}}",
-                    get_output_name(&func),
-                    get_output_name(&func),
-                    args.join(", ")
-                );
-            }
-
-            format!("{}({})", func, args.join(", "))
-        }
-        Expr::Index(idx) => {
-            format!(
-                "{}[{}]",
-                transform_expr(&idx.expr),
-                transform_expr(&idx.index)
-            )
-        }
-        Expr::Field(field) => {
-            let member_str = match &field.member {
-                syn::Member::Named(ident) => ident.to_string(),
-                syn::Member::Unnamed(index) => index.index.to_string(),
-            };
-            format!("{}.{}", transform_expr(&field.base), member_str)
-        }
-        Expr::Lit(lit) => TokenStream::from(lit.to_token_stream()).to_string(),
-        Expr::Path(path) => path
-            .path
-            .segments
-            .last()
-            .map(|seg| seg.ident.to_string())
-            .unwrap_or_default(),
-        _ => "/* unsupported expression */".to_string(),
     }
 }
 
-fn get_wgsl_type(ty: &Type) -> String {
-    match ty {
-        Type::Path(type_path) => {
-            let last_segment = type_path
-                .path
-                .segments
-                .last()
-                .expect("Type path should have at least one segment");
+/// Export a wgsl item (function, struct, etc).
+///
+/// Must have the same `name` as the exported item.
+///
+/// ```
+/// # use wgsl_ln::{wgsl, wgsl_export};
+/// #[wgsl_export(manhattan_distance)]
+/// pub static MANHATTAN_DISTANCE: &str = wgsl!(
+///     fn manhattan_distance(a: vec2<f32>, b: vec2<f32>) -> f32 {
+///         return abs(a.x - b.x) + abs(a.y - b.y);
+///     }
+/// );
+/// ```
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn wgsl_export(attr: TokenStream1, stream: TokenStream1) -> TokenStream1 {
+    wgsl_export2(attr.into(), stream.into()).into()
+}
 
-            match &last_segment.arguments {
-                PathArguments::AngleBracketed(args) => {
-                    // Handle generic types
-                    let type_name = last_segment.ident.to_string();
-                    let generic_args: Vec<String> = args
-                        .args
-                        .iter()
-                        .filter_map(|arg| {
-                            if let GenericArgument::Type(ty) = arg {
-                                Some(get_wgsl_type(ty))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
-
-                    match type_name.as_str() {
-                        "Vec" => format!("array<{}>", generic_args[0]),
-                        "Vec2" => format!("vec2<{}>", generic_args[0]),
-                        "Vec3" => format!("vec3<{}>", generic_args[0]),
-                        "Vec4" => format!("vec4<{}>", generic_args[0]),
-                        _ => type_name,
+fn wgsl_export2(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let Some(TokenTree::Ident(name)) = attr.into_iter().next() else {
+        abort!(Span::call_site(), "Expected #[wgsl_export(name)]");
+    };
+    let mut wgsl_macro_ident = false;
+    let mut exclamation_mark = false;
+    let sealed = format_ident!("__sealed_{}", name);
+    let mut paste = format_ident!("__wgsl_paste_{}", name);
+    paste.set_span(name.span());
+    for token in stream.clone() {
+        match token {
+            TokenTree::Ident(i) if i == "wgsl" => {
+                wgsl_macro_ident = true;
+                exclamation_mark = false;
+            }
+            TokenTree::Punct(p) if wgsl_macro_ident && p.as_char() == '!' => {
+                exclamation_mark = true;
+            }
+            TokenTree::Group(g) if wgsl_macro_ident && exclamation_mark => {
+                let source = g.stream();
+                return quote! {
+                    #[allow(non_snake_case)]
+                    mod #sealed {
+                        #[allow(non_snake_case)]
+                        #[doc(hidden)]
+                        #[macro_export]
+                        macro_rules! #paste {
+                            (wgsl!($($tt: tt)*)) => {
+                                ::wgsl_ln::__wgsl_paste!(#name {#source} $($tt)*)
+                            };
+                        }
                     }
-                }
-                PathArguments::None => {
-                    // Handle non-generic types
-                    match last_segment.ident.to_string().as_str() {
-                        "f32" => "f32",
-                        "u32" => "u32",
-                        "i32" => "i32",
-                        "bool" => "bool",
-                        custom => custom, // Custom type that should implement WGSLType
+                    #stream
+                };
+            }
+            _ => {
+                wgsl_macro_ident = false;
+                exclamation_mark = false;
+            }
+        }
+    }
+    abort!(Span::call_site(), "Expected wgsl! macro.");
+}
+
+/// Paste and avoid duplicates.
+#[doc(hidden)]
+#[proc_macro]
+#[proc_macro_error]
+pub fn __wgsl_paste(stream: TokenStream1) -> TokenStream1 {
+    __wgsl_paste2(stream.into()).into()
+}
+
+fn __wgsl_paste2(stream: TokenStream) -> TokenStream {
+    let mut iter = stream.into_iter();
+    let Some(TokenTree::Ident(definition)) = iter.next() else {
+        abort!(
+            Span::call_site(),
+            "Expected `__wgsl_paste!($definition {to_be_pasted} $([$($defined)*])? $($tt)*)`!"
+        )
+    };
+    let Some(TokenTree::Group(pasted)) = iter.next() else {
+        abort!(
+            Span::call_site(),
+            "Expected `__wgsl_paste!($definition {to_be_pasted} $([$($defined)*])? $($tt)*)`!"
+        )
+    };
+    let pasted = pasted.stream();
+    match iter.next() {
+        // If some values are defined, check if this item has been defined.
+        // If defined, skip, if not defined, paste and define this item.
+        Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Bracket => {
+            let tokens: TokenStream = iter.collect();
+            let mut found = false;
+            let names: Vec<_> = g
+                .stream()
+                .into_iter()
+                .filter(|x| match x {
+                    TokenTree::Ident(i) => {
+                        if i == &definition {
+                            found = true;
+                        }
+                        true
                     }
-                    .to_string()
-                }
-                _ => panic!("Unsupported type arguments"),
+                    _ => false,
+                })
+                .collect();
+            if found {
+                quote!(::wgsl_ln::wgsl!([#(#names)*] #tokens))
+            } else {
+                quote!(::wgsl_ln::wgsl!([#(#names)* #definition] #pasted #tokens))
             }
         }
-        Type::Array(array) => {
-            format!(
-                "array<{}, {}>",
-                get_wgsl_type(&array.elem),
-                TokenStream::from(array.len.to_token_stream()).to_string()
-            )
+        // If no values defined, paste and define this item.
+        other => {
+            let tokens: TokenStream = iter.collect();
+            quote! {
+                ::wgsl_ln::wgsl!([#definition] #pasted #other #tokens)
+            }
         }
-        Type::Reference(reference) => {
-            // References are ignored in WGSL, just get the inner type
-            get_wgsl_type(&reference.elem)
-        }
-        _ => panic!("Unsupported type in WGSL generation"),
     }
-}
-
-// Keep track of binding numbers
-use std::sync::atomic::{AtomicU32, Ordering};
-static BINDING_COUNTER: AtomicU32 = AtomicU32::new(0);
-
-fn get_binding_num(name: &Ident) -> u32 {
-    // We could make this more sophisticated by:
-    // 1. Using a hash map to ensure consistent numbers across recompilations
-    // 2. Grouping related bindings together
-    // 3. Reserving certain binding numbers for specific purposes
-
-    BINDING_COUNTER.fetch_add(1, Ordering::SeqCst)
-}
-
-// Helper function to reset binding counter between shader compilations
-fn reset_binding_counter() {
-    BINDING_COUNTER.store(0, Ordering::SeqCst);
-}
-
-fn ty_implements_trait(ty: &Type, trait_name: &str) -> bool {
-    // In a real implementation, we would use rustc's trait solving capabilities
-    // This is a simplified version that checks for our marker attributes
-    if let Type::Path(type_path) = ty {
-        let type_name = type_path
-            .path
-            .segments
-            .last()
-            .map(|seg| seg.ident.to_string())
-            .unwrap_or_default();
-
-        // Check if the type has our derive macros
-        // In a real implementation, we would check the actual trait bounds
-        match trait_name {
-            "ComputeInput" => type_name.ends_with("Input") || has_attribute(ty, "ComputeInput"),
-            "ComputeOutput" => type_name.ends_with("Output") || has_attribute(ty, "ComputeOutput"),
-            _ => false,
-        }
-    } else {
-        false
-    }
-}
-
-fn has_attribute(ty: &Type, attr_name: &str) -> bool {
-    // In a real implementation, this would check the actual attributes
-    // of the type using the Rust compiler's APIs
-    // For now, we just assume types following our naming convention
-    // implement the appropriate traits
-    if let Type::Path(type_path) = ty {
-        let type_name = type_path
-            .path
-            .segments
-            .last()
-            .map(|seg| seg.ident.to_string())
-            .unwrap_or_default();
-
-        type_name.contains(attr_name)
-    } else {
-        false
-    }
-}
-
-// Helper function to get output buffer name from method call
-fn get_output_name(method: &str) -> &str {
-    // This is a simplified version - in reality, we'd need to track
-    // the actual variable names and their types
-    if method.contains("results") {
-        "results"
-    } else {
-        "output"
-    }
-}
-
-#[proc_macro_derive(ComputeInput)]
-pub fn compute_input_derive(input: TokenStream) -> TokenStream {
-    // Parse the input tokens into a syntax tree
-    let input = parse_macro_input!(input as DeriveInput);
-    let name = &input.ident;
-
-    // Get the inner type of the struct
-    let inner_type = match &input.data {
-        Data::Struct(data_struct) => match &data_struct.fields {
-            Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
-                // Get the type of the single field
-                &fields.unnamed.first().unwrap().ty
-            }
-            Fields::Named(fields) if fields.named.len() == 1 => {
-                // Get the type of the single named field
-                &fields.named.first().unwrap().ty
-            }
-            _ => panic!("ComputeInput can only be derived for structs with a single field"),
-        },
-        _ => panic!("ComputeInput can only be derived for structs"),
-    };
-
-    // Generate the implementation
-    let expanded = quote! {
-        impl ComputeInput for #name {
-            type Inner = #inner_type;
-
-            fn as_slice(&self) -> &[Self::Inner] {
-                std::slice::from_ref(&self.0)
-            }
-
-            fn from_slice(slice: &[Self::Inner]) -> Vec<Self> {
-                slice.iter().map(|item| Self(*item)).collect()
-            }
-        }
-
-        impl WGSLType for #name {
-            const TYPE_NAME: &'static str = <#inner_type as WGSLType>::TYPE_NAME;
-            const STORAGE_COMPATIBLE: bool = true;
-        }
-    };
-
-    // Return the generated implementation
-    TokenStream::from(expanded)
-}
-
-#[proc_macro_derive(ComputeOutput)]
-pub fn compute_output_derive(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let name = &input.ident;
-
-    let expanded = quote! {
-        impl ComputeOutput for #name {
-            fn as_slice(&self) -> &[Self] {
-                std::slice::from_ref(self)
-            }
-
-            fn from_slice(slice: &[Self]) -> Vec<Self> {
-                slice.to_vec()
-            }
-        }
-
-        impl WGSLType for #name {
-            const TYPE_NAME: &'static str = stringify!(#name);
-            const STORAGE_COMPATIBLE: bool = true;
-        }
-    };
-
-    TokenStream::from(expanded)
 }

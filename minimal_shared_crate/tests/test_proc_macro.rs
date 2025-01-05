@@ -1,15 +1,30 @@
-use minimal_proc_macro::fn_macro_ast_viz_debug;
+// use minimal_proc_macro::wgsl;
 #[test]
-fn test_wgsl_ln() {
+fn test_wgsl_mine() {
     use wgsl_ln::wgsl;
 
-    // pub static MANHATTAN_DISTANCE: &str = wgsl!(
-    //     fn manhattan_distance(a: vec2<f32>, b: vec2<f32>) -> f32 {
-    //         return abs(a.x - b.x) + abs(a.y - b.y);
-    //     }
-    // );
+    //* user input vectors
+    struct Position {
+        pub x: [f32; 2],
+    };
+    struct Radius(pub f32);
+    // struct CollisionResult {
+    // entity1: u32,
+    // entity2: u32,
+    // }
+    // struct Uniforms {
+    //     time: f32,
+    //     resolution: vec2<f32>,
+    // }
+
+    pub static MANHATTAN_DISTANCE: &str = wgsl!(
+        struct Position {
+            x: (f32, f32),
+        }
+    );
+    // pub static un iforms: &str = wgsl!(Uniforms);
     // pub static TEST_2: &str = wgsl!(
-    //     @group(0) @binding(0) var<storage, read> positions: Positions;
+    // @group(0) @binding(0) var<storage, read> positions: Positions;
     // );
 }
 
