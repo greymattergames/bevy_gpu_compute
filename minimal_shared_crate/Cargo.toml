@@ -1,9 +1,0 @@
-[package]
-name = "minimal_shared_crate"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-# minimal_proc_macro = { path = "../minimal_proc_macro" }
-naga = "23.1.0"
-wgsl_ln = "0.2.1"

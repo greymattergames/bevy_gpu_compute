@@ -1,7 +1,0 @@
-[package]
-name = "minimal_test_proc_macro"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-minimal_shared_crate = { path = "../minimal_shared_crate" }

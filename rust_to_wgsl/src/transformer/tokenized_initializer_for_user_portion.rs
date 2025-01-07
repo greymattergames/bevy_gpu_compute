@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 
-use crate::third_crate::wgsl_components::WgslShaderModuleUserPortion;
+use shared::wgsl_components::WgslShaderModuleUserPortion;
 pub fn convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(
     obj: WgslShaderModuleUserPortion,
 ) -> TokenStream {
@@ -130,7 +130,8 @@ pub fn convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(
 
     let initialization_code = format!(
         "{} mod {} {{
-        use crate::third_crate::wgsl_components::*;
+        use shared::wgsl_components::*; //todo, make this less brittle
+
 
         pub fn parsed () -> WgslShaderModuleUserPortion 
         {{
