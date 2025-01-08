@@ -10,7 +10,7 @@ use syn::{Attribute, Ident};
 
 use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_to_wgsl};
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum CustomTypeKind {
     GpuOnlyHelperType,
     Uniform,
@@ -22,7 +22,7 @@ pub enum CustomTypeKind {
 impl From<&Vec<Attribute, Global>> for CustomTypeKind {
     fn from(attrs: &Vec<Attribute, Global>) -> Self {
         for attr in attrs {
-            if attr.path().is_ident("wgsl_uniform") {
+            if attr.path().is_ident("wgsl_config") {
                 return CustomTypeKind::Uniform;
             } else if attr.path().is_ident("wgsl_input_array") {
                 return CustomTypeKind::InputArray;
@@ -35,7 +35,7 @@ impl From<&Vec<Attribute, Global>> for CustomTypeKind {
         CustomTypeKind::GpuOnlyHelperType
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CustomType {
     pub name: CustomTypeName,
     pub kind: CustomTypeKind,

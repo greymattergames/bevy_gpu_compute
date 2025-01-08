@@ -1,12 +1,28 @@
 use proc_macro2::Ident;
 use quote::format_ident;
 
+use crate::wgsl_components::SelfToStructInitializer;
+
 #[derive(Clone, Debug)]
 
 pub struct CustomTypeName {
     pub name: Ident,
     pub upper: Ident,
     pub lower: Ident,
+}
+impl SelfToStructInitializer for CustomTypeName {
+    fn to_struct_initializer(&self) -> String {
+        format!(
+            "CustomTypeName {{
+                name: {},
+                upper: {},
+                lower: {},
+            }}",
+            self.name.to_string(),
+            self.upper.to_string(),
+            self.lower.to_string()
+        )
+    }
 }
 impl CustomTypeName {
     pub fn new(name: &Ident) -> Self {

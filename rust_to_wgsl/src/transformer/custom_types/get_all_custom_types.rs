@@ -45,8 +45,9 @@ impl CustomTypesLister {
     }
 }
 
-pub fn get_custom_types(state: &mut ModuleTransformState) -> AllowedRustTypes {
+pub fn get_custom_types(state: &mut ModuleTransformState) {
     let mut types_lister = CustomTypesLister::new();
     types_lister.visit_item_mod(&state.rust_module);
-    types_lister.allowed_types
+    // println!("allowed types {:?}", types_lister.allowed_types);
+    state.allowed_types = Some(types_lister.allowed_types);
 }

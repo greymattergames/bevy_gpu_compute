@@ -11,7 +11,7 @@ use shared::wgsl_components::{
     WgslType,
 };
 use syn::{
-    Ident, Item, ItemConst, ItemFn, ItemMod,
+    Ident, Item, ItemConst, ItemFn, ItemMod, PatIdent, parse_quote,
     spanned::Spanned,
     visit::{self, Visit},
 };
@@ -35,11 +35,15 @@ struct MainFunctionsExtractor<'a> {
 impl<'ast> Visit<'ast> for MainFunctionsExtractor<'ast> {
     fn visit_item_fn(&mut self, c: &'ast syn::ItemFn) {
         syn::visit::visit_item_fn(self, c);
+        let name = c.sig.ident.to_string();
+        if name != "main" {
+            return;
+        }
         self.count += 1;
         if self.count > 1 {
             abort!(c.sig.ident.span(), "Only one main function is allowed");
         }
-        self.state.result.main_function = Some(parse_fn(c, self.state));
+        self.state.result.main_function = Some(parse_main_fn(c, self.state));
     }
 }
 
@@ -49,13 +53,17 @@ impl<'ast> MainFunctionsExtractor<'ast> {
     }
 }
 
-fn parse_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
+fn parse_main_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
+    let mut func_clone = func.clone();
+    // alter the main function argument
+    func_clone.sig.inputs = parse_quote!(
+        @builtin(global_invocation_id) global_id: vec3<u32>);
     WgslFunction {
         code: WgslShaderModuleComponent {
-            rust_code: func.to_token_stream().to_string(),
-            wgsl_code: convert_to_wgsl(func.to_token_stream(), state).to_string(),
+            rust_code: func_clone.to_token_stream().to_string(),
+            wgsl_code: convert_to_wgsl(func_clone.to_token_stream(), state).to_string(),
         },
-        name: func.sig.ident.to_string(),
+        name: func_clone.sig.ident.to_string(),
     }
 }
 
@@ -68,8 +76,15 @@ fn validate_main_function(function: TokenStream) {
             "Main function must have exactly one parameter of type WgslGlobalId"
         );
     }
-    // Validate the parameter type is WgslGlobalId
+    // Validate the parameter type is WgslGlobalId called "global_id"
     if let syn::FnArg::Typed(pat_type) = &function.sig.inputs[0] {
+        match &*pat_type.pat {
+            syn::Pat::Ident(_) => {}
+            _ => abort!(
+                pat_type.pat.span(),
+                "Main function parameter must be called 'global_id'"
+            ),
+        }
         if let syn::Type::Path(type_path) = &*pat_type.ty {
             if let Some(segment) = type_path.path.segments.last() {
                 if segment.ident != "WgslGlobalId" {

@@ -8,6 +8,7 @@ use state::ModuleTransformState;
 use syn::{parse, parse_macro_input, token::Semi};
 use transformer::{
     custom_types::get_all_custom_types::get_custom_types,
+    module_parser::module_parser::parse_shader_module,
     tokenized_initializer_for_user_portion::convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code,
     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
     type_transformer::apply_known_rust_to_wgsl_type_transformations,
@@ -41,9 +42,9 @@ pub fn shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut state = ModuleTransformState::empty(module);
     get_custom_types(&mut state);
     transform_wgsl_helper_methods(&mut state);
-    extract_shader_module_components(&mut state);
-    convert_rust_to_wgsl(&mut state);
-    let initialization = convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(p);
+    parse_shader_module(&mut state);
+    let initialization =
+        convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(&state);
     quote! (
     #initialization
     )

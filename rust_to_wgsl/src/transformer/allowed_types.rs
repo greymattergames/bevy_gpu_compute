@@ -11,6 +11,7 @@ const LIB_HELPER_TYPES: [&str; 5] = [
     "WgslOutput",
 ];
 
+#[derive(Debug)]
 pub struct AllowedRustTypes {
     pub wgsl_native_types: Vec<String>,
     pub lib_helper_types: Vec<String>,

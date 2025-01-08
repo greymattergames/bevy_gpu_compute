@@ -40,7 +40,7 @@ impl WgslHelperMethodMatcher {
                     "Expected an argument for output push"
                 );
                 assert!(
-                    method.t_def.kind == CustomTypeKind::OutputArray,
+                    method.t_def.kind == CustomTypeKind::OutputVec,
                     "Expected {} to be an output vec type, since WgslOutput::push is called. Put #[wgsl_output_vec] above your type declaration to fix this. A given type cannot be used for multiple purposes, for example a type T cannot be both an input array and an output array, an output cannot be both a vec and an array.",
                     method.t_def.name.name
                 );
