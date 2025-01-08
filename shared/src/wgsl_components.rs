@@ -1,4 +1,13 @@
+use crate::custom_type_name::CustomTypeName;
+
 /// includes just the parts the user has input, with any relevant metadata necessary for the library to complete the module
+
+#[derive(Debug)]
+pub struct WgslShaderModuleComponent {
+    pub rust_code: String,
+    pub wgsl_code: String,
+}
+
 pub struct WgslShaderModuleUserPortion {
     /// defined with the "const" keyword
     /// single line
@@ -12,7 +21,7 @@ pub struct WgslShaderModuleUserPortion {
     /// identified with a #[config_input] attribute above them
     pub uniforms: Vec<WgslType>,
     /// identified with a #[vec_input] attribute above them
-    pub input_arrays: Vec<WgslArray>,
+    pub input_arrays: Vec<WgslInputArray>,
     /// identified with a #[vec_output] attribute above them
     pub output_arrays: Vec<WgslOutputArray>,
     /// any function that appears besides the one called "main"
@@ -22,69 +31,54 @@ pub struct WgslShaderModuleUserPortion {
     /// look for any attempt to ASSIGN to the value of "global_id.x", "global_id.y", or "global_id.z" or just "global_id" and throw an error
     pub main_function: Option<WgslFunction>,
 }
+impl WgslShaderModuleUserPortion {
+    pub fn empty() -> Self {
+        Self {
+            static_consts: vec![],
+            helper_types: vec![],
+            uniforms: vec![],
+            input_arrays: vec![],
+            output_arrays: vec![],
+            helper_functions: vec![],
+            main_function: None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct WgslType {
+    pub name: CustomTypeName,
+    pub code: WgslShaderModuleComponent,
+}
+#[derive(Debug)]
+pub struct WgslDerivedType {
     pub name: String,
-    pub wgsl: String,
+    pub code: WgslShaderModuleComponent,
 }
-impl ToString for WgslType {
-    fn to_string(&self) -> String {
-        return format!("{}{}", self.wgsl.clone(), "\n");
-    }
-}
+
 pub struct WgslFunction {
     pub name: String,
-    pub wgsl_definition: String,
-}
-impl ToString for WgslFunction {
-    fn to_string(&self) -> String {
-        return format!("{}{}", self.wgsl_definition.clone(), "\n");
-    }
+    pub code: WgslShaderModuleComponent,
 }
 
 /// assignments using let can happen within functions and we don't care about them, we don't need to change anything
 pub struct WgslConstAssignment {
-    pub assigner_keyword: String,
-    pub var_name: String,
-    pub var_type: WgslType,
-    pub value: String,
+    pub code: WgslShaderModuleComponent,
 }
-impl ToString for WgslConstAssignment {
-    fn to_string(&self) -> String {
-        return format!(
-            "{} {}: {} = {};\n",
-            self.assigner_keyword, self.var_name, self.var_type.wgsl, self.value
-        );
-    }
+pub struct WgslArrayLength {
+    pub name: String,
+    pub code: WgslShaderModuleComponent,
 }
-pub struct WgslArray {
-    pub type_name: String,
+
+pub struct WgslInputArray {
     pub item_type: WgslType,
-    pub length: u32,
+    pub array_type: WgslDerivedType,
 }
-impl ToString for WgslArray {
-    fn to_string(&self) -> String {
-        return format!(
-            "alias {} = array<{},{}>;\n",
-            self.type_name, self.item_type.name, self.length
-        );
-    }
-}
+
 pub struct WgslOutputArray {
-    pub arr: WgslArray,
-    pub atomic_counter: bool,
-}
-impl ToString for WgslOutputArray {
-    fn to_string(&self) -> String {
-        let mut s = self.arr.to_string();
-        if self.atomic_counter {
-            s.push_str(&format!(
-                "alias {}_counter : atomic<u32>;\n",
-                self.arr.item_type.name
-            ));
-        }
-        return s;
-    }
+    pub item_type: WgslType,
+    pub array_type: WgslDerivedType,
+    pub atomic_counter_type: Option<WgslDerivedType>,
 }
 
 pub enum WgpuShaderType {

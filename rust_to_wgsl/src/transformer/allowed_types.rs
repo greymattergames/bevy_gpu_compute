@@ -14,19 +14,18 @@ const LIB_HELPER_TYPES: [&str; 5] = [
 pub struct AllowedRustTypes {
     pub wgsl_native_types: Vec<String>,
     pub lib_helper_types: Vec<String>,
-    pub user_declared_types: Vec<CustomType>,
+    pub custom_types: Vec<CustomType>,
 }
 
 impl AllowedRustTypes {
-    pub fn new(user_declared_types: Vec<CustomType>) -> Self {
+    pub fn new(custom_types: Vec<CustomType>) -> Self {
         AllowedRustTypes {
             wgsl_native_types: WGSL_NATIVE_TYPES.iter().map(|s| s.to_string()).collect(),
             lib_helper_types: LIB_HELPER_TYPES.iter().map(|s| s.to_string()).collect(),
-            user_declared_types,
+            custom_types,
         }
     }
-    pub fn add_user_type(&mut self, name: String, kind: CustomTypeKind) {
-        todo!()
-        // self.user_declared_types.push(CustomType { name, kind });
+    pub fn add_user_type(&mut self, custom_type: CustomType) {
+        self.custom_types.push(custom_type);
     }
 }

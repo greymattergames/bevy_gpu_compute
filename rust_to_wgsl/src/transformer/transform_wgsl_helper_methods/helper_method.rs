@@ -1,6 +1,6 @@
 use syn::Expr;
 
-use crate::transformer::custom_types::custom_type::{CustomType, CustomTypeKind, CustomTypeName};
+use crate::transformer::custom_types::custom_type::CustomType;
 
 use super::{
     category::WgslHelperCategory, method_name::WgslHelperMethodName,

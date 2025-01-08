@@ -2,9 +2,11 @@ use proc_macro_error::abort;
 use quote::quote;
 use syn::{Item, ItemMod, ItemUse, UseTree, spanned::Spanned};
 
-pub fn handle_use_statements<'a>(content: &'a Vec<Item>, module: &'a ItemMod) -> Vec<&'a Item> {
+use crate::state::ModuleTransformState;
+
+pub fn handle_use_statements<'a>(state: &mut ModuleTransformState) {
     let mut found_valid_use_statement = false;
-    for item in content.iter() {
+    for item in state.rust_module.content.as_ref().unwrap().1.iter() {
         if let Item::Use(use_stmt) = item {
             if !is_valid_use_statement(use_stmt, "wgsl_in_rust_helpers") {
                 abort!(
@@ -21,12 +23,19 @@ pub fn handle_use_statements<'a>(content: &'a Vec<Item>, module: &'a ItemMod) ->
             found_valid_use_statement = true;
         }
     }
-    // Filter out use statements and proceed with remaining items
-    let filtered_content: Vec<_> = content
-        .iter()
-        .filter(|item| !matches!(item, Item::Use(_)))
-        .collect();
-    return filtered_content;
+    state.rust_module.content = Some((
+        state.rust_module.content.as_ref().unwrap().0,
+        state
+            .rust_module
+            .content
+            .as_ref()
+            .unwrap()
+            .1
+            .iter()
+            .filter(|item| !matches!(item, Item::Use(_)))
+            .cloned()
+            .collect(),
+    ));
 }
 
 fn is_valid_use_statement(use_stmt: &ItemUse, valid_path_segment: &str) -> bool {

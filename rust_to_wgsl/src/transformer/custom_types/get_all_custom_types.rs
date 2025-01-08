@@ -2,14 +2,15 @@
 
 // ItemStruct.ident or  ItemType.ident
 
+use quote::ToTokens;
 use syn::{
     Ident, Item, ItemMod,
     visit::{self, Visit},
 };
 
-use crate::transformer::allowed_types::AllowedRustTypes;
+use crate::{state::ModuleTransformState, transformer::allowed_types::AllowedRustTypes};
 
-use super::custom_type::CustomTypeKind;
+use super::custom_type::{CustomType, CustomTypeKind};
 
 struct CustomTypesLister {
     allowed_types: AllowedRustTypes,
@@ -19,14 +20,20 @@ impl<'ast> Visit<'ast> for CustomTypesLister {
     fn visit_item_struct(&mut self, i: &'ast syn::ItemStruct) {
         syn::visit::visit_item_struct(self, i);
 
-        self.allowed_types
-            .add_user_type(i.ident.to_string(), CustomTypeKind::from(&i.attrs));
+        self.allowed_types.add_user_type(CustomType::new(
+            &i.ident,
+            CustomTypeKind::from(&i.attrs),
+            i.to_token_stream(),
+        ));
     }
 
     fn visit_item_type(&mut self, i: &'ast syn::ItemType) {
         syn::visit::visit_item_type(self, i);
-        self.allowed_types
-            .add_user_type(i.ident.to_string(), CustomTypeKind::from(&i.attrs));
+        self.allowed_types.add_user_type(CustomType::new(
+            &i.ident,
+            CustomTypeKind::from(&i.attrs),
+            i.to_token_stream(),
+        ));
     }
 }
 
@@ -38,9 +45,8 @@ impl CustomTypesLister {
     }
 }
 
-pub fn get_custom_types(module: &ItemMod) -> AllowedRustTypes {
-    let mut module = module.clone();
+pub fn get_custom_types(state: &mut ModuleTransformState) -> AllowedRustTypes {
     let mut types_lister = CustomTypesLister::new();
-    types_lister.visit_item_mod(&module);
+    types_lister.visit_item_mod(&state.rust_module);
     types_lister.allowed_types
 }

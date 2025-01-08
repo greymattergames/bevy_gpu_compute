@@ -4,9 +4,12 @@ use std::str::FromStr;
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy};
 use quote::{ToTokens, quote};
+use state::ModuleTransformState;
 use syn::{parse, parse_macro_input, token::Semi};
 use transformer::{
+    custom_types::get_all_custom_types::get_custom_types,
     tokenized_initializer_for_user_portion::convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code,
+    transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
     type_transformer::apply_known_rust_to_wgsl_type_transformations,
 };
 mod state;
@@ -35,9 +38,11 @@ Here are some pointers:
 pub fn shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // set_dummy(quote! { mod shader_module { const t: u32 = 0;} });
     let mut module = parse_macro_input!(item as syn::ItemMod);
-    // let declared_types = get_user_declared_types(&module);
-    // let mut module_prepped = convert_special_helper_functions(&module, declared_types);
-    // let p = parse_shader_module(&module_prepped);
+    let mut state = ModuleTransformState::empty(module);
+    get_custom_types(&mut state);
+    transform_wgsl_helper_methods(&mut state);
+    extract_shader_module_components(&mut state);
+    convert_rust_to_wgsl(&mut state);
     let initialization = convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(p);
     quote! (
     #initialization

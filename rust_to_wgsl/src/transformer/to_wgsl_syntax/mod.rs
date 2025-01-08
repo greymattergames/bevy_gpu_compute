@@ -1,3 +1,13 @@
+use array::ArrayToWgslTransformer;
+use expr::ExprToWgslTransformer;
+use proc_macro2::TokenStream;
+use quote::ToTokens;
+use syn::{Expr, File, Item, parse, parse2, visit_mut::VisitMut};
+use r#type::TypeToWgslTransformer;
+use type_def::TypeDefToWgslTransformer;
+
+use crate::state::ModuleTransformState;
+
 /**
  # Notes about conversions (all syntax not mentioned is either the same or not supported in wgsl)
 
@@ -40,7 +50,19 @@
 - Types:
     - f32, f16, i32, u32, bool, vec2, vec3, vec4, mat2x2, mat3x3, mat4x4
   */
-pub mod array;
-pub mod expr;
-pub mod r#type;
-pub mod type_def;
+mod array;
+mod expr;
+mod r#type;
+mod type_def;
+
+pub fn convert_to_wgsl(input: TokenStream, state: &ModuleTransformState) -> TokenStream {
+    let mut file = parse::<File>(input.into()).unwrap();
+    TypeToWgslTransformer {
+        custom_types: &state.allowed_types.as_ref().unwrap().custom_types,
+    }
+    .visit_file_mut(&mut file);
+    ArrayToWgslTransformer {}.visit_file_mut(&mut file);
+    TypeDefToWgslTransformer {}.visit_file_mut(&mut file);
+    ExprToWgslTransformer {}.visit_file_mut(&mut file);
+    file.to_token_stream().into()
+}

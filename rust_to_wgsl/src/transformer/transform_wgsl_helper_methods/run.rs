@@ -9,10 +9,13 @@ use syn::{
     visit_mut::{self, VisitMut},
 };
 
-use crate::transformer::{
-    custom_types::custom_type::CustomType,
-    transform_wgsl_helper_methods::{
-        helper_method::WgslHelperMethod, to_expanded_format::ToExpandedFormat,
+use crate::{
+    state::ModuleTransformState,
+    transformer::{
+        custom_types::custom_type::CustomType,
+        transform_wgsl_helper_methods::{
+            helper_method::WgslHelperMethod, to_expanded_format::ToExpandedFormat,
+        },
     },
 };
 
@@ -106,9 +109,12 @@ impl HelperFunctionConverter {
 }
 
 /// Rust's normal type checking will ensure that these helper functions are using correctly defined types
-pub fn transform_wgsl_helper_methods(module: &ItemMod, custom_types: &Vec<CustomType>) -> ItemMod {
-    let mut module = module.clone();
-    let mut converter = HelperFunctionConverter::new(custom_types);
-    converter.visit_item_mod_mut(&mut module);
-    module
+pub fn transform_wgsl_helper_methods(state: &mut ModuleTransformState) {
+    assert!(
+        state.allowed_types.is_some(),
+        "Allowed types must be defined"
+    );
+    let mut converter =
+        HelperFunctionConverter::new(&state.allowed_types.as_ref().unwrap().custom_types);
+    converter.visit_item_mod_mut(&mut state.rust_module);
 }

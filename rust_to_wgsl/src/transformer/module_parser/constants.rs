@@ -1,41 +1,44 @@
-use shared::wgsl_components::{WgslConstAssignment, WgslShaderModuleUserPortion, WgslType};
-use syn::{
-    Ident, Item, ItemConst, ItemMod,
-    visit::{self, Visit},
-};
+use quote::ToTokens;
+use shared::wgsl_components::{WgslConstAssignment, WgslShaderModuleComponent};
+use syn::{ItemConst, visit::Visit};
 
-use crate::transformer::allowed_types::AllowedRustTypes;
+use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_to_wgsl};
+
+pub fn find_constants(state: &mut ModuleTransformState) {
+    let rust_module = state.rust_module.clone();
+    let mut extractor = ConstantsExtractor::new(state);
+    extractor.visit_item_mod(&rust_module);
+    state.rust_module = rust_module;
+}
 
 struct ConstantsExtractor<'a> {
-    result: &'a mut WgslShaderModuleUserPortion,
+    state: &'a mut ModuleTransformState,
 }
 
 impl<'ast> Visit<'ast> for ConstantsExtractor<'ast> {
     fn visit_item_const(&mut self, c: &'ast syn::ItemConst) {
         syn::visit::visit_item_const(self, c);
-        self.result.static_consts.push(parse_const_assignment(c));
+        self.state
+            .result
+            .static_consts
+            .push(parse_const_assignment(c, self.state));
     }
 }
 
 impl<'ast> ConstantsExtractor<'ast> {
-    pub fn new(result: &'ast mut WgslShaderModuleUserPortion) -> Self {
-        ConstantsExtractor { result }
+    pub fn new(state: &'ast mut ModuleTransformState) -> Self {
+        ConstantsExtractor { state }
     }
 }
 
-pub fn add_constants(module: &ItemMod, result: &mut WgslShaderModuleUserPortion) {
-    let mut extractor = ConstantsExtractor::new(result);
-    extractor.visit_item_mod(&module);
-}
-
-fn parse_const_assignment(constant: &ItemConst) -> WgslConstAssignment {
+fn parse_const_assignment(
+    constant: &ItemConst,
+    state: &ModuleTransformState,
+) -> WgslConstAssignment {
     WgslConstAssignment {
-        assigner_keyword: "const".to_string(),
-        var_name: constant.ident.to_string(),
-        var_type: WgslType {
-            name: format_type(&constant.ty),
-            wgsl: type_to_wgsl(&constant.ty),
+        code: WgslShaderModuleComponent {
+            rust_code: constant.to_token_stream().to_string(),
+            wgsl_code: convert_to_wgsl(constant.to_token_stream(), &state).to_string(),
         },
-        value: expr_to_wgsl(&constant.expr),
     }
 }

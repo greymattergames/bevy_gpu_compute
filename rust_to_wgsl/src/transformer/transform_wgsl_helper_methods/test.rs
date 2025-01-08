@@ -1,8 +1,18 @@
 #[cfg(test)]
 mod tests {
+    use crate::{
+        state::ModuleTransformState,
+        transformer::{
+            allowed_types::AllowedRustTypes,
+            custom_types::custom_type::{CustomType, CustomTypeKind},
+            transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
+        },
+    };
+
     use super::*;
-    use quote::ToTokens;
-    use syn::parse_quote;
+    use proc_macro2::TokenStream;
+    use quote::{ToTokens, format_ident};
+    use syn::{ItemMod, parse_quote};
 
     #[test]
     fn test_vec_len() {
@@ -15,10 +25,15 @@ mod tests {
         };
         let expected_output =
             "mod test { fn example () { let x = POSITION_INPUT_ARRAY_LENGTH ; } }";
-
-        let custom_types = vec![String::from("Position")];
-        let output = convert_special_helper_functions(&input, custom_types);
-        let result = output.to_token_stream().to_string();
+        let mut state = ModuleTransformState::empty(input);
+        let custom_types = vec![CustomType::new(
+            &format_ident!("Position"),
+            CustomTypeKind::InputArray,
+            TokenStream::new(),
+        )];
+        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        transform_wgsl_helper_methods(&mut state);
+        let result = state.rust_module.to_token_stream().to_string();
         println!("{}", result);
         assert_eq!(
             result, expected_output,
@@ -38,9 +53,15 @@ mod tests {
         };
         let expected_output = "mod test { fn example () { let x = radius_input_array [5] ; } }";
 
-        let custom_types = vec![String::from("Radius")];
-        let output = convert_special_helper_functions(&input, custom_types);
-        let result = output.to_token_stream().to_string();
+        let mut state = ModuleTransformState::empty(input);
+        let custom_types = vec![CustomType::new(
+            &format_ident!("Radius"),
+            CustomTypeKind::InputArray,
+            TokenStream::new(),
+        )];
+        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        transform_wgsl_helper_methods(&mut state);
+        let result = state.rust_module.to_token_stream().to_string();
         println!("{}", result);
         assert_eq!(
             result, expected_output,
@@ -59,10 +80,17 @@ mod tests {
             }
         };
 
-        let custom_types = vec![String::from("CollisionResult")];
         let expected_output = "mod test { fn example () { { let collisionresult_output_array_index = atomicAdd (& collisionresult_counter , 1u) ; if collisionresult_output_array_index < COLLISIONRESULT_OUTPUT_ARRAY_LENGTH { collisionresult_output_array [collisionresult_output_array_index] = value ; } } ; } }";
-        let output = convert_special_helper_functions(&input, custom_types);
-        let result = output.to_token_stream().to_string();
+        let mut state = ModuleTransformState::empty(input);
+        let custom_types = vec![CustomType::new(
+            &format_ident!("CollisionResult"),
+            CustomTypeKind::OutputArray,
+            TokenStream::new(),
+        )];
+        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        transform_wgsl_helper_methods(&mut state);
+        let result = state.rust_module.to_token_stream().to_string();
+
         println!("{}", result);
         assert_eq!(
             result, expected_output,
@@ -80,12 +108,19 @@ mod tests {
                 }
             }
         };
-        let custom_types = vec![String::from("CollisionResult")];
         let expected_output =
             "mod test { fn example () { let x = COLLISIONRESULT_OUTPUT_ARRAY_LENGTH ; } }";
 
-        let output = convert_special_helper_functions(&input, custom_types);
-        let result = output.to_token_stream().to_string();
+        let mut state = ModuleTransformState::empty(input);
+        let custom_types = vec![CustomType::new(
+            &format_ident!("CollisionResult"),
+            CustomTypeKind::OutputArray,
+            TokenStream::new(),
+        )];
+        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        transform_wgsl_helper_methods(&mut state);
+        let result = state.rust_module.to_token_stream().to_string();
+
         println!("{}", result);
         assert_eq!(
             result, expected_output,
@@ -103,12 +138,19 @@ mod tests {
                 }
             }
         };
-        let custom_types = vec![String::from("CollisionResult")];
         let expected_output =
             "mod test { fn example () { collisionresult_output_array [idx] = val ; } }";
 
-        let output = convert_special_helper_functions(&input, custom_types);
-        let result = output.to_token_stream().to_string();
+        let mut state = ModuleTransformState::empty(input);
+        let custom_types = vec![CustomType::new(
+            &format_ident!("CollisionResult"),
+            CustomTypeKind::OutputArray,
+            TokenStream::new(),
+        )];
+        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        transform_wgsl_helper_methods(&mut state);
+        let result = state.rust_module.to_token_stream().to_string();
+
         println!("{}", result);
         assert_eq!(
             result, expected_output,

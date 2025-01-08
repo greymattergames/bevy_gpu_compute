@@ -1,29 +1,26 @@
 use proc_macro_error::abort;
 use quote::ToTokens;
-use syn::spanned::Spanned;
+use syn::{Expr, parse_quote, spanned::Spanned, visit_mut::VisitMut};
 
-fn expr_to_wgsl(expr: &syn::Expr) -> String {
+pub struct ExprToWgslTransformer {}
+
+impl VisitMut for ExprToWgslTransformer {
+    fn visit_expr_mut(&mut self, expr: &mut syn::Expr) {
+        syn::visit_mut::visit_expr_mut(self, expr);
+        if let Some(new_expr) = expr_to_wgsl(expr) {
+            *expr = new_expr;
+        }
+    }
+}
+
+/// if none then no mutation is needed
+fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
     match expr {
-        syn::Expr::Lit(lit) => match &lit.lit {
-            syn::Lit::Int(n) => n.to_string(),
-            syn::Lit::Float(n) => n.to_string(),
-            syn::Lit::Bool(b) => b.value.to_string(),
-            _ => abort!(
-                lit.span(),
-                "Unsupported literal type in constant expression"
-            ),
-        },
+        syn::Expr::Lit(lit) => None,
         syn::Expr::Array(array) => {
             abort!(array.span(), "Array literals are not supported in WGSL")
         }
-        syn::Expr::Assign(assign) => {
-            format!(
-                "{} {} {}",
-                expr_to_wgsl(&assign.left),
-                &assign.eq_token.to_token_stream().to_string(),
-                expr_to_wgsl(&assign.right)
-            )
-        }
+        syn::Expr::Assign(assign) => None,
         syn::Expr::Async(async_expr) => {
             abort!(
                 async_expr.span(),
@@ -36,31 +33,10 @@ fn expr_to_wgsl(expr: &syn::Expr) -> String {
                 "Await expressions are not supported in WGSL"
             )
         }
-        syn::Expr::Binary(bin) => {
-            format!(
-                "({} {} {})",
-                expr_to_wgsl(&bin.left),
-                binary_op_to_wgsl(&bin.op),
-                expr_to_wgsl(&bin.right)
-            )
-        }
-        syn::Expr::Block(block) => format_block(&block.block),
-        syn::Expr::Break(break_expr) => {
-            if let Some(expr) = &break_expr.expr {
-                format!("break {}", expr_to_wgsl(expr))
-            } else {
-                "break".to_string()
-            }
-        }
-        syn::Expr::Call(call) => {
-            let args = call
-                .args
-                .iter()
-                .map(expr_to_wgsl)
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("{}({})", expr_to_wgsl(&call.func), args)
-        }
+        syn::Expr::Binary(bin) => None,
+        syn::Expr::Block(block) => None,
+        syn::Expr::Break(break_expr) => None,
+        syn::Expr::Call(call) => None,
         syn::Expr::Cast(cast) => {
             abort!(cast.span(), "Cast expressions are not supported in WGSL")
         }
@@ -73,56 +49,39 @@ fn expr_to_wgsl(expr: &syn::Expr) -> String {
         syn::Expr::Const(const_expr) => {
             abort!(const_expr.span(), "Const blocks are not supported in WGSL")
         }
-        syn::Expr::Continue(continue_expr) => "continue".to_string(),
-        syn::Expr::Field(field) => {
-            format!(
-                "{}{}{}",
-                expr_to_wgsl(&field.base),
-                field.dot_token.to_token_stream().to_string(),
-                field.member.to_token_stream().to_string(),
-            )
-        }
+        syn::Expr::Continue(continue_expr) => None,
+        syn::Expr::Field(field) => None,
         syn::Expr::ForLoop(for_loop) => {
-            // Convert to C-style for loop
-            format!(
-                "for ({}) {{ {} }}",
-                expr_to_wgsl(&for_loop.expr),
-                format_block(&for_loop.body)
-            )
+            abort!(
+                for_loop.span(),
+                "For loops to wgsl syntax conversion not yet implemented"
+            );
+            //todo Convert to wgsl style for loop from rust
+            // let s = format!(
+            // "for ({init}; {cond}; {update}) {{ {body} }}",
+            // init = &for_loop.init,
+            // cond = &for_loop.cond,
+            // update = &for_loop.update,
+            // body = &for_loop.body
+            // );
+            // Some(parse_quote!(#s))
         }
-        syn::Expr::Group(group) => expr_to_wgsl(&group.expr),
-        syn::Expr::If(if_expr) => {
-            let else_branch = if_expr
-                .else_branch
-                .as_ref()
-                .map(|(_, expr)| format!(" else {{ {} }}", expr_to_wgsl(expr)))
-                .unwrap_or_default();
-
-            format!(
-                "if ({}) {{ {} }}{}",
-                expr_to_wgsl(&if_expr.cond),
-                format_block(&if_expr.then_branch),
-                else_branch
-            )
-        }
-        syn::Expr::Index(index) => {
-            format!(
-                "{}[{}]",
-                expr_to_wgsl(&index.expr),
-                expr_to_wgsl(&index.index)
-            )
-        }
+        syn::Expr::Group(group) => None,
+        syn::Expr::If(if_expr) => None,
+        syn::Expr::Index(index) => None,
         syn::Expr::Infer(_) => {
             abort!(
                 expr.span(),
                 "Type inference expressions are not supported in WGSL"
             )
         }
-        syn::Expr::Let(let_expr) => {
-            abort!(let_expr.span(), "Let expressions are not supported in WGSL")
-        }
+        syn::Expr::Let(let_expr) => None,
         syn::Expr::Loop(loop_expr) => {
-            format!("for (;;) {{ {} }}", format_block(&loop_expr.body))
+            abort!(
+                loop_expr.span(),
+                "Loop expression conversion to wgsl not yet implemented"
+            )
+            //todo format!("for (;;) {{ {} }}", format_block(&loop_expr.body))
         }
         syn::Expr::Macro(macro_expr) => {
             abort!(
@@ -142,7 +101,7 @@ fn expr_to_wgsl(expr: &syn::Expr) -> String {
                 "Method calls are not supported in WGSL, use standalone functions instead"
             )
         }
-        syn::Expr::Paren(paren) => format!("({})", expr_to_wgsl(&paren.expr)),
+        syn::Expr::Paren(paren) => None,
         syn::Expr::Path(path) => {
             if path.path.segments.len() > 1 {
                 abort!(
@@ -150,11 +109,7 @@ fn expr_to_wgsl(expr: &syn::Expr) -> String {
                     "Complex paths are not supported in WGSL, only simple identifiers are allowed"
                 )
             }
-            path.path
-                .segments
-                .first()
-                .map(|seg| seg.ident.to_string())
-                .unwrap_or_default()
+            None
         }
         syn::Expr::Range(range) => {
             abort!(range.span(), "Range expressions are not supported in WGSL")
@@ -166,27 +121,25 @@ fn expr_to_wgsl(expr: &syn::Expr) -> String {
                     "Mutable references are not supported in WGSL yet"
                 )
             }
-            format!("&{}", expr_to_wgsl(&reference.expr))
+            None
+            // format!("&{}", expr_to_wgsl(&reference.expr))
+            // todo still some work to do around converting pointers correctly
         }
-        syn::Expr::Return(ret) => {
-            if let Some(expr) = &ret.expr {
-                format!("return {}", expr_to_wgsl(expr))
-            } else {
-                "return".to_string()
-            }
-        }
+        syn::Expr::Return(ret) => None,
+        /// initialization field order must match the struct definition field order, because we are not able right now to reference the original struct definition to reorder the fields for wgsl
         syn::Expr::Struct(struct_expr) => {
             let fields = struct_expr
                 .fields
                 .iter()
-                .map(|field| expr_to_wgsl(&field.expr))
+                .map(|f| f.to_token_stream().to_string())
                 .collect::<Vec<_>>()
                 .join(", ");
-            format!(
+            let s = format!(
                 "{}({})",
                 &struct_expr.path.segments.last().unwrap().ident.to_string(),
                 fields
-            )
+            );
+            Some(parse_quote!(#s))
         }
         syn::Expr::Try(try_expr) => {
             abort!(try_expr.span(), "Try expressions are not supported in WGSL")
@@ -197,13 +150,7 @@ fn expr_to_wgsl(expr: &syn::Expr) -> String {
         syn::Expr::Tuple(tuple) => {
             abort!(tuple.span(), "Tuple expressions are not supported in WGSL")
         }
-        syn::Expr::Unary(unary) => {
-            format!(
-                "({} {})",
-                unary_op_to_wgsl(&unary.op),
-                expr_to_wgsl(&unary.expr)
-            )
-        }
+        syn::Expr::Unary(unary) => None,
         syn::Expr::Unsafe(unsafe_expr) => {
             abort!(
                 unsafe_expr.span(),
@@ -211,22 +158,22 @@ fn expr_to_wgsl(expr: &syn::Expr) -> String {
             )
         }
         syn::Expr::Verbatim(tokens) => {
-            // Emit warning about uninterpreted tokens
-            tokens.to_string()
+            //todo: Emit warning about uninterpreted tokens
+            None
         }
-        syn::Expr::While(while_expr) => {
-            format!(
-                "while ({}) {{ {} }}",
-                expr_to_wgsl(&while_expr.cond),
-                format_block(&while_expr.body)
-            )
-        }
+        syn::Expr::While(while_expr) => None,
         syn::Expr::Yield(yield_expr) => {
             abort!(
                 yield_expr.span(),
                 "Yield expressions are not supported in WGSL"
             )
         }
-        _ => abort!(expr.span(), "Unsupported expression type in WGSL"),
+        _ => abort!(
+            expr.span(),
+            format!(
+                "Unsupported expression type in WGSL: {}",
+                expr.to_token_stream().to_string()
+            )
+        ),
     }
 }
