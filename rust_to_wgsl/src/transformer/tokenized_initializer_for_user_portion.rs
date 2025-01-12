@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
 
+use proc_macro_error::abort;
 use shared::wgsl_components::{SelfToStructInitializer, WgslShaderModuleUserPortion};
 
 use crate::state::ModuleTransformState;
@@ -53,26 +54,42 @@ pub fn convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(
         .main_function
         .map_or("None".to_string(), |func| func.to_struct_initializer());
 
+    let module_ident = if let Some(c) = &state.module_ident {
+        c
+    } else {
+        abort!(
+            state.rust_module.ident.span(),
+            "No module ident found in transform state"
+        );
+    };
+    let module_visibility = if let Some(c) = &state.module_visibility {
+        c
+    } else {
+        abort!(
+            state.rust_module.ident.span(),
+            "No module visibility found in transform state"
+        );
+    };
     let initialization_code = format!(
         "{} mod {} {{
         use shared::wgsl_components::*; //todo, make this less brittle
-
+        use shared::custom_type_name::*;
 
         pub fn parsed () -> WgslShaderModuleUserPortion 
         {{
         WgslShaderModuleUserPortion {{
-            static_consts: vec![{}],
-            helper_types: vec![{}],
-            uniforms: vec![{}],
-            input_arrays: vec![{}],
-            output_arrays: vec![{}],
-            helper_functions: vec![{}],
-            main_function: {},
+            static_consts: [{}].into(),
+            helper_types: [{}].into(),
+            uniforms: [{}].into(),
+            input_arrays: [{}].into(),
+            output_arrays: [{}].into(),
+            helper_functions: [{}].into(),
+            main_function: Some({}),
         }}
         }}
         }}",
-        state.module_visibility.as_ref().unwrap(),
-        state.module_ident.as_ref().unwrap(),
+        module_visibility,
+        module_ident,
         static_consts,
         helper_types,
         uniforms,
@@ -82,5 +99,12 @@ pub fn convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(
         main_function
     );
 
-    initialization_code.parse().unwrap()
+    if let Ok(parsed) = initialization_code.parse() {
+        return parsed;
+    } else {
+        abort!(
+            state.rust_module.ident.span(),
+            "Failed to parse tokenized initializer code"
+        );
+    }
 }

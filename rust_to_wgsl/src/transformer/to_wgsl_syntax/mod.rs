@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use array::ArrayToWgslTransformer;
 use expr::ExprToWgslTransformer;
-use proc_macro2::TokenStream;
+use proc_macro_error::abort;
+use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use syn::{Expr, File, Item, parse, parse2, visit_mut::VisitMut};
+use syn::{Expr, File, Item, parse, parse2, visit::Visit, visit_mut::VisitMut};
 use r#type::TypeToWgslTransformer;
 use type_def::TypeDefToWgslTransformer;
 
@@ -55,14 +58,37 @@ mod expr;
 mod r#type;
 mod type_def;
 
-pub fn convert_to_wgsl(input: TokenStream, state: &ModuleTransformState) -> TokenStream {
-    let mut file = parse::<File>(input.into()).unwrap();
+pub fn convert_to_wgsl(input: TokenStream, state: &ModuleTransformState) -> String {
+    let mut file = if let Ok(f) = parse::<File>(input.into()) {
+        f
+    } else {
+        abort!(Span::call_site(), "Failed to parse file")
+    };
+    let allowed_types = if let Some(at) = &state.allowed_types {
+        at
+    } else {
+        abort!(
+            state.rust_module.ident.span(),
+            "Allowed types must be set before converting to wgsl"
+        );
+    };
     TypeToWgslTransformer {
-        custom_types: &state.allowed_types.as_ref().unwrap().custom_types,
+        custom_types: &allowed_types.custom_types,
     }
     .visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);
     TypeDefToWgslTransformer {}.visit_file_mut(&mut file);
-    ExprToWgslTransformer {}.visit_file_mut(&mut file);
-    file.to_token_stream().into()
+    // expressions have to be transformed differently because they may change the token structure, so we have to transition to strings
+    let mut string_version = file.to_token_stream().to_string();
+    let mut expression_transformer = ExprToWgslTransformer {
+        replacements: HashMap::new(),
+    };
+    expression_transformer.visit_file(&file);
+    expression_transformer
+        .replacements
+        .iter()
+        .for_each(|(k, v)| {
+            string_version = string_version.replace(k, v);
+        });
+    string_version
 }

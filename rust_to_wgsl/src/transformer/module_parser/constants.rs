@@ -38,7 +38,7 @@ fn parse_const_assignment(
     WgslConstAssignment {
         code: WgslShaderModuleComponent {
             rust_code: constant.to_token_stream().to_string(),
-            wgsl_code: convert_to_wgsl(constant.to_token_stream(), &state).to_string(),
+            wgsl_code: convert_to_wgsl(constant.to_token_stream(), &state),
         },
     }
 }

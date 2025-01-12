@@ -27,7 +27,7 @@ pub mod collision_shader {
     //* user output vectors
     #[wgsl_output_vec]
     struct CollisionResult {
-        entity1: Vec3<u32>,
+        entity1: u32,
         entity2: u32,
     }
     //*  library generated buffer types, will go below

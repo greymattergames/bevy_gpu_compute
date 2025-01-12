@@ -1,22 +1,19 @@
-use proc_macro2::Ident;
-use quote::format_ident;
-
 use crate::wgsl_components::SelfToStructInitializer;
 
 #[derive(Clone, Debug)]
 
 pub struct CustomTypeName {
-    pub name: Ident,
-    pub upper: Ident,
-    pub lower: Ident,
+    pub name: String,
+    pub upper: String,
+    pub lower: String,
 }
 impl SelfToStructInitializer for CustomTypeName {
     fn to_struct_initializer(&self) -> String {
         format!(
             "CustomTypeName {{
-                name: {},
-                upper: {},
-                lower: {},
+                name: \"{}\".to_string(),
+                upper: \"{}\".to_string(),
+                lower: \"{}\".to_string(),
             }}",
             self.name.to_string(),
             self.upper.to_string(),
@@ -25,9 +22,9 @@ impl SelfToStructInitializer for CustomTypeName {
     }
 }
 impl CustomTypeName {
-    pub fn new(name: &Ident) -> Self {
-        let upper = Ident::new(&name.to_string().to_uppercase(), name.span());
-        let lower = Ident::new(&name.to_string().to_lowercase(), name.span());
+    pub fn new(name: &String) -> Self {
+        let upper = name.to_uppercase();
+        let lower = name.to_lowercase();
         Self {
             name: name.clone(),
             upper,
@@ -37,22 +34,22 @@ impl CustomTypeName {
     pub fn eq(&self, other: &String) -> bool {
         self.name.to_string() == *other
     }
-    pub fn input_array_length(&self) -> Ident {
-        format_ident!("{}_INPUT_ARRAY_LENGTH", self.upper)
+    pub fn input_array_length(&self) -> String {
+        format!("{}_INPUT_ARRAY_LENGTH", self.upper)
     }
-    pub fn input_array(&self) -> Ident {
-        format_ident!("{}_input_array", self.lower)
+    pub fn input_array(&self) -> String {
+        format!("{}_input_array", self.lower)
     }
-    pub fn output_array_length(&self) -> Ident {
-        format_ident!("{}_OUTPUT_ARRAY_LENGTH", self.upper)
+    pub fn output_array_length(&self) -> String {
+        format!("{}_OUTPUT_ARRAY_LENGTH", self.upper)
     }
-    pub fn output_array(&self) -> Ident {
-        format_ident!("{}_output_array", self.lower)
+    pub fn output_array(&self) -> String {
+        format!("{}_output_array", self.lower)
     }
-    pub fn counter(&self) -> Ident {
-        format_ident!("{}_counter", self.lower)
+    pub fn counter(&self) -> String {
+        format!("{}_counter", self.lower)
     }
-    pub fn index(&self) -> Ident {
-        format_ident!("{}_output_array_index", self.lower)
+    pub fn index(&self) -> String {
+        format!("{}_output_array_index", self.lower)
     }
 }

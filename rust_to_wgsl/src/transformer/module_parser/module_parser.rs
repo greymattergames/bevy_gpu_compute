@@ -24,6 +24,7 @@ pub fn parse_shader_module(mut state: &mut ModuleTransformState) {
             "Shader module must have a body"
         );
     }
+    find_main_function(&mut state);
     handle_use_statements(&mut state);
     state.module_ident = Some(state.rust_module.ident.to_string());
     state.module_visibility = Some(state.rust_module.vis.to_token_stream().to_string());
@@ -31,5 +32,4 @@ pub fn parse_shader_module(mut state: &mut ModuleTransformState) {
     find_constants(&mut state);
     divide_custom_types_by_category(&mut state);
     find_helper_functions(&mut state);
-    find_main_function(&mut state);
 }

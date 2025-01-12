@@ -6,7 +6,15 @@ use crate::state::ModuleTransformState;
 
 pub fn handle_use_statements<'a>(state: &mut ModuleTransformState) {
     let mut found_valid_use_statement = false;
-    for item in state.rust_module.content.as_ref().unwrap().1.iter() {
+    let module_content = if let Some(c) = &state.rust_module.content {
+        c
+    } else {
+        abort!(
+            state.rust_module.ident.span(),
+            "Shader module must have a body"
+        );
+    };
+    for item in module_content.1.iter() {
         if let Item::Use(use_stmt) = item {
             if !is_valid_use_statement(use_stmt, "wgsl_in_rust_helpers") {
                 abort!(
@@ -24,12 +32,8 @@ pub fn handle_use_statements<'a>(state: &mut ModuleTransformState) {
         }
     }
     state.rust_module.content = Some((
-        state.rust_module.content.as_ref().unwrap().0,
-        state
-            .rust_module
-            .content
-            .as_ref()
-            .unwrap()
+        module_content.0,
+        module_content
             .1
             .iter()
             .filter(|item| !matches!(item, Item::Use(_)))

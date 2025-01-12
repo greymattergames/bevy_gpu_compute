@@ -1,3 +1,4 @@
+use proc_macro_error::abort;
 use shared::{
     custom_type_name::CustomTypeName,
     wgsl_components::{
@@ -15,8 +16,15 @@ use crate::{
 use quote::quote;
 
 pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
-    assert!(state.allowed_types.is_some());
-    for custom_type in state.allowed_types.as_ref().unwrap().custom_types.iter() {
+    let allowed_types = if let Some(ct) = &state.allowed_types {
+        ct
+    } else {
+        abort!(
+            state.rust_module.ident.span(),
+            "Allowed types must be set before dividing custom types"
+        );
+    };
+    for custom_type in allowed_types.custom_types.iter() {
         match custom_type.kind {
             CustomTypeKind::GpuOnlyHelperType => state
                 .result
@@ -65,7 +73,7 @@ fn wgsl_input_array_def_from_item_type(
         name: item.name.input_array().to_string(),
         code: WgslShaderModuleComponent {
             rust_code,
-            wgsl_code: convert_to_wgsl(quote!(rust_code), &state).to_string(),
+            wgsl_code: convert_to_wgsl(quote!(rust_code), &state),
         },
     }
 }
@@ -83,7 +91,7 @@ fn wgsl_output_array_def_from_item_type(
         name: item.name.output_array().to_string(),
         code: WgslShaderModuleComponent {
             rust_code,
-            wgsl_code: convert_to_wgsl(quote!(rust_code), &state).to_string(),
+            wgsl_code: convert_to_wgsl(quote!(rust_code), &state),
         },
     }
 }
@@ -97,7 +105,7 @@ fn wgsl_atomic_counter_def_from_item_type(
         name: item.name.counter().to_string(),
         code: WgslShaderModuleComponent {
             rust_code,
-            wgsl_code: convert_to_wgsl(quote!(rust_code), state).to_string(),
+            wgsl_code: convert_to_wgsl(quote!(rust_code), state),
         },
     }
 }

@@ -2,13 +2,12 @@ use std::alloc::Global;
 
 use proc_macro2::TokenStream;
 use quote::format_ident;
-use shared::{
-    custom_type_name::CustomTypeName,
-    wgsl_components::{WgslShaderModuleComponent, WgslType},
-};
+use shared::wgsl_components::{WgslShaderModuleComponent, WgslType};
 use syn::{Attribute, Ident};
 
 use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_to_wgsl};
+
+use super::custom_type_idents::CustomTypeIdents;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum CustomTypeKind {
@@ -37,24 +36,24 @@ impl From<&Vec<Attribute, Global>> for CustomTypeKind {
 }
 #[derive(Clone, Debug)]
 pub struct CustomType {
-    pub name: CustomTypeName,
+    pub name: CustomTypeIdents,
     pub kind: CustomTypeKind,
     pub rust_code: TokenStream,
 }
 impl CustomType {
     pub fn new(name: &Ident, kind: CustomTypeKind, type_def_code: TokenStream) -> Self {
         Self {
-            name: CustomTypeName::new(name),
+            name: CustomTypeIdents::new(name),
             kind,
             rust_code: type_def_code,
         }
     }
     pub fn into_wgsl_type(self, state: &ModuleTransformState) -> WgslType {
         WgslType {
-            name: self.name,
+            name: self.name.into(),
             code: WgslShaderModuleComponent {
                 rust_code: self.rust_code.to_string(),
-                wgsl_code: convert_to_wgsl(self.rust_code, &state).to_string(),
+                wgsl_code: convert_to_wgsl(self.rust_code, &state),
             },
         }
     }

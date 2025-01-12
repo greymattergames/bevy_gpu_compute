@@ -11,7 +11,6 @@ use transformer::{
     module_parser::module_parser::parse_shader_module,
     tokenized_initializer_for_user_portion::convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code,
     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
-    type_transformer::apply_known_rust_to_wgsl_type_transformations,
 };
 mod state;
 mod transformer;
@@ -45,8 +44,12 @@ pub fn shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     parse_shader_module(&mut state);
     let initialization =
         convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(&state);
-    quote! (
+    let r: TokenStream = quote! (
     #initialization
     )
-    .into()
+    .into();
+    return r;
+    // let out_s = initialization.to_string();
+    // quote!(struct S {};#out_s).into()
+    // item
 }

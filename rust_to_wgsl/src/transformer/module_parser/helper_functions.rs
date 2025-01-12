@@ -1,4 +1,5 @@
-use quote::ToTokens;
+use proc_macro2::Span;
+use quote::{ToTokens, format_ident};
 use shared::wgsl_components::{
     WgslConstAssignment, WgslFunction, WgslShaderModuleComponent, WgslShaderModuleUserPortion,
     WgslType,
@@ -27,6 +28,13 @@ struct HelperFunctionsExtractor<'a> {
 impl<'ast> Visit<'ast> for HelperFunctionsExtractor<'ast> {
     fn visit_item_fn(&mut self, c: &'ast syn::ItemFn) {
         syn::visit::visit_item_fn(self, c);
+        if (c.sig.ident.to_string() == "main") {
+            return;
+        }
+        // ident from string
+        let test_string = "tsts".to_string();
+        let t: Ident = Ident::new(&test_string, Span::call_site());
+
         self.state
             .result
             .helper_functions
@@ -44,7 +52,7 @@ fn parse_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
     WgslFunction {
         code: WgslShaderModuleComponent {
             rust_code: func.to_token_stream().to_string(),
-            wgsl_code: convert_to_wgsl(func.to_token_stream(), state).to_string(),
+            wgsl_code: convert_to_wgsl(func.to_token_stream(), state),
         },
         name: func.sig.ident.to_string(),
     }

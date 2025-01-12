@@ -46,6 +46,7 @@ mod tests {
     fn test_vec_val() {
         let input: ItemMod = parse_quote! {
             mod test {
+
                 fn example() {
                     let x = WgslVecInput::vec_val::<Radius>(5);
                 }
@@ -84,7 +85,7 @@ mod tests {
         let mut state = ModuleTransformState::empty(input);
         let custom_types = vec![CustomType::new(
             &format_ident!("CollisionResult"),
-            CustomTypeKind::OutputArray,
+            CustomTypeKind::OutputVec,
             TokenStream::new(),
         )];
         state.allowed_types = Some(AllowedRustTypes::new(custom_types));
@@ -114,7 +115,7 @@ mod tests {
         let mut state = ModuleTransformState::empty(input);
         let custom_types = vec![CustomType::new(
             &format_ident!("CollisionResult"),
-            CustomTypeKind::OutputArray,
+            CustomTypeKind::OutputVec,
             TokenStream::new(),
         )];
         state.allowed_types = Some(AllowedRustTypes::new(custom_types));

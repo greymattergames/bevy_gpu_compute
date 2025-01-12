@@ -49,8 +49,7 @@ fn get_special_function_generic_type<'a>(
             if let PathArguments::AngleBracketed(args) = &last_seg.arguments {
                 if let Some(GenericArgument::Type(Type::Path(type_path))) = args.args.first() {
                     if let Some(last_seg) = type_path.path.segments.last() {
-                        let name = last_seg.ident.to_string();
-                        return custom_types.iter().find(|t| t.name.eq(&name));
+                        return custom_types.iter().find(|t| t.name.eq(&last_seg.ident));
                     }
                 }
             }
@@ -114,7 +113,14 @@ pub fn transform_wgsl_helper_methods(state: &mut ModuleTransformState) {
         state.allowed_types.is_some(),
         "Allowed types must be defined"
     );
-    let mut converter =
-        HelperFunctionConverter::new(&state.allowed_types.as_ref().unwrap().custom_types);
+    let allowed_types = if let Some(at) = &state.allowed_types {
+        at
+    } else {
+        abort!(
+            state.rust_module.ident.span(),
+            "Allowed types must be set before transforming helper functions"
+        );
+    };
+    let mut converter = HelperFunctionConverter::new(&allowed_types.custom_types);
     converter.visit_item_mod_mut(&mut state.rust_module);
 }

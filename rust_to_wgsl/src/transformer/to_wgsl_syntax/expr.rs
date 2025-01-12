@@ -1,20 +1,28 @@
+use std::collections::HashMap;
+
 use proc_macro_error::abort;
-use quote::ToTokens;
-use syn::{Expr, parse_quote, spanned::Spanned, visit_mut::VisitMut};
+use quote::{ToTokens, quote};
+use syn::{Expr, parse_quote, spanned::Spanned, visit::Visit, visit_mut::VisitMut};
 
-pub struct ExprToWgslTransformer {}
+pub struct ExprToWgslTransformer {
+    // key is the rust syntax, value is the wgsl syntax
+    pub replacements: HashMap<String, String>,
+}
 
-impl VisitMut for ExprToWgslTransformer {
-    fn visit_expr_mut(&mut self, expr: &mut syn::Expr) {
-        syn::visit_mut::visit_expr_mut(self, expr);
+impl<'ast> Visit<'ast> for ExprToWgslTransformer {
+    fn visit_expr(&mut self, expr: &syn::Expr) {
+        // First visit nested expressions
+        syn::visit::visit_expr(self, expr);
         if let Some(new_expr) = expr_to_wgsl(expr) {
-            *expr = new_expr;
+            // Instead of direct replacement, use placeholder system
+            self.replacements
+                .insert(expr.to_token_stream().to_string(), new_expr);
         }
     }
 }
 
 /// if none then no mutation is needed
-fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
+pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<String> {
     match expr {
         syn::Expr::Lit(lit) => None,
         syn::Expr::Array(array) => {
@@ -126,20 +134,23 @@ fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
             // todo still some work to do around converting pointers correctly
         }
         syn::Expr::Return(ret) => None,
-        /// initialization field order must match the struct definition field order, because we are not able right now to reference the original struct definition to reorder the fields for wgsl
+        // initialization field order must match the struct definition field order, because we are not able right now to reference the original struct definition to reorder the fields for wgsl
         syn::Expr::Struct(struct_expr) => {
+            // Some(parse_quote!(Somethin2gnn ( x: 3 )))
             let fields = struct_expr
                 .fields
                 .iter()
-                .map(|f| f.to_token_stream().to_string())
+                .map(|f| f.expr.to_token_stream().to_string())
                 .collect::<Vec<_>>()
                 .join(", ");
-            let s = format!(
-                "{}({})",
-                &struct_expr.path.segments.last().unwrap().ident.to_string(),
-                fields
-            );
-            Some(parse_quote!(#s))
+            let struct_type_name = if let Some(lp) = struct_expr.path.segments.last() {
+                lp
+            } else {
+                abort!(struct_expr.span(), "Struct path is empty")
+            };
+            let s = format!("{}({})", &struct_type_name.ident.to_string(), fields);
+            // Some(syn::Expr::Verbatim(quote!(#s)))
+            Some(s)
         }
         syn::Expr::Try(try_expr) => {
             abort!(try_expr.span(), "Try expressions are not supported in WGSL")

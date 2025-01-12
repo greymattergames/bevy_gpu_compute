@@ -1,5 +1,6 @@
 use proc_macro_error::abort;
-use syn::{PathSegment, TypePath, parse_quote, spanned::Spanned, visit_mut::VisitMut};
+use quote::format_ident;
+use syn::{Ident, PathSegment, TypePath, parse_quote, spanned::Spanned, visit_mut::VisitMut};
 
 use crate::transformer::custom_types::custom_type::CustomType;
 
@@ -25,7 +26,7 @@ pub fn path_type_to_wgsl<'a>(type_path: &mut syn::TypePath, custom_types: &Vec<C
 }
 fn convert_path_segment(segment: PathSegment, custom_types: &Vec<CustomType>) -> PathSegment {
     let ident = &segment.ident;
-    let custom_t = custom_types.iter().find(|t| t.name.eq(&ident.to_string()));
+    let custom_t = custom_types.iter().find(|t| t.name.eq(&ident));
     if let Some(_) = custom_t {
         segment.clone()
     } else {
@@ -34,22 +35,28 @@ fn convert_path_segment(segment: PathSegment, custom_types: &Vec<CustomType>) ->
             "i32" => segment.clone(),
             "u32" => segment.clone(),
             "bool" => segment.clone(),
-            "Vec2" => handle_vec(&segment, "vec2", custom_types),
-            "Vec3" => handle_vec(&segment, "vec3", custom_types),
-            "Vec4" => handle_vec(&segment, "vec4", custom_types),
-            "Mat2x2" => handle_mat(&segment, "mat2x2", custom_types),
-            "Mat3x3" => handle_mat(&segment, "mat3x3", custom_types),
-            "Mat4x4" => handle_mat(&segment, "mat4x4", custom_types),
-            _ => abort!(ident.span(), "Unsupported type in type_to_wgsl"),
+            "vec3" => segment.clone(),
+            "vec2" => segment.clone(),
+            "vec4" => segment.clone(),
+            "mat2x2" => segment.clone(),
+            "mat3x3" => segment.clone(),
+            "mat4x4" => segment.clone(),
+            "WgslGlobalId" => segment.clone(),
+            "Vec2" => handle_vec(&segment, format_ident!("{}", "vec2")),
+            "Vec3" => handle_vec(&segment, format_ident!("{}", "vec3")),
+            "Vec4" => handle_vec(&segment, format_ident!("{}", "vec4")),
+            "Mat2x2" => handle_mat(&segment, format_ident!("{}", "mat2x2")),
+            "Mat3x3" => handle_mat(&segment, format_ident!("{}", "mat3x3")),
+            "Mat4x4" => handle_mat(&segment, format_ident!("{}", "mat4x4")),
+            _ => {
+                let message = format!("Unsupported type in type_to_wgsl: {}", ident.to_string());
+                abort!(ident.span(), message)
+            }
         }
     }
 }
 
-fn handle_vec(
-    segment: &syn::PathSegment,
-    name: &str,
-    custom_types: &Vec<CustomType>,
-) -> PathSegment {
+fn handle_vec(segment: &syn::PathSegment, name: Ident) -> PathSegment {
     {
         if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
             if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
@@ -69,11 +76,7 @@ fn handle_vec(
     }
 }
 
-fn handle_mat(
-    segment: &syn::PathSegment,
-    name: &str,
-    custom_types: &Vec<CustomType>,
-) -> PathSegment {
+fn handle_mat(segment: &syn::PathSegment, name: Ident) -> PathSegment {
     {
         if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
             if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {

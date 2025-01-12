@@ -2,6 +2,7 @@ use crate::{
     state::ModuleTransformState,
     transformer::{allowed_types::AllowedRustTypes, to_wgsl_syntax::convert_to_wgsl},
 };
+use proc_macro::Span;
 use proc_macro_error::abort;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
@@ -20,10 +21,13 @@ pub fn find_main_function(mut state: &mut ModuleTransformState) {
     let module = state.rust_module.clone();
     let mut extractor = MainFunctionsExtractor::new(&mut state);
     extractor.visit_item_mod(&module);
-    if state.result.main_function.is_none() {
+    let main_func = if let Some(mf) = &state.result.main_function {
+        mf
+    } else {
         abort!(state.rust_module.ident.span(), "No main function found");
-    }
-    validate_main_function(quote!(&state.result.main_function.unwrap().code.rust_code));
+    };
+    let r_code = main_func.code.rust_code.clone();
+    validate_main_function(r_code);
     state.rust_module = module;
 }
 
@@ -56,19 +60,51 @@ impl<'ast> MainFunctionsExtractor<'ast> {
 fn parse_main_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
     let mut func_clone = func.clone();
     // alter the main function argument
-    func_clone.sig.inputs = parse_quote!(
-        @builtin(global_invocation_id) global_id: vec3<u32>);
     WgslFunction {
         code: WgslShaderModuleComponent {
             rust_code: func_clone.to_token_stream().to_string(),
-            wgsl_code: convert_to_wgsl(func_clone.to_token_stream(), state).to_string(),
+            wgsl_code: alter_global_id_argument(convert_to_wgsl(
+                func_clone.to_token_stream(),
+                state,
+            )),
         },
         name: func_clone.sig.ident.to_string(),
     }
 }
+/// we have to alter the main function argument to match the wgsl spec by string replace instead of ast manipulation because the new argument is not a valid rust syntax
+fn alter_global_id_argument(func_string: String) -> String {
+    let match_patterns = [
+        "global_id: WgslGlobalId",
+        "global_id : WgslGlobalId",
+        "global_id:WgslGlobalId",
+        "global_id:  WgslGlobalId",
+    ];
+    let replace_pattern = "@builtin(global_invocation_id) global_id: vec3<u32>";
+    let mut new_func = func_string.clone();
+    let mut found = false;
+    for pattern in match_patterns.iter() {
+        if new_func.find(pattern).is_some() {
+            found = true;
+            new_func = new_func.replace(pattern, replace_pattern);
+        }
+    }
+    if !found {
+        let error_message = format!(
+            "Failed to find main function argument, we are looking for a string that exactly matches 'global_id: WgslGlobalId', found {}",
+            new_func
+        );
+        abort!(Span::call_site(), error_message);
+    }
+    new_func
+}
 
-fn validate_main_function(function: TokenStream) {
-    let function = syn::parse2::<ItemFn>(function).unwrap();
+fn validate_main_function(function_string: String) {
+    let function = if let Ok(f) = syn::parse_str::<ItemFn>(&function_string) {
+        f
+    } else {
+        let message = format!("Failed to parse main function: {}", function_string);
+        abort!(Span::call_site(), message);
+    };
     // Check that main has exactly one parameter
     if function.sig.inputs.len() != 1 {
         abort!(
