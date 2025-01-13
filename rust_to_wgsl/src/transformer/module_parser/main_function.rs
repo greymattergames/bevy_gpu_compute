@@ -1,6 +1,6 @@
 use crate::{
     state::ModuleTransformState,
-    transformer::{allowed_types::AllowedRustTypes, to_wgsl_syntax::convert_to_wgsl},
+    transformer::{allowed_types::AllowedRustTypes, to_wgsl_syntax::convert_file_to_wgsl},
 };
 use proc_macro::Span;
 use proc_macro_error::abort;
@@ -63,9 +63,10 @@ fn parse_main_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
     WgslFunction {
         code: WgslShaderModuleComponent {
             rust_code: func_clone.to_token_stream().to_string(),
-            wgsl_code: alter_global_id_argument(convert_to_wgsl(
+            wgsl_code: alter_global_id_argument(convert_file_to_wgsl(
                 func_clone.to_token_stream(),
                 state,
+                "main".to_string(),
             )),
         },
         name: func_clone.sig.ident.to_string(),

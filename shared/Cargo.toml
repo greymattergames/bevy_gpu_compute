@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+paste = "1.0.15"
 proc-macro2 = "1.0.92"
 quote = "1.0.38"

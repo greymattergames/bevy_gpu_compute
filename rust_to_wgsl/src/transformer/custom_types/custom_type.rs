@@ -5,7 +5,7 @@ use quote::format_ident;
 use shared::wgsl_components::{WgslShaderModuleComponent, WgslType};
 use syn::{Attribute, Ident};
 
-use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_to_wgsl};
+use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_file_to_wgsl};
 
 use super::custom_type_idents::CustomTypeIdents;
 
@@ -16,6 +16,7 @@ pub enum CustomTypeKind {
     InputArray,
     OutputArray,
     OutputVec,
+    ArrayLengthVariable,
 }
 
 impl From<&Vec<Attribute, Global>> for CustomTypeKind {
@@ -53,7 +54,7 @@ impl CustomType {
             name: self.name.into(),
             code: WgslShaderModuleComponent {
                 rust_code: self.rust_code.to_string(),
-                wgsl_code: convert_to_wgsl(self.rust_code, &state),
+                wgsl_code: convert_file_to_wgsl(self.rust_code, &state, "custom_type".to_string()),
             },
         }
     }

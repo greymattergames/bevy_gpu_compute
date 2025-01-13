@@ -31,6 +31,8 @@ fn convert_path_segment(segment: PathSegment, custom_types: &Vec<CustomType>) ->
         segment.clone()
     } else {
         match ident.to_string().as_str() {
+            "atomic" => segment.clone(),
+            "array" => segment.clone(),
             "f32" => segment.clone(),
             "i32" => segment.clone(),
             "u32" => segment.clone(),
@@ -41,57 +43,78 @@ fn convert_path_segment(segment: PathSegment, custom_types: &Vec<CustomType>) ->
             "mat2x2" => segment.clone(),
             "mat3x3" => segment.clone(),
             "mat4x4" => segment.clone(),
+            "mat2x3" => segment.clone(),
+            "mat2x4" => segment.clone(),
+            "mat3x2" => segment.clone(),
+            "mat3x4" => segment.clone(),
+            "mat4x2" => segment.clone(),
+            "mat4x3" => segment.clone(),
             "WgslGlobalId" => segment.clone(),
-            "Vec2" => handle_vec(&segment, format_ident!("{}", "vec2")),
-            "Vec3" => handle_vec(&segment, format_ident!("{}", "vec3")),
-            "Vec4" => handle_vec(&segment, format_ident!("{}", "vec4")),
-            "Mat2x2" => handle_mat(&segment, format_ident!("{}", "mat2x2")),
-            "Mat3x3" => handle_mat(&segment, format_ident!("{}", "mat3x3")),
-            "Mat4x4" => handle_mat(&segment, format_ident!("{}", "mat4x4")),
+            "Vec2I32" => parse_quote!(vec2<i32>),
+            "Vec2U32" => parse_quote!(vec2<u32>),
+            "Vec2F32" => parse_quote!(vec2<f32>),
+            "Vec2F16" => parse_quote!(vec2<f16>),
+            "Vec2Bool" => parse_quote!(vec2<bool>),
+            "Vec3I32" => parse_quote!(vec3<i32>),
+            "Vec3U32" => parse_quote!(vec3<u32>),
+            "Vec3F32" => parse_quote!(vec3<f32>),
+            "Vec3F16" => parse_quote!(vec3<f16>),
+            "Vec3Bool" => parse_quote!(vec3<bool>),
+            "Vec4I32" => parse_quote!(vec4<i32>),
+            "Vec4U32" => parse_quote!(vec4<u32>),
+            "Vec4F32" => parse_quote!(vec4<f32>),
+            "Vec4F16" => parse_quote!(vec4<f16>),
+            "Vec4Bool" => parse_quote!(vec4<bool>),
+            "Mat2x2I32" => parse_quote!(mat2x2<i32>),
+            "Mat2x2U32" => parse_quote!(mat2x2<u32>),
+            "Mat2x2F32" => parse_quote!(mat2x2<f32>),
+            "Mat2x2F16" => parse_quote!(mat2x2<f16>),
+            "Mat2x2Bool" => parse_quote!(mat2x2<bool>),
+            "Mat2x3I32" => parse_quote!(mat2x3<i32>),
+            "Mat2x3U32" => parse_quote!(mat2x3<u32>),
+            "Mat2x3F32" => parse_quote!(mat2x3<f32>),
+            "Mat2x3F16" => parse_quote!(mat2x3<f16>),
+            "Mat2x3Bool" => parse_quote!(mat2x3<bool>),
+            "Mat2x4I32" => parse_quote!(mat2x4<i32>),
+            "Mat2x4U32" => parse_quote!(mat2x4<u32>),
+            "Mat2x4F32" => parse_quote!(mat2x4<f32>),
+            "Mat2x4F16" => parse_quote!(mat2x4<f16>),
+            "Mat2x4Bool" => parse_quote!(mat2x4<bool>),
+            "Mat3x2I32" => parse_quote!(mat3x2<i32>),
+            "Mat3x2U32" => parse_quote!(mat3x2<u32>),
+            "Mat3x2F32" => parse_quote!(mat3x2<f32>),
+            "Mat3x2F16" => parse_quote!(mat3x2<f16>),
+            "Mat3x2Bool" => parse_quote!(mat3x2<bool>),
+            "Mat3x3I32" => parse_quote!(mat3x3<i32>),
+            "Mat3x3U32" => parse_quote!(mat3x3<u32>),
+            "Mat3x3F32" => parse_quote!(mat3x3<f32>),
+            "Mat3x3F16" => parse_quote!(mat3x3<f16>),
+            "Mat3x3Bool" => parse_quote!(mat3x3<bool>),
+            "Mat3x4I32" => parse_quote!(mat3x4<i32>),
+            "Mat3x4U32" => parse_quote!(mat3x4<u32>),
+            "Mat3x4F32" => parse_quote!(mat3x4<f32>),
+            "Mat3x4F16" => parse_quote!(mat3x4<f16>),
+            "Mat3x4Bool" => parse_quote!(mat3x4<bool>),
+            "Mat4x2I32" => parse_quote!(mat4x2<i32>),
+            "Mat4x2U32" => parse_quote!(mat4x2<u32>),
+            "Mat4x2F32" => parse_quote!(mat4x2<f32>),
+            "Mat4x2F16" => parse_quote!(mat4x2<f16>),
+            "Mat4x2Bool" => parse_quote!(mat4x2<bool>),
+            "Mat4x3I32" => parse_quote!(mat4x3<i32>),
+            "Mat4x3U32" => parse_quote!(mat4x3<u32>),
+            "Mat4x3F32" => parse_quote!(mat4x3<f32>),
+            "Mat4x3F16" => parse_quote!(mat4x3<f16>),
+            "Mat4x3Bool" => parse_quote!(mat4x3<bool>),
+            "Mat4x4I32" => parse_quote!(mat4x4<i32>),
+            "Mat4x4U32" => parse_quote!(mat4x4<u32>),
+            "Mat4x4F32" => parse_quote!(mat4x4<f32>),
+            "Mat4x4F16" => parse_quote!(mat4x4<f16>),
+            "Mat4x4Bool" => parse_quote!(mat4x4<bool>),
+
             _ => {
                 let message = format!("Unsupported type in type_to_wgsl: {}", ident.to_string());
                 abort!(ident.span(), message)
             }
-        }
-    }
-}
-
-fn handle_vec(segment: &syn::PathSegment, name: Ident) -> PathSegment {
-    {
-        if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
-            if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
-                parse_quote!(#name<#inner_type>)
-            } else {
-                abort!(
-                    segment.span(),
-                    format!("{} requires a type parameter", name)
-                )
-            }
-        } else {
-            abort!(
-                segment.span(),
-                format!("{} requires a type parameter", name)
-            )
-        }
-    }
-}
-
-fn handle_mat(segment: &syn::PathSegment, name: Ident) -> PathSegment {
-    {
-        if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
-            if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
-                parse_quote!(#name<#inner_type>)
-            } else {
-                abort!(
-                    segment.span(),
-                    format!("{} requires a type parameter", name)
-                )
-            }
-        } else {
-            abort!(
-                segment.span(),
-                format!("{} requires a type parameter", name)
-            )
         }
     }
 }

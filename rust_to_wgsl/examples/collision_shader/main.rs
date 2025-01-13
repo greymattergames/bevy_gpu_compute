@@ -5,6 +5,7 @@ use shared::wgsl_components::*;
 #[shader_module]
 pub mod collision_shader {
 
+    use rust_to_wgsl::*;
     use shared::wgsl_in_rust_helpers::*;
     //* no other use or import statements allowed, since they break wgsl
     //* user Shader-Module-Constant
@@ -15,7 +16,7 @@ pub mod collision_shader {
     #[wgsl_config]
     struct Uniforms {
         time: f32,
-        resolution: Vec2<f32>,
+        resolution: Vec2F32,
     }
     //* user input vectors
     //todo this changes to alias
@@ -91,9 +92,11 @@ pub mod collision_shader {
 
 fn main() {
     // User can test the Rust version directly
+    let shader = collision_shader::parsed();
     // let shader = collision_shader::create_pipeline();
     // Can also get WGSL version
     // let wgsl = collision_shader::as_wgsl();
-    // let p = collision_shader::parsed();
+    let p = collision_shader::parsed();
+
     // println!("{:?} string", p.helper_types);
 }

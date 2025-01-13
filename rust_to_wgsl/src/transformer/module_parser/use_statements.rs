@@ -1,76 +1,63 @@
 use proc_macro_error::abort;
-use quote::quote;
-use syn::{Item, ItemMod, ItemUse, UseTree, spanned::Spanned};
+use quote::{ToTokens, quote};
+use syn::{
+    Item, ItemMod, ItemUse, UseTree, parse_quote, spanned::Spanned, visit::Visit,
+    visit_mut::VisitMut,
+};
 
 use crate::state::ModuleTransformState;
 
-pub fn handle_use_statements<'a>(state: &mut ModuleTransformState) {
-    let mut found_valid_use_statement = false;
-    let module_content = if let Some(c) = &state.rust_module.content {
-        c
-    } else {
-        abort!(
-            state.rust_module.ident.span(),
-            "Shader module must have a body"
-        );
-    };
-    for item in module_content.1.iter() {
-        if let Item::Use(use_stmt) = item {
-            if !is_valid_use_statement(use_stmt, "wgsl_in_rust_helpers") {
-                abort!(
-                    use_stmt.span(),
-                    "You cannot export anything into a wgsl module, except for the single helper crate this library provides."
-                );
-            }
-            if found_valid_use_statement {
-                abort!(
-                    use_stmt.span(),
-                    "Only one helper crate import is allowed in a wgsl module."
-                );
-            }
-            found_valid_use_statement = true;
-        }
-    }
-    state.rust_module.content = Some((
-        module_content.0,
-        module_content
-            .1
-            .iter()
-            .filter(|item| !matches!(item, Item::Use(_)))
-            .cloned()
-            .collect(),
-    ));
+const VALID_USE_STATEMENT_PATHS: [&str; 2] = ["wgsl_in_rust_helpers", "rust_to_wgsl"];
+
+pub fn handle_use_statements(state: &mut ModuleTransformState) {
+    let mut handler = UseStatementHandler {};
+    handler.visit_item_mod_mut(&mut state.rust_module);
 }
 
-fn is_valid_use_statement(use_stmt: &ItemUse, valid_path_segment: &str) -> bool {
-    fn check_path_for_helper(path: &UseTree, valid_path_segment: &str) -> bool {
-        match path {
-            UseTree::Name(name) => name.ident == valid_path_segment,
-            UseTree::Path(path) if path.ident == valid_path_segment => true,
-            UseTree::Path(path) => check_path_for_helper(&*path.tree, valid_path_segment),
-            _ => false,
+struct UseStatementHandler {}
+
+impl VisitMut for UseStatementHandler {
+    fn visit_item_mut(&mut self, i: &mut Item) {
+        syn::visit_mut::visit_item_mut(self, i);
+        match i {
+            Item::Use(use_stmt) => {
+                validate_use_statement(&use_stmt);
+                // remove the use statement
+                *i = Item::Verbatim(quote! {})
+            }
+            _ => {}
         }
     }
+}
 
-    let mut current = &use_stmt.tree;
-    loop {
-        match current {
-            syn::UseTree::Path(path) => {
-                if check_path_for_helper(&*path.tree, valid_path_segment) {
-                    return true;
-                }
-                current = &path.tree;
-            }
-            syn::UseTree::Glob(..) => {
-                // Only return true if parent path contained wgsl_in_rust_helpers
-                return match &use_stmt.tree {
-                    syn::UseTree::Path(path) => {
-                        check_path_for_helper(&path.tree, valid_path_segment)
-                    }
-                    _ => false,
-                };
-            }
-            _ => return false,
+fn validate_use_statement(use_stmt: &ItemUse) {
+    let mut single_handler = SingleUseStatementHandler { found: false };
+    single_handler.visit_item_use(use_stmt);
+    if !single_handler.found {
+        let message = format!(
+            "Invalid use statement: {:?}. You are only allowed to import from one of these crates: {}",
+            use_stmt.to_token_stream().to_string(),
+            VALID_USE_STATEMENT_PATHS.join(", ")
+        );
+        abort!(use_stmt.span(), message);
+    }
+}
+
+struct SingleUseStatementHandler {
+    found: bool,
+}
+
+impl<'ast> Visit<'ast> for SingleUseStatementHandler {
+    fn visit_use_path(&mut self, i: &syn::UsePath) {
+        syn::visit::visit_use_path(self, i);
+        if VALID_USE_STATEMENT_PATHS.contains(&i.ident.to_string().as_str()) {
+            self.found = true;
+        }
+    }
+    fn visit_use_name(&mut self, i: &syn::UseName) {
+        syn::visit::visit_use_name(self, i);
+        if VALID_USE_STATEMENT_PATHS.contains(&i.ident.to_string().as_str()) {
+            self.found = true;
         }
     }
 }

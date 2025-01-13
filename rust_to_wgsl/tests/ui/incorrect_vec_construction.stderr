@@ -1,0 +1,17 @@
+error[E0601]: `main` function not found in crate `$CRATE`
+ --> tests/ui/incorrect_vec_construction.rs:6:3
+  |
+6 | };
+  |   ^ consider adding a `main` function to `$DIR/tests/ui/incorrect_vec_construction.rs`
+
+error: cannot construct `shared::wgsl_in_rust_helpers::Vec3Bool` with struct literal syntax due to private fields
+ --> tests/ui/incorrect_vec_construction.rs:2:28
+  |
+2 | const MY_CONST: Vec3Bool = Vec3Bool {
+  |                            ^^^^^^^^
+  |
+  = note: ...and other private field `_force_constructor` that was not provided
+help: you might have meant to use the `new` associated function
+  |
+2 | const MY_CONST: Vec3Bool = Vec3Bool::new(_, _, _);
+  |                                    ~~~~~~~~~~~~~~

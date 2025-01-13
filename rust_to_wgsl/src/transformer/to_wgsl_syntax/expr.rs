@@ -4,6 +4,8 @@ use proc_macro_error::abort;
 use quote::{ToTokens, quote};
 use syn::{Expr, parse_quote, spanned::Spanned, visit::Visit, visit_mut::VisitMut};
 
+use crate::transformer::allowed_types::WGSL_NATIVE_TYPES;
+
 pub struct ExprToWgslTransformer {
     // key is the rust syntax, value is the wgsl syntax
     pub replacements: HashMap<String, String>,
@@ -46,7 +48,7 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<String> {
         syn::Expr::Break(break_expr) => None,
         syn::Expr::Call(call) => None,
         syn::Expr::Cast(cast) => {
-            abort!(cast.span(), "Cast expressions are not supported in WGSL")
+            todo!("casts have this syntax in wgsl: `f32(x)`");
         }
         syn::Expr::Closure(closure) => {
             abort!(
@@ -112,6 +114,18 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<String> {
         syn::Expr::Paren(paren) => None,
         syn::Expr::Path(path) => {
             if path.path.segments.len() > 1 {
+                if path.path.segments.len() == 2 {
+                    let matched = WGSL_NATIVE_TYPES
+                        .iter()
+                        .find(|t| **t == path.path.segments[0].ident.to_string());
+                    if let Some(m) = matched {
+                        if path.path.segments.last().unwrap().ident.to_string() == "new" {
+                            // will be handled at a later stage
+                            return None;
+                        }
+                    }
+                }
+
                 abort!(
                     path.span(),
                     "Complex paths are not supported in WGSL, only simple identifiers are allowed"

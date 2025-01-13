@@ -25,7 +25,7 @@ mod tests {
         };
         let expected_output =
             "mod test { fn example () { let x = POSITION_INPUT_ARRAY_LENGTH ; } }";
-        let mut state = ModuleTransformState::empty(input);
+        let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
             &format_ident!("Position"),
             CustomTypeKind::InputArray,
@@ -54,7 +54,7 @@ mod tests {
         };
         let expected_output = "mod test { fn example () { let x = radius_input_array [5] ; } }";
 
-        let mut state = ModuleTransformState::empty(input);
+        let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
             &format_ident!("Radius"),
             CustomTypeKind::InputArray,
@@ -82,7 +82,7 @@ mod tests {
         };
 
         let expected_output = "mod test { fn example () { { let collisionresult_output_array_index = atomicAdd (& collisionresult_counter , 1u) ; if collisionresult_output_array_index < COLLISIONRESULT_OUTPUT_ARRAY_LENGTH { collisionresult_output_array [collisionresult_output_array_index] = value ; } } ; } }";
-        let mut state = ModuleTransformState::empty(input);
+        let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
             &format_ident!("CollisionResult"),
             CustomTypeKind::OutputVec,
@@ -112,7 +112,7 @@ mod tests {
         let expected_output =
             "mod test { fn example () { let x = COLLISIONRESULT_OUTPUT_ARRAY_LENGTH ; } }";
 
-        let mut state = ModuleTransformState::empty(input);
+        let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
             &format_ident!("CollisionResult"),
             CustomTypeKind::OutputVec,
@@ -142,7 +142,7 @@ mod tests {
         let expected_output =
             "mod test { fn example () { collisionresult_output_array [idx] = val ; } }";
 
-        let mut state = ModuleTransformState::empty(input);
+        let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
             &format_ident!("CollisionResult"),
             CustomTypeKind::OutputArray,

@@ -22,7 +22,7 @@ impl SelfToStructInitializer for WgslShaderModuleComponent {
         )
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WgslShaderModuleUserPortion {
     /// defined with the "const" keyword
     /// single line
@@ -94,7 +94,7 @@ impl SelfToStructInitializer for WgslDerivedType {
         )
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 
 pub struct WgslFunction {
     pub name: String,
@@ -113,7 +113,7 @@ impl SelfToStructInitializer for WgslFunction {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// assignments using let can happen within functions and we don't care about them, we don't need to change anything
 pub struct WgslConstAssignment {
     pub code: WgslShaderModuleComponent,
@@ -128,7 +128,7 @@ impl SelfToStructInitializer for WgslConstAssignment {
         )
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 
 pub struct WgslArrayLength {
     pub name: String,
@@ -146,7 +146,7 @@ impl SelfToStructInitializer for WgslArrayLength {
         )
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 
 pub struct WgslInputArray {
     pub item_type: WgslType,
@@ -164,7 +164,7 @@ impl SelfToStructInitializer for WgslInputArray {
         )
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 
 pub struct WgslOutputArray {
     pub item_type: WgslType,
@@ -184,7 +184,7 @@ impl SelfToStructInitializer for WgslOutputArray {
             self.atomic_counter_type
                 .as_ref()
                 .map_or("None".to_string(), |counter| {
-                    counter.to_struct_initializer()
+                    format!("Some({})", counter.to_struct_initializer())
                 })
         )
     }

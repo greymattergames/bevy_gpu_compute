@@ -2,7 +2,7 @@ use quote::ToTokens;
 use shared::wgsl_components::{WgslConstAssignment, WgslShaderModuleComponent};
 use syn::{ItemConst, visit::Visit};
 
-use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_to_wgsl};
+use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_file_to_wgsl};
 
 pub fn find_constants(state: &mut ModuleTransformState) {
     let rust_module = state.rust_module.clone();
@@ -38,7 +38,7 @@ fn parse_const_assignment(
     WgslConstAssignment {
         code: WgslShaderModuleComponent {
             rust_code: constant.to_token_stream().to_string(),
-            wgsl_code: convert_to_wgsl(constant.to_token_stream(), &state),
+            wgsl_code: convert_file_to_wgsl(constant.to_token_stream(), &state, "const".to_string()),
         },
     }
 }

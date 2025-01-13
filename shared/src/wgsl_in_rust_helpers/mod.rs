@@ -1,15 +1,8 @@
-pub trait WgslScalar {}
-impl WgslScalar for bool {}
-impl WgslScalar for u32 {}
-impl WgslScalar for i32 {}
-impl WgslScalar for f32 {}
-impl WgslScalar for f16 {}
-pub type Vec2<T: WgslScalar> = [T; 2];
-pub type Vec3<T: WgslScalar> = [T; 3];
-pub type Vec4<T: WgslScalar> = [T; 4];
-pub type Mat2x2<T: WgslScalar> = [Vec2<T>; 2];
-pub type Mat3x3<T: WgslScalar> = [Vec3<T>; 3];
-pub type Mat4x4<T: WgslScalar> = [Vec4<T>; 4];
+pub mod matrices;
+pub mod vectors;
+
+pub use matrices::*;
+pub use vectors::*;
 
 pub struct WgslGlobalId {
     pub x: u32,

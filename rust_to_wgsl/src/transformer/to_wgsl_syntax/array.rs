@@ -1,4 +1,5 @@
 use proc_macro_error::abort;
+use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::{parse_quote, spanned::Spanned, visit_mut::VisitMut};
 
@@ -7,27 +8,53 @@ use crate::transformer::custom_types::custom_type::CustomType;
 pub struct ArrayToWgslTransformer {}
 
 impl VisitMut for ArrayToWgslTransformer {
-    fn visit_type_mut(&mut self, t: &mut syn::Type) {
-        syn::visit_mut::visit_type_mut(self, t);
-        if let syn::Type::Array(arr) = t {
-            let arr = array_to_wgsl(arr);
-            *t = arr;
+    fn visit_item_type_mut(&mut self, t: &mut syn::ItemType) {
+        syn::visit_mut::visit_item_type_mut(self, t);
+        match *t.ty.clone() {
+            syn::Type::Array(arr) => {
+                let type_path = array_to_wgsl(&arr);
+                *t.ty = syn::Type::Path(type_path);
+            }
+            _ => (),
+        }
+    }
+    fn visit_pat_type_mut(&mut self, t: &mut syn::PatType) {
+        syn::visit_mut::visit_pat_type_mut(self, t);
+        match *t.ty.clone() {
+            syn::Type::Array(arr) => {
+                let type_path = array_to_wgsl(&arr);
+                *t.ty = syn::Type::Path(type_path);
+            }
+            _ => (),
         }
     }
 }
 
-pub fn array_to_wgsl(arr: &syn::TypeArray) -> syn::Type {
-    let t = &arr.elem;
-    let len = format_array_len(&arr.len);
-    return parse_quote!(array<#t,#len>);
+pub fn array_to_wgsl(arr: &syn::TypeArray) -> syn::TypePath {
+    let ident = match *arr.elem.clone() {
+        syn::Type::Path(p) => {
+            if let Some(f) = p.path.segments.first() {
+                f.ident.clone()
+            } else {
+                abort!(arr.elem.span(), "Array element type is not a path")
+            }
+        }
+        _ => abort!(arr.elem.span(), "Array element type is not a path"),
+    };
+    let len = arr.len.clone();
+
+    return parse_quote!(array<#ident,#len>);
 }
 
-fn format_array_len(expr: &syn::Expr) -> String {
-    match expr {
-        syn::Expr::Lit(lit) => match &lit.lit {
-            syn::Lit::Int(int) => int.to_string(),
-            _ => abort!(lit.span(), "Array length must be an integer literal"),
-        },
-        _ => abort!(expr.span(), "Array length must be a constant expression"),
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use syn::{TypeArray, parse_quote};
+
+    #[test]
+    fn test_array_to_wgsl() {
+        let input: TypeArray = parse_quote! { [f32; 4] };
+        let output = array_to_wgsl(&input);
+        assert_eq!(output.to_token_stream().to_string(), "array < f32 , 4 >");
     }
 }

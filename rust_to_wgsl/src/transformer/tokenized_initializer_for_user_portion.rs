@@ -71,7 +71,13 @@ pub fn convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(
         );
     };
     let initialization_code = format!(
-        "{} mod {} {{
+        "
+        {} mod {}_for_syntax_check {{
+            {}
+        }}
+        
+        
+        {} mod {} {{
         use shared::wgsl_components::*; //todo, make this less brittle
         use shared::custom_type_name::*;
 
@@ -88,6 +94,9 @@ pub fn convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code(
         }}
         }}
         }}",
+        module_visibility,
+        module_ident,
+        state.get_original_content().to_string(),
         module_visibility,
         module_ident,
         static_consts,

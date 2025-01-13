@@ -4,10 +4,12 @@ use array::ArrayToWgslTransformer;
 use expr::ExprToWgslTransformer;
 use proc_macro_error::abort;
 use proc_macro2::{Span, TokenStream};
-use quote::ToTokens;
-use syn::{Expr, File, Item, parse, parse2, visit::Visit, visit_mut::VisitMut};
+use quote::{ToTokens, quote};
+use remove_attributes::remove_attributes;
+use syn::{Expr, File, Item, parse, parse_quote, parse2, visit::Visit, visit_mut::VisitMut};
 use r#type::TypeToWgslTransformer;
 use type_def::TypeDefToWgslTransformer;
+use wgsl_builtin_constructors::convert_wgsl_builtin_constructors;
 
 use crate::state::ModuleTransformState;
 
@@ -22,7 +24,7 @@ use crate::state::ModuleTransformState;
 
 - Reference(ExprReference):
   support pointer types, but this is something for a future version. Example of pointers in wgsl:
-  ```
+  ```ignore
   fn my_function(
       /* 'ptr<function,i32,read_write>' is the type of a pointer value that references
          memory for keeping an 'i32' value, using memory locations in the 'function'
@@ -55,15 +57,31 @@ use crate::state::ModuleTransformState;
   */
 mod array;
 mod expr;
+mod remove_attributes;
 mod r#type;
 mod type_def;
+mod wgsl_builtin_constructors;
+/// called_from is for debug messages
+pub fn convert_file_to_wgsl(
+    input: TokenStream,
+    state: &ModuleTransformState,
+    called_from: String,
+) -> String {
+    let unprocessed_string = input.to_string();
+    let input_no_attributes = remove_attributes(unprocessed_string);
+    let processed_stream: TokenStream = input_no_attributes.parse().unwrap();
+    let debug_str = processed_stream.clone().to_string();
 
-pub fn convert_to_wgsl(input: TokenStream, state: &ModuleTransformState) -> String {
-    let mut file = if let Ok(f) = parse::<File>(input.into()) {
+    let mut file = if let Ok(f) = parse::<File>(processed_stream.into()) {
         f
     } else {
-        abort!(Span::call_site(), "Failed to parse file")
+        let message = format!(
+            "Failed to parse file, in convert_to_wgsl, from {}. File:{}",
+            called_from, debug_str
+        );
+        abort!(Span::call_site(), message);
     };
+
     let allowed_types = if let Some(at) = &state.allowed_types {
         at
     } else {
@@ -77,9 +95,10 @@ pub fn convert_to_wgsl(input: TokenStream, state: &ModuleTransformState) -> Stri
     }
     .visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);
-    TypeDefToWgslTransformer {}.visit_file_mut(&mut file);
-    // expressions have to be transformed differently because they may change the token structure, so we have to transition to strings
+
+    // expressions and type defs have to be transformed differently because they may change the token structure, so we have to transition to strings
     let mut string_version = file.to_token_stream().to_string();
+    // transform expressions
     let mut expression_transformer = ExprToWgslTransformer {
         replacements: HashMap::new(),
     };
@@ -90,5 +109,15 @@ pub fn convert_to_wgsl(input: TokenStream, state: &ModuleTransformState) -> Stri
         .for_each(|(k, v)| {
             string_version = string_version.replace(k, v);
         });
+    // transform type defs (should not conflict with other replacements)
+    let mut type_def_transformer = TypeDefToWgslTransformer {
+        replacements: HashMap::new(),
+    };
+    type_def_transformer.visit_file(&file);
+    type_def_transformer.replacements.iter().for_each(|(k, v)| {
+        string_version = string_version.replace(k, v);
+    });
+    // transform vec and matrix constructors
+    string_version = convert_wgsl_builtin_constructors(string_version);
     string_version
 }

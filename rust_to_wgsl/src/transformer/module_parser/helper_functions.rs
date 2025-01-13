@@ -11,7 +11,7 @@ use syn::{
 
 use crate::{
     state::{self, ModuleTransformState},
-    transformer::{allowed_types::AllowedRustTypes, to_wgsl_syntax::convert_to_wgsl},
+    transformer::{allowed_types::AllowedRustTypes, to_wgsl_syntax::convert_file_to_wgsl},
 };
 
 pub fn find_helper_functions(mut state: &mut ModuleTransformState) {
@@ -52,7 +52,7 @@ fn parse_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
     WgslFunction {
         code: WgslShaderModuleComponent {
             rust_code: func.to_token_stream().to_string(),
-            wgsl_code: convert_to_wgsl(func.to_token_stream(), state),
+            wgsl_code: convert_file_to_wgsl(func.to_token_stream(), state, "helper fn".to_string()),
         },
         name: func.sig.ident.to_string(),
     }

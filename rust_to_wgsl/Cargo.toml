@@ -11,3 +11,6 @@ proc-macro2 = "1.0.92"
 quote = "1.0.38"
 syn = { version = "2.0.94", features = ["full","visit-mut","visit"]   }
 shared = {path = "../shared"}
+regex = "1.11.1"
+compiletest_rs = "0.11.2"
+trybuild = "1.0.101"
