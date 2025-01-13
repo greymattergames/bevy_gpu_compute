@@ -188,7 +188,7 @@ mod component_tests {
         assert!(t2.helper_types.len() == 0);
         assert_eq!(
             t2.uniforms.first().unwrap().code.wgsl_code,
-            " struct Uniforms { time : f32, resolution : vec2 < f32 > , }"
+            "struct Uniforms { time : f32, resolution : vec2 < f32 > , }"
         );
     }
     #[test]
