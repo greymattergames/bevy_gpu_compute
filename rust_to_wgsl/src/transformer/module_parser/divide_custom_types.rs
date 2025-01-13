@@ -59,7 +59,7 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                 state.result.output_arrays.push(WgslOutputArray {
                     item_type: custom_type.clone().into_wgsl_type(&state),
                     array_type: wgsl_output_array_def_from_item_type(custom_type, state),
-                    atomic_counter_type: None,
+                    atomic_counter_name: None,
                 });
             }
             CustomTypeKind::OutputVec => {
@@ -75,10 +75,7 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                 state.result.output_arrays.push(WgslOutputArray {
                     item_type: custom_type.clone().into_wgsl_type(state),
                     array_type: wgsl_output_array_def_from_item_type(custom_type, state),
-                    atomic_counter_type: Some(wgsl_atomic_counter_def_from_item_type(
-                        custom_type,
-                        state,
-                    )),
+                    atomic_counter_name: Some(custom_type.name.counter().to_string()),
                 });
             }
             CustomTypeKind::Uniform => state
@@ -127,25 +124,6 @@ fn wgsl_output_array_def_from_item_type(
                 quote!(type #name = array<#item_type, #array_length>;),
                 &state,
                 "output_array_def".to_string(),
-            ),
-        },
-    }
-}
-
-fn wgsl_atomic_counter_def_from_item_type(
-    item: &CustomType,
-    state: &ModuleTransformState,
-) -> WgslDerivedType {
-    let name = item.name.counter();
-    let rust_code = format!("type {} = atomic<u32>;", item.name.counter());
-    WgslDerivedType {
-        name: item.name.counter().to_string(),
-        code: WgslShaderModuleComponent {
-            rust_code: rust_code.clone(),
-            wgsl_code: convert_file_to_wgsl(
-                quote!(type #name = atomic<u32>;),
-                state,
-                "atomic_counter_def".to_string(),
             ),
         },
     }

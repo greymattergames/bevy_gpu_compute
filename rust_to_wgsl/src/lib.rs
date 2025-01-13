@@ -8,7 +8,7 @@ use state::ModuleTransformState;
 use syn::{parse, parse_macro_input, token::Semi};
 use transformer::{
     custom_types::get_all_custom_types::get_custom_types,
-    module_parser::module_parser::parse_shader_module,
+    module_parser::module_parser::parse_shader_module, remove_doc_comments::remove_doc_comments,
     tokenized_initializer_for_user_portion::convert_wgsl_shader_module_user_portion_into_tokenized_initializer_code,
     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
 };
@@ -67,11 +67,12 @@ let x = my_vec3.x();
 
 #[proc_macro_attribute]
 #[proc_macro_error]
-pub fn shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     println!("Entered shader_module proc macro");
     set_dummy(item.clone().into());
     let content = item.to_string();
-    let mut module = parse_macro_input!(item as syn::ItemMod);
+    let content_no_doc_comments: TokenStream = remove_doc_comments(&content).parse().unwrap();
+    let mut module = parse_macro_input!(content_no_doc_comments as syn::ItemMod);
     let mut state = ModuleTransformState::empty(module, content);
     get_custom_types(&mut state);
     transform_wgsl_helper_methods(&mut state);
@@ -84,10 +85,11 @@ pub fn shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     )
     .into();
     return r;
+
     // let out_s = initialization.to_string();
     // quote!(struct S {};#out_s).into()
     // output the original rust as well, to allow for correct syntax/ compile checking on it
-    // item
+    // quote!({}).into()
 }
 
 /// used to help this library figure out what to do with user-defined types

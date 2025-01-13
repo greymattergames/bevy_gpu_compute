@@ -7,6 +7,7 @@ use quote::quote;
 use super::helper_method::WgslHelperMethod;
 
 pub enum ToExpandedFormatMethodKind {
+    ConfigGet,
     InputLen,
     InputVal,
     OutputPush,
@@ -18,6 +19,12 @@ pub struct ToExpandedFormat {}
 impl ToExpandedFormat {
     pub fn run(method: &WgslHelperMethod) -> TokenStream {
         match method.method_expander_kind {
+            Some(ToExpandedFormatMethodKind::ConfigGet) => {
+                let name = method.t_def.name.uniform();
+                quote! {
+                    #name
+                }
+            }
             Some(ToExpandedFormatMethodKind::InputLen) => {
                 method.t_def.name.input_array_length().to_token_stream()
             }

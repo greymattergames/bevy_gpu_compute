@@ -159,4 +159,32 @@ mod tests {
             expected_output, result
         );
     }
+    #[test]
+    fn test_config_get() {
+        let input: ItemMod = parse_quote! {
+            mod test {
+                fn example() {
+                    let t = WgslConfigInput::get::<Position>();
+                }
+            }
+        };
+        let expected_output = "mod test { fn example () { let t = position ; } }";
+
+        let mut state = ModuleTransformState::empty(input, "".to_string());
+        let custom_types = vec![CustomType::new(
+            &format_ident!("Position"),
+            CustomTypeKind::Uniform,
+            TokenStream::new(),
+        )];
+        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        transform_wgsl_helper_methods(&mut state);
+        let result = state.rust_module.to_token_stream().to_string();
+
+        println!("{}", result);
+        assert_eq!(
+            result, expected_output,
+            "Expected: {}\nGot: {}",
+            expected_output, result
+        );
+    }
 }

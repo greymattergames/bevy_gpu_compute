@@ -128,6 +128,16 @@ impl SelfToStructInitializer for WgslConstAssignment {
         )
     }
 }
+impl WgslConstAssignment {
+    pub fn new(name: &str, scalar_type: &str, value: &str) -> Self {
+        Self {
+            code: WgslShaderModuleComponent {
+                rust_code: format!("const {}: {} = {};", name, scalar_type, value),
+                wgsl_code: format!("override {}: {} = {};", name, scalar_type, value),
+            },
+        }
+    }
+}
 #[derive(Clone, Debug)]
 
 pub struct WgslArrayLength {
@@ -169,7 +179,7 @@ impl SelfToStructInitializer for WgslInputArray {
 pub struct WgslOutputArray {
     pub item_type: WgslType,
     pub array_type: WgslDerivedType,
-    pub atomic_counter_type: Option<WgslDerivedType>,
+    pub atomic_counter_name: Option<String>,
 }
 impl SelfToStructInitializer for WgslOutputArray {
     fn to_struct_initializer(&self) -> String {
@@ -177,14 +187,14 @@ impl SelfToStructInitializer for WgslOutputArray {
             "WgslOutputArray {{
                 item_type: {},
                 array_type: {},
-                atomic_counter_type: {},
+                atomic_counter_name: {},
             }}",
             self.item_type.to_struct_initializer(),
             self.array_type.to_struct_initializer(),
-            self.atomic_counter_type
+            self.atomic_counter_name
                 .as_ref()
                 .map_or("None".to_string(), |counter| {
-                    format!("Some({})", counter.to_struct_initializer())
+                    format!("Some(\"{}\".to_string())", counter)
                 })
         )
     }
@@ -204,20 +214,21 @@ impl ToString for WgpuShaderType {
         }
     }
 }
+
+pub const WORKGROUP_SIZE_X_VAR_NAME: &str = "_LIB_WORKGROUP_SIZE_X";
+pub const WORKGROUP_SIZE_Y_VAR_NAME: &str = "_LIB_WORKGROUP_SIZE_Y";
+pub const WORKGROUP_SIZE_Z_VAR_NAME: &str = "_LIB_WORKGROUP_SIZE_Z";
 pub struct WgslWorkgroupDeclaration {
     pub shader_type: WgpuShaderType,
-    pub x: u32,
-    pub y: u32,
-    pub z: u32,
 }
 impl ToString for WgslWorkgroupDeclaration {
     fn to_string(&self) -> String {
         return format!(
             "@{} @workgroup_size({}, {}, {})\n",
             self.shader_type.to_string(),
-            self.x,
-            self.y,
-            self.z
+            WORKGROUP_SIZE_X_VAR_NAME,
+            WORKGROUP_SIZE_Y_VAR_NAME,
+            WORKGROUP_SIZE_Z_VAR_NAME
         );
     }
 }

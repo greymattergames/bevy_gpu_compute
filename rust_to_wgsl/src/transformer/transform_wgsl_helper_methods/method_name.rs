@@ -6,6 +6,7 @@ pub enum WgslHelperMethodName {
     Push,
     Len,
     Set,
+    Get,
     _Invalid,
 }
 impl WgslHelperMethodName {
@@ -16,6 +17,7 @@ impl WgslHelperMethodName {
             "push" => Some(WgslHelperMethodName::Push),
             "len" => Some(WgslHelperMethodName::Len),
             "set" => Some(WgslHelperMethodName::Set),
+            "get" => Some(WgslHelperMethodName::Get),
             _ => None,
         }
     }

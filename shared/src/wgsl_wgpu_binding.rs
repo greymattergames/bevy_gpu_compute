@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use crate::wgsl_components::WgslOutputArray;
+#[derive(Clone, Debug)]
 pub struct WgslWgpuBinding {
     pub group_num: u32,
     pub entry_num: u32,
@@ -21,6 +23,59 @@ impl ToString for WgslWgpuBinding {
         );
     }
 }
+
+impl WgslWgpuBinding {
+    pub fn uniform(group_num: u32, entry_num: u32, name: String, type_name: String) -> Self {
+        WgslWgpuBinding {
+            group_num,
+            entry_num,
+            buffer_type: WgpuBufferType::Uniform,
+            access: WgpuBufferAccessMode::Read,
+            name,
+            type_name,
+        }
+    }
+    pub fn input_array(group_num: u32, entry_num: u32, name: String, type_name: String) -> Self {
+        WgslWgpuBinding {
+            group_num,
+            entry_num,
+            buffer_type: WgpuBufferType::Storage,
+            access: WgpuBufferAccessMode::Read,
+            name,
+            type_name,
+        }
+    }
+    pub fn output_array(group_num: u32, entry_num: u32, name: String, type_name: String) -> Self {
+        WgslWgpuBinding {
+            group_num,
+            entry_num,
+            buffer_type: WgpuBufferType::Storage,
+            access: WgpuBufferAccessMode::ReadWrite,
+            name,
+            type_name,
+        }
+    }
+
+    pub fn counter(
+        entry_number: u32,
+        out_array: &WgslOutputArray,
+        out_array_binding: &WgslWgpuBinding,
+    ) -> Self {
+        assert!(
+            out_array.atomic_counter_name.is_some(),
+            "Atomic counter name must be present if you want to create a counter binding"
+        );
+        WgslWgpuBinding {
+            group_num: out_array_binding.group_num,
+            entry_num: entry_number,
+            buffer_type: WgpuBufferType::Storage,
+            access: WgpuBufferAccessMode::ReadWrite,
+            name: out_array.atomic_counter_name.as_ref().unwrap().clone(),
+            type_name: "atomic<u32>".to_string(),
+        }
+    }
+}
+#[derive(Clone, Debug)]
 enum WgpuBufferType {
     Storage,
     Uniform,
@@ -43,7 +98,7 @@ impl ToString for WgpuBufferType {
         }
     }
 }
-// string either "read" or "read_write"
+#[derive(Clone, Debug)]
 enum WgpuBufferAccessMode {
     Read,
     ReadWrite,

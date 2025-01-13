@@ -1,8 +1,8 @@
-use rust_to_wgsl::shader_module;
+use rust_to_wgsl::wgsl_shader_module;
 use shared::wgsl_components::*;
 // This module will be transformed
 // the user would not normally input the comments, those are just there for the developer, temporary
-#[shader_module]
+#[wgsl_shader_module]
 pub mod collision_shader {
 
     use rust_to_wgsl::*;

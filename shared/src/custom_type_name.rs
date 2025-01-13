@@ -34,6 +34,9 @@ impl CustomTypeName {
     pub fn eq(&self, other: &String) -> bool {
         self.name.to_string() == *other
     }
+    pub fn uniform(&self) -> String {
+        self.lower.to_string()
+    }
     pub fn input_array_length(&self) -> String {
         format!("{}_INPUT_ARRAY_LENGTH", self.upper)
     }

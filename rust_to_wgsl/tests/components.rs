@@ -4,13 +4,13 @@ mod component_tests {
     use super::*;
     use proc_macro2::TokenStream;
     use quote::{ToTokens, format_ident};
-    use rust_to_wgsl::shader_module;
+    use rust_to_wgsl::wgsl_shader_module;
     use shared::wgsl_in_rust_helpers::Vec3Bool;
     use syn::{ItemMod, parse_quote};
 
     #[test]
     fn test_simple_struct() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use shared::wgsl_in_rust_helpers::WgslGlobalId;
 
@@ -38,7 +38,7 @@ mod component_tests {
 
     #[test]
     fn test_struct_creation() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use shared::wgsl_in_rust_helpers::WgslGlobalId;
 
@@ -66,7 +66,7 @@ mod component_tests {
     }
     #[test]
     fn test_simple_type_transforms() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use shared::wgsl_in_rust_helpers::{WgslGlobalId, *};
             struct TStruct {
@@ -90,7 +90,7 @@ mod component_tests {
     }
     #[test]
     fn test_struct_creation_with_nested_transforms() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use shared::wgsl_in_rust_helpers::*;
 
@@ -123,7 +123,7 @@ mod component_tests {
     }
     #[test]
     fn test_type_alias() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use shared::wgsl_in_rust_helpers::*;
             type MyType = i32;
@@ -145,7 +145,7 @@ mod component_tests {
     #[test]
     fn test_consts() {
         let t = Vec3Bool::new(true, false, true);
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use shared::wgsl_in_rust_helpers::{WgslGlobalId, *};
             const MY_CONST: i32 = 3;
@@ -167,7 +167,7 @@ mod component_tests {
     }
     #[test]
     fn test_uniforms() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use rust_to_wgsl::wgsl_config;
             use shared::wgsl_in_rust_helpers::*;
@@ -176,7 +176,9 @@ mod component_tests {
                 time: f32,
                 resolution: Vec2F32,
             }
-            fn main(global_id: WgslGlobalId) {}
+            fn main(global_id: WgslGlobalId) {
+                let time = WgslConfigInput::get::<Uniforms>().time;
+            }
         }
         let t2 = test_module::parsed();
         assert!(t2.output_arrays.len() == 0);
@@ -193,7 +195,7 @@ mod component_tests {
     }
     #[test]
     fn test_input_arrays() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use rust_to_wgsl::wgsl_input_array;
             use shared::wgsl_in_rust_helpers::*;
@@ -222,7 +224,7 @@ mod component_tests {
 
     #[test]
     fn test_output_arrays() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use rust_to_wgsl::wgsl_output_array;
             use shared::wgsl_in_rust_helpers::*;
@@ -254,13 +256,13 @@ COLLISIONRESULT_OUTPUT_ARRAY_LENGTH > ;"
             t2.output_arrays
                 .first()
                 .unwrap()
-                .atomic_counter_type
+                .atomic_counter_name
                 .is_none()
         );
     }
     #[test]
     fn test_output_vec() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use rust_to_wgsl::wgsl_output_vec;
             use shared::wgsl_in_rust_helpers::*;
@@ -292,24 +294,22 @@ COLLISIONRESULT_OUTPUT_ARRAY_LENGTH > ;"
             t2.output_arrays
                 .first()
                 .unwrap()
-                .atomic_counter_type
+                .atomic_counter_name
                 .is_some()
         );
         assert_eq!(
             t2.output_arrays
                 .first()
                 .unwrap()
-                .atomic_counter_type
+                .atomic_counter_name
                 .as_ref()
-                .unwrap()
-                .code
-                .wgsl_code,
-            "alias collisionresult_counter  = atomic < u32 > ;"
+                .unwrap(),
+            &"collisionresult_counter".to_string()
         )
     }
     #[test]
     fn test_helper_functions() {
-        #[shader_module]
+        #[wgsl_shader_module]
         pub mod test_module {
             use shared::wgsl_in_rust_helpers::*;
             fn calculate_distance_squared(p1: [f32; 2], p2: [f32; 2]) -> f32 {
@@ -331,5 +331,27 @@ COLLISIONRESULT_OUTPUT_ARRAY_LENGTH > ;"
             t2.helper_functions.first().unwrap().code.wgsl_code,
             "fn calculate_distance_squared(p1 : array < f32, 2 > , p2 : array < f32, 2 >)\n-> f32\n{\n    let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *\n    dy;\n}"
         );
+    }
+    #[test]
+    fn test_doc_comments() {
+        #[wgsl_shader_module]
+        pub mod test_module {
+            use rust_to_wgsl::wgsl_config;
+            use shared::wgsl_in_rust_helpers::*;
+            /// some doc comment, should be removed
+            #[wgsl_config]
+            struct MyConfig {
+                value: bool,
+            }
+            fn main(global_id: WgslGlobalId) {}
+        }
+        let t2 = test_module::parsed();
+        assert!(t2.output_arrays.len() == 0);
+        assert!(t2.input_arrays.len() == 0);
+        assert!(t2.uniforms.len() == 1);
+        assert!(t2.helper_functions.len() == 0);
+        assert!(t2.main_function.is_some());
+        assert!(t2.static_consts.len() == 0);
+        assert!(t2.helper_types.len() == 0);
     }
 }

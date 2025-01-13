@@ -70,6 +70,7 @@ fn update_single_pipeline(
             layout: Some(&pipeline_layout.0),
             module: &shader_module,
             entry_point: Some(wgsl.entry_point_function_name()),
+            // this is where we specify new values for pipeline constants...
             compilation_options: Default::default(),
             cache: None,
         });

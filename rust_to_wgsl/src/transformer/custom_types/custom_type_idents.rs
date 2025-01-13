@@ -23,6 +23,9 @@ impl CustomTypeIdents {
     pub fn eq(&self, other: &Ident) -> bool {
         self.name.to_string() == *other.to_string()
     }
+    pub fn uniform(&self) -> &Ident {
+        &self.lower
+    }
     pub fn input_array_length(&self) -> Ident {
         format_ident!("{}_INPUT_ARRAY_LENGTH", self.upper)
     }

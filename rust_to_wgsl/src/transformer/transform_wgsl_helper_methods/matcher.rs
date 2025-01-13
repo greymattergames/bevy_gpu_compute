@@ -14,6 +14,15 @@ pub struct WgslHelperMethodMatcher {}
 impl WgslHelperMethodMatcher {
     pub fn choose_expand_format(method: &mut WgslHelperMethod) {
         match (&method.category, &method.method) {
+            (WgslHelperCategory::ConfigInput, WgslHelperMethodName::Get) => {
+                assert!(
+                    method.t_def.kind == CustomTypeKind::Uniform,
+                    "Expected {} to be an input config type, since WgslConfigInput::get is called, instead found it was of type {:?}. Put #[wgsl_config] above your type declaration to fix this. A given type cannot be used for multiple purposes, for example a type T cannot be both a config and a input array.",
+                    method.t_def.name.name,
+                    method.t_def.kind
+                );
+                method.method_expander_kind = Some(ToExpandedFormatMethodKind::ConfigGet);
+            }
             (WgslHelperCategory::VecInput, WgslHelperMethodName::VecLen) => {
                 assert!(
                     method.t_def.kind == CustomTypeKind::InputArray,
