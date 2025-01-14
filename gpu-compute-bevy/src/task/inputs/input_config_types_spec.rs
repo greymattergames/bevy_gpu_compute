@@ -1,3 +1,5 @@
+use shared::misc_types::InputConfigTypesSpec;
+
 pub struct BlankInputConfigTypesSpec {}
 impl InputConfigTypesSpec for BlankInputConfigTypesSpec {
     type Input0 = ();

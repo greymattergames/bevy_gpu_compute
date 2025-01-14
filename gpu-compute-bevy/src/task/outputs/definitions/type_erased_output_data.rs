@@ -1,6 +1,7 @@
 use bevy::prelude::Component;
+use shared::misc_types::OutputVectorTypesSpec;
 
-use super::{output_data::OutputData, output_vector_types_spec::OutputVectorTypesSpec};
+use super::output_data::OutputData;
 
 #[derive(Clone, Component)]
 pub struct TypeErasedOutputData {

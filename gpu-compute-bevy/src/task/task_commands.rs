@@ -2,6 +2,7 @@ use bevy::{
     log,
     prelude::{Commands, Component, DespawnRecursiveExt, Entity, Event, Query, ResMut},
 };
+use shared::misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec};
 
 use crate::run_ids::GpuAcceleratedBevyRunIds;
 
@@ -10,14 +11,10 @@ use super::{
         GpuComputeTaskChangeEvent, InputDataChangeEvent,
         IterationSpaceOrMaxOutVecLengthChangedEvent, WgslCodeChangedEvent,
     },
-    inputs::{
-        input_data::InputData, input_vector_types_spec::InputVectorTypesSpec,
-        type_erased_input_data::TypeErasedInputData,
-    },
+    inputs::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
     outputs::definitions::{
         output_data::OutputData,
         output_vector_metadata_spec::{self, OutputVectorsMetadataSpec},
-        output_vector_types_spec::OutputVectorTypesSpec,
         type_erased_output_data::TypeErasedOutputData,
     },
     task_components::task_run_id::TaskRunId,

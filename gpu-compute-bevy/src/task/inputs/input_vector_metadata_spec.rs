@@ -1,7 +1,7 @@
 use bevy::prelude::Component;
+use shared::misc_types::InputVectorTypesSpec;
 
-use super::input_vector_types_spec::InputVectorTypesSpec;
-
+#[derive(Copy, Clone)]
 pub struct InputVectorMetadataDefinition {
     pub binding_number: u32,
 }
@@ -55,7 +55,7 @@ impl InputVectorsMetadataSpec {
     }
     fn get_input<ST>(
         i: usize,
-        definitions: [Option<&InputVectorMetadataDefinition>; 6],
+        definitions: [Option<InputVectorMetadataDefinition>; 6],
     ) -> Option<InputVectorMetadata> {
         if let Some(def) = definitions[i] {
             Some(InputVectorMetadata::new(
@@ -67,7 +67,7 @@ impl InputVectorsMetadataSpec {
         }
     }
     pub fn from_input_vector_types_spec<T: InputVectorTypesSpec>(
-        definitions: [Option<&InputVectorMetadataDefinition>; 6],
+        definitions: [Option<InputVectorMetadataDefinition>; 6],
     ) -> Self {
         Self {
             input0: Self::get_input::<T::Input0>(0, definitions),

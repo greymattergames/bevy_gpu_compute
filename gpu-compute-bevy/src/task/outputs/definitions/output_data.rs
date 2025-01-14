@@ -1,4 +1,6 @@
-use super::output_vector_types_spec::{BlankOutputVectorTypesSpec, OutputVectorTypesSpec};
+use shared::misc_types::OutputVectorTypesSpec;
+
+use super::output_vector_types_spec::BlankOutputVectorTypesSpec;
 
 pub struct OutputData<T: OutputVectorTypesSpec> {
     output0: Option<Vec<T::Output0>>,

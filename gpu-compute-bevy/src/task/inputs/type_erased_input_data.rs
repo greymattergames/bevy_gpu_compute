@@ -1,10 +1,8 @@
 use bevy::prelude::Component;
+use shared::misc_types::InputVectorTypesSpec;
 use std::any::Any;
 
-use super::{
-    input_data::{InputData, InputDataTrait},
-    input_vector_types_spec::InputVectorTypesSpec,
-};
+use super::input_data::{InputData, InputDataTrait};
 
 #[derive(Component)]
 pub struct TypeErasedInputData {

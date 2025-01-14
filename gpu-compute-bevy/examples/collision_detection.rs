@@ -8,13 +8,11 @@ use gpu_compute_bevy::{
         inputs::{
             input_data::InputData,
             input_vector_metadata_spec::{InputVectorMetadataDefinition, InputVectorsMetadataSpec},
-            input_vector_types_spec::InputVectorTypesSpec,
         },
         outputs::definitions::{
             output_vector_metadata_spec::{
                 OutputVectorMetadataDefinition, OutputVectorsMetadataSpec,
             },
-            output_vector_types_spec::OutputVectorTypesSpec,
             type_erased_output_data::TypeErasedOutputData,
         },
         task_components::task_run_id::TaskRunId,
@@ -50,7 +48,10 @@ impl OutputVectorTypesSpec for ExampleTaskOutputType {
     type Output5 = Unused;
 }
 use rust_to_wgsl::*;
-use shared::wgsl_in_rust_helpers::*;
+use shared::{
+    misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec},
+    wgsl_in_rust_helpers::*,
+};
 
 fn main() {}
 
@@ -117,26 +118,30 @@ fn example_task_creation_system(
     mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
 ) {
     let task_name = "example task".to_string();
-
-    let t = example_shader_2::parsed();
-    let task_spec = TaskUserSpecification::create_automatically(example_shader_2::parsed());
-
     let initial_iteration_space = IterationSpace::new(100, 10, 1);
+    let initial_max_output_lengths = MaxOutputVectorLengths::new(vec![10, 30, 100]);
+    let task_spec = TaskUserSpecification::create_automatically::<example_shader_2::Types>(
+        example_shader_2::parsed(),
+        initial_iteration_space,
+        initial_max_output_lengths.clone(),
+    );
+
+    //*  additional code below required if you use WGSL directly
     let input_definitions = [
-        Some(&InputVectorMetadataDefinition { binding_number: 0 }),
-        Some(&InputVectorMetadataDefinition { binding_number: 1 }),
-        Some(&InputVectorMetadataDefinition { binding_number: 2 }),
+        Some(InputVectorMetadataDefinition { binding_number: 0 }),
+        Some(InputVectorMetadataDefinition { binding_number: 1 }),
+        Some(InputVectorMetadataDefinition { binding_number: 2 }),
         None,
         None,
         None,
     ];
     let output_definitions = [
-        Some(&OutputVectorMetadataDefinition {
+        Some(OutputVectorMetadataDefinition {
             binding_number: 3,
             include_count: true,
             count_binding_number: Some(5),
         }),
-        Some(&OutputVectorMetadataDefinition {
+        Some(OutputVectorMetadataDefinition {
             binding_number: 4,
             include_count: false,
             count_binding_number: None,
@@ -155,7 +160,7 @@ fn example_task_creation_system(
             output_definitions,
         ),
         initial_iteration_space,
-        MaxOutputVectorLengths::new(vec![10, 30, 100]),
+        initial_max_output_lengths,
         WgslCode::from_file("./collision.wgsl", "main".to_string()), // SHOULD be alterable
     );
     let task = gpu_acc_bevy.create_task(&mut commands, &task_name, task_spec);

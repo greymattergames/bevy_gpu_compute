@@ -1,8 +1,8 @@
 use bevy::{log, prelude::Component};
+use shared::misc_types::InputVectorTypesSpec;
 
 use super::{
-    input_vector_types_spec::{BlankInputVectorTypesSpec, InputVectorTypesSpec},
-    type_erased_input_data::TypeErasedInputData,
+    input_vector_types_spec::BlankInputVectorTypesSpec, type_erased_input_data::TypeErasedInputData,
 };
 
 pub trait InputDataTrait: Send + Sync {

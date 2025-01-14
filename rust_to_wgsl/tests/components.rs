@@ -2,7 +2,10 @@
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
 use rust_to_wgsl::wgsl_shader_module;
-use shared::{wgsl_components::WgslShaderModuleComponent, wgsl_in_rust_helpers::Vec3Bool};
+use shared::{
+    misc_types::TypesSpec, wgsl_components::WgslShaderModuleComponent,
+    wgsl_in_rust_helpers::Vec3Bool,
+};
 use syn::{ItemMod, parse_quote};
 
 #[test]
@@ -251,7 +254,6 @@ fn can_extract_types() {
         }
         fn main(global_id: WgslGlobalId) {}
     }
-    use test_module::TypesSpec;
     fn fun<T: TypesSpec>() -> T::InputConfigTypes {
         unimplemented!();
     }

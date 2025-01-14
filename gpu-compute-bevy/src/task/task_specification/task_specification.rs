@@ -1,6 +1,6 @@
 use bevy::prelude::{Commands, Component, Entity};
 use futures::never::Never;
-use shared::{compose_wgsl_module::{compose_wgsl, WgslShaderModule}, wgsl_components::WgslShaderModuleUserPortion};
+use shared::{compose_wgsl_module::{compose_wgsl, WgslShaderModule}, misc_types::TypesSpec, wgsl_components::WgslShaderModuleUserPortion};
 
 use crate::task::{
     events::{
@@ -10,7 +10,7 @@ use crate::task::{
     inputs::input_vector_metadata_spec::{
         self, InputVectorMetadataDefinition, InputVectorsMetadataSpec,
     },
-    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
+    outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec},
     task_components::task_max_output_bytes::TaskMaxOutputBytes,
     task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
@@ -52,7 +52,11 @@ impl Default for TaskUserSpecification {
 }
 
 impl TaskUserSpecification {
-    pub fn create_automatically<ShaderModuleTypes>(wgsl_shader_module: WgslShaderModuleUserPortion) {
+    pub fn create_automatically<ShaderModuleTypes: TypesSpec>(
+        wgsl_shader_module: WgslShaderModuleUserPortion,
+        iteration_space: IterationSpace,
+        max_output_vector_lengths: MaxOutputVectorLengths,
+    )->Self {
         let full_module = compose_wgsl(wgsl_shader_module);
         let mut input_definitions = [None; 6];
         full_module.user_portion
@@ -61,7 +65,7 @@ impl TaskUserSpecification {
             if let Some(binding) = full_module.library_portion.bindings.iter().find(|b| b.type_name == a.item_type.name.name){
                 
                 if i < input_definitions.len() {
-                    input_definitions[i] = Some(&InputVectorMetadataDefinition { binding_number: binding.entry_num });
+                    input_definitions[i] = Some(InputVectorMetadataDefinition { binding_number: binding.entry_num });
                     //todo support variety of binding groups
                 }else {
                     panic!("Too many input arrays in wgsl_shader_module, max is {}", input_definitions.len());
@@ -72,26 +76,38 @@ impl TaskUserSpecification {
             
         });
         
-        InputVectorsMetadataSpec::from_input_vector_types_spec::<ShaderModuleTypes::InputArrayTypes>(
+        let input_metadata = InputVectorsMetadataSpec::from_input_vector_types_spec::<ShaderModuleTypes::InputArrayTypes>( 
             input_definitions,
-        ),
-        //todo implement config/uniforms
-        let output_definitions = [
-            Some(&OutputVectorMetadataDefinition {
-                binding_number: 3,
-                include_count: true,
-                count_binding_number: Some(5),
-            }),
-            Some(&OutputVectorMetadataDefinition {
-                binding_number: 4,
-                include_count: false,
-                count_binding_number: None,
-            }),
-            None,
-            None,
-            None,
-            None,
-        ];
+        );
+        let mut output_definitions = [const { None }; 6];
+        full_module.user_portion
+        .output_arrays.iter().enumerate().for_each(|(i,a)|{
+            // get correct binding
+            if let Some(binding) = full_module.library_portion.bindings.iter().find(|b| b.type_name == a.item_type.name.name){
+                
+                if i < output_definitions.len() {
+                    output_definitions[i] = Some(OutputVectorMetadataDefinition { binding_number: binding.entry_num,
+                        include_count: a.atomic_counter_name.is_some(),
+                        count_binding_number: if a.atomic_counter_name.is_some() {Some(binding.entry_num + 1)}else {None},
+                     });
+                }else {
+                    panic!("Too many output arrays in wgsl_shader_module, max is {}", input_definitions.len());
+                }
+            }else {
+                panic!("Could not find binding for output array {}, something has gone wrong with the library", a.item_type.name.name);
+            }
+            
+        });
+        let output_metadata = OutputVectorsMetadataSpec::from_output_vector_types_spec::<ShaderModuleTypes::OutputArrayTypes>(
+            output_definitions,
+        );
+        TaskUserSpecification::create_manually(
+            input_metadata,
+            output_metadata,
+            iteration_space,
+            max_output_vector_lengths,
+            WgslCode::new(full_module.wgsl_code,"main".to_string()),
+        )
     }
 
     /// ensure that you send relevant update events after calling this function

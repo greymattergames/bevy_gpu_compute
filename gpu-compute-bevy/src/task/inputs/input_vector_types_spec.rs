@@ -1,3 +1,5 @@
+use shared::misc_types::InputVectorTypesSpec;
+
 pub struct BlankInputVectorTypesSpec {}
 impl InputVectorTypesSpec for BlankInputVectorTypesSpec {
     type Input0 = ();

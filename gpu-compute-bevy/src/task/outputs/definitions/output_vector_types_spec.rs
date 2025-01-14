@@ -1,3 +1,5 @@
+use shared::misc_types::OutputVectorTypesSpec;
+
 pub struct BlankOutputVectorTypesSpec {}
 impl OutputVectorTypesSpec for BlankOutputVectorTypesSpec {
     type Output0 = ();

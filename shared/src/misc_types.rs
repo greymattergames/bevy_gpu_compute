@@ -5,6 +5,11 @@ use bytemuck::Pod;
 
 pub struct _INTERNAL_UNUSED {}
 
+pub trait TypesSpec {
+    type InputConfigTypes: InputConfigTypesSpec;
+    type InputArrayTypes: InputVectorTypesSpec;
+    type OutputArrayTypes: OutputVectorTypesSpec;
+}
 // //   ! todo!("Re enable the type constraints in misc_types");
 pub trait InputConfigTypesSpec {
     type Input0: Pod + Send + Sync;

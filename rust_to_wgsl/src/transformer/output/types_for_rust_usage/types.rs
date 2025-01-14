@@ -33,11 +33,7 @@ pub fn define_types_for_use_in_rust(state: &ModuleTransformState) -> TokenStream
     #output_arrays
         /// public facing types for use by library
 
-        pub trait TypesSpec {
-            type InputConfigTypes;
-            type InputArrayTypes;
-            type OutputArrayTypes;
-        }
+
 
         pub struct Types;
         impl TypesSpec for Types {

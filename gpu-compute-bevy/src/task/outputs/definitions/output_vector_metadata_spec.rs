@@ -1,6 +1,5 @@
 use bevy::prelude::Component;
-
-use super::output_vector_types_spec::OutputVectorTypesSpec;
+use shared::misc_types::OutputVectorTypesSpec;
 
 pub struct OutputVectorMetadataDefinition {
     pub binding_number: u32,
@@ -71,9 +70,9 @@ impl OutputVectorsMetadataSpec {
     }
     fn get_output<ST>(
         i: usize,
-        definitions: [Option<&OutputVectorMetadataDefinition>; 6],
+        definitions: &[Option<OutputVectorMetadataDefinition>; 6],
     ) -> Option<OutputVectorMetadata> {
-        if let Some(def) = definitions[i] {
+        if let Some(def) = &definitions[i] {
             Some(OutputVectorMetadata::new(
                 std::mem::size_of::<ST>(),
                 def.binding_number,
@@ -89,15 +88,15 @@ impl OutputVectorsMetadataSpec {
         }
     }
     pub fn from_output_vector_types_spec<T: OutputVectorTypesSpec>(
-        definitions: [Option<&OutputVectorMetadataDefinition>; 6],
+        definitions: [Option<OutputVectorMetadataDefinition>; 6],
     ) -> Self {
         Self {
-            output0: Self::get_output::<T::Output0>(0, definitions),
-            output1: Self::get_output::<T::Output1>(1, definitions),
-            output2: Self::get_output::<T::Output2>(2, definitions),
-            output3: Self::get_output::<T::Output3>(3, definitions),
-            output4: Self::get_output::<T::Output4>(4, definitions),
-            output5: Self::get_output::<T::Output5>(5, definitions),
+            output0: Self::get_output::<T::Output0>(0, &definitions),
+            output1: Self::get_output::<T::Output1>(1, &definitions),
+            output2: Self::get_output::<T::Output2>(2, &definitions),
+            output3: Self::get_output::<T::Output3>(3, &definitions),
+            output4: Self::get_output::<T::Output4>(4, &definitions),
+            output5: Self::get_output::<T::Output5>(5, &definitions),
         }
     }
     pub fn get_all_metadata(&self) -> [Option<&OutputVectorMetadata>; 6] {
