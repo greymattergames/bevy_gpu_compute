@@ -2,26 +2,12 @@ use crate::custom_type_name::CustomTypeName;
 
 /// includes just the parts the user has input, with any relevant metadata necessary for the library to complete the module
 
-pub trait SelfToStructInitializer {
-    fn to_struct_initializer(&self) -> String;
-}
-
 #[derive(Debug, Clone)]
 pub struct WgslShaderModuleComponent {
     pub rust_code: String,
     pub wgsl_code: String,
 }
-impl SelfToStructInitializer for WgslShaderModuleComponent {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslShaderModuleComponent {{
-                rust_code: \"{}\".to_string(),
-                wgsl_code: \"{}\".to_string(),
-            }}",
-            self.rust_code, self.wgsl_code
-        )
-    }
-}
+
 #[derive(Clone, Debug)]
 pub struct WgslShaderModuleUserPortion {
     /// defined with the "const" keyword
@@ -65,52 +51,18 @@ pub struct WgslType {
     pub name: CustomTypeName,
     pub code: WgslShaderModuleComponent,
 }
-impl SelfToStructInitializer for WgslType {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslType {{
-                name: {},
-                code: {},
-            }}",
-            self.name.to_struct_initializer(),
-            self.code.to_struct_initializer()
-        )
-    }
-}
+
 #[derive(Debug, Clone)]
 pub struct WgslDerivedType {
     pub name: String,
     pub code: WgslShaderModuleComponent,
 }
-impl SelfToStructInitializer for WgslDerivedType {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslDerivedType {{
-                name: \"{}\".to_string(),
-                code: {},
-            }}",
-            self.name,
-            self.code.to_struct_initializer()
-        )
-    }
-}
+
 #[derive(Clone, Debug)]
 
 pub struct WgslFunction {
     pub name: String,
     pub code: WgslShaderModuleComponent,
-}
-impl SelfToStructInitializer for WgslFunction {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslFunction {{
-                name: \"{}\".to_string(),
-                code: {},
-            }}",
-            self.name,
-            self.code.to_struct_initializer()
-        )
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -118,16 +70,7 @@ impl SelfToStructInitializer for WgslFunction {
 pub struct WgslConstAssignment {
     pub code: WgslShaderModuleComponent,
 }
-impl SelfToStructInitializer for WgslConstAssignment {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslConstAssignment {{
-                code: {},
-            }}",
-            self.code.to_struct_initializer()
-        )
-    }
-}
+
 impl WgslConstAssignment {
     pub fn new(name: &str, scalar_type: &str, value: &str) -> Self {
         Self {
@@ -144,60 +87,20 @@ pub struct WgslArrayLength {
     pub name: String,
     pub code: WgslShaderModuleComponent,
 }
-impl SelfToStructInitializer for WgslArrayLength {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslArrayLength {{
-                name: \"{}\".to_string(),
-                code: {},
-            }}",
-            self.name,
-            self.code.to_struct_initializer()
-        )
-    }
-}
+
 #[derive(Clone, Debug)]
 
 pub struct WgslInputArray {
     pub item_type: WgslType,
     pub array_type: WgslDerivedType,
 }
-impl SelfToStructInitializer for WgslInputArray {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslInputArray {{
-                item_type: {},
-                array_type: {},
-            }}",
-            self.item_type.to_struct_initializer(),
-            self.array_type.to_struct_initializer()
-        )
-    }
-}
+
 #[derive(Clone, Debug)]
 
 pub struct WgslOutputArray {
     pub item_type: WgslType,
     pub array_type: WgslDerivedType,
     pub atomic_counter_name: Option<String>,
-}
-impl SelfToStructInitializer for WgslOutputArray {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "WgslOutputArray {{
-                item_type: {},
-                array_type: {},
-                atomic_counter_name: {},
-            }}",
-            self.item_type.to_struct_initializer(),
-            self.array_type.to_struct_initializer(),
-            self.atomic_counter_name
-                .as_ref()
-                .map_or("None".to_string(), |counter| {
-                    format!("Some(\"{}\".to_string())", counter)
-                })
-        )
-    }
 }
 
 pub enum WgpuShaderType {

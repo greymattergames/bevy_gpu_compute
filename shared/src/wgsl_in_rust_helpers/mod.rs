@@ -1,9 +1,9 @@
 pub mod matrices;
+pub mod pod_f16;
 pub mod vectors;
-
 pub use matrices::*;
+pub use pod_f16::*;
 pub use vectors::*;
-
 pub struct WgslGlobalId {
     pub x: u32,
     pub y: u32,

@@ -1,6 +1,56 @@
+use super::PodF16;
+
 macro_rules! impl_vector {
     ($name:ident, $type:ty, $($field:ident, $index:expr),+) => {
-        #[derive(Debug, Clone,Copy)]
+        #[repr(C)]
+        #[derive(Debug, Clone,Copy, bytemuck::Pod, bytemuck::Zeroable)]
+        pub struct $name {
+            $(pub $field: $type,)+
+            _force_constructor: ()
+        }
+
+        impl $name {
+            pub fn new($($field: $type),+) -> Self {
+                Self {
+                    $($field,)+
+                    _force_constructor: ()
+                }
+            }
+
+            // Generate setters for coordinate access (x,y,z,w)
+            $(
+                paste::paste! {
+                    pub fn [<set_ $field>](&mut self, value: $type) {
+                        self.$field = value;
+                    }
+                }
+            )+
+        }
+
+        impl std::ops::Index<i32> for $name {
+            type Output = $type;
+
+            fn index(&self, index: i32) -> &Self::Output {
+                match index {
+                    $($index => &self.$field,)+
+                    _ => panic!("Index out of bounds"),
+                }
+            }
+        }
+
+        impl std::ops::IndexMut<i32> for $name {
+            fn index_mut(&mut self, index: i32) -> &mut Self::Output {
+                match index {
+                    $($index => &mut self.$field,)+
+                    _ => panic!("Index out of bounds"),
+                }
+            }
+        }
+    }
+}
+
+macro_rules! impl_vector_no_pod {
+    ($name:ident, $type:ty, $($field:ident, $index:expr),+) => {
         pub struct $name {
             $(pub $field: $type,)+
             _force_constructor: ()
@@ -57,13 +107,24 @@ macro_rules! define_vector_types {
         }
     };
 }
+macro_rules! define_vector_types_no_pod {
+    ($type:ty, $suffix:ident) => {
+        paste::paste! {
+            impl_vector_no_pod!([<Vec2 $suffix>], $type, x, 0, y, 1);
+            impl_vector_no_pod!([<Vec3 $suffix>], $type, x, 0, y, 1, z, 2);
+            impl_vector_no_pod!([<Vec4 $suffix>], $type, x, 0, y, 1, z, 2, w, 3);
+
+
+        }
+    };
+}
 
 // Generate concrete types for all scalar types
-define_vector_types!(bool, Bool);
 define_vector_types!(u32, U32);
 define_vector_types!(i32, I32);
 define_vector_types!(f32, F32);
-define_vector_types!(f16, F16);
+define_vector_types!(PodF16, F16);
+define_vector_types_no_pod!(bool, Bool);
 
 #[cfg(test)]
 mod tests {

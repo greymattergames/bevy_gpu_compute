@@ -193,12 +193,12 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<String> {
                 "Yield expressions are not supported in WGSL"
             )
         }
-        _ => abort!(
-            expr.span(),
-            format!(
+        _ => {
+            let message = format!(
                 "Unsupported expression type in WGSL: {}",
                 expr.to_token_stream().to_string()
-            )
-        ),
+            );
+            abort!(expr.span(), message)
+        }
     }
 }

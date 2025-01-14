@@ -14,3 +14,4 @@ shared = {path = "../shared"}
 regex = "1.11.1"
 compiletest_rs = "0.11.2"
 trybuild = "1.0.101"
+bytemuck = {version = "1.21.0", features=["derive"]}

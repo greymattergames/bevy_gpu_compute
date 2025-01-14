@@ -1,11 +1,15 @@
 use bevy::prelude::{Commands, Component, Entity};
+use futures::never::Never;
+use shared::{compose_wgsl_module::{compose_wgsl, WgslShaderModule}, wgsl_components::WgslShaderModuleUserPortion};
 
 use crate::task::{
     events::{
         GpuComputeTaskChangeEvent, IterationSpaceOrMaxOutVecLengthChangedEvent,
         WgslCodeChangedEvent,
     },
-    inputs::input_vector_metadata_spec::{self, InputVectorsMetadataSpec},
+    inputs::input_vector_metadata_spec::{
+        self, InputVectorMetadataDefinition, InputVectorsMetadataSpec,
+    },
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_components::task_max_output_bytes::TaskMaxOutputBytes,
     task_specification::{
@@ -48,8 +52,50 @@ impl Default for TaskUserSpecification {
 }
 
 impl TaskUserSpecification {
+    pub fn create_automatically<ShaderModuleTypes>(wgsl_shader_module: WgslShaderModuleUserPortion) {
+        let full_module = compose_wgsl(wgsl_shader_module);
+        let mut input_definitions = [None; 6];
+        full_module.user_portion
+        .input_arrays.iter().enumerate().for_each(|(i,a)|{
+            // get correct binding
+            if let Some(binding) = full_module.library_portion.bindings.iter().find(|b| b.type_name == a.item_type.name.name){
+                
+                if i < input_definitions.len() {
+                    input_definitions[i] = Some(&InputVectorMetadataDefinition { binding_number: binding.entry_num });
+                    //todo support variety of binding groups
+                }else {
+                    panic!("Too many input arrays in wgsl_shader_module, max is {}", input_definitions.len());
+                }
+            }else {
+                panic!("Could not find binding for input array {}, something has gone wrong with the library", a.item_type.name.name);
+            }
+            
+        });
+        
+        InputVectorsMetadataSpec::from_input_vector_types_spec::<ShaderModuleTypes::InputArrayTypes>(
+            input_definitions,
+        ),
+        //todo implement config/uniforms
+        let output_definitions = [
+            Some(&OutputVectorMetadataDefinition {
+                binding_number: 3,
+                include_count: true,
+                count_binding_number: Some(5),
+            }),
+            Some(&OutputVectorMetadataDefinition {
+                binding_number: 4,
+                include_count: false,
+                count_binding_number: None,
+            }),
+            None,
+            None,
+            None,
+            None,
+        ];
+    }
+
     /// ensure that you send relevant update events after calling this function
-    pub fn new(
+    pub fn create_manually(
         input_vector_metadata_spec: InputVectorsMetadataSpec,
         output_vector_metadata_spec: OutputVectorsMetadataSpec,
         iteration_space: IterationSpace,

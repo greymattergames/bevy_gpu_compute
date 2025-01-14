@@ -1,5 +1,5 @@
-pub struct BlankInputVectorTypesSpec {}
-impl InputVectorTypesSpec for BlankInputVectorTypesSpec {
+pub struct BlankInputConfigTypesSpec {}
+impl InputConfigTypesSpec for BlankInputConfigTypesSpec {
     type Input0 = ();
     type Input1 = ();
     type Input2 = ();

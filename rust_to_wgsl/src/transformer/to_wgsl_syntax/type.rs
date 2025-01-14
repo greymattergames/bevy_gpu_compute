@@ -36,6 +36,13 @@ fn convert_path_segment(segment: PathSegment, custom_types: &Vec<CustomType>) ->
             "f32" => segment.clone(),
             "i32" => segment.clone(),
             "u32" => segment.clone(),
+            "PodF16" => parse_quote!(f16),
+            "f16" => {
+                abort!(
+                    ident.span(),
+                    "Standard rust f16s are not \"Pods\", use `PodF16` instead of `f16`. This is because we use `bytemuck` for creating and reading GPU buffers."
+                )
+            }
             "bool" => segment.clone(),
             "vec3" => segment.clone(),
             "vec2" => segment.clone(),

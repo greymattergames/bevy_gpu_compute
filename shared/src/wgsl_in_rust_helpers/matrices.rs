@@ -1,7 +1,54 @@
 use crate::wgsl_in_rust_helpers::vectors::*;
 macro_rules! impl_matrix {
     ($name:ident, $vec_type:ty, $($field:ident, $index:expr),+) => {
-        #[derive(Debug, Clone)]
+        #[repr(C)]
+        #[derive(Debug, Clone,Copy, bytemuck::Pod, bytemuck::Zeroable)]
+        pub struct $name {
+            $(pub $field: $vec_type,)+
+            _force_constructor: ()
+        }
+
+        impl $name {
+            pub fn new($($field: $vec_type),+) -> Self {
+                Self {
+                    $($field,)+
+                    _force_constructor: ()
+                }
+            }
+
+            // Generate setters for row access (x,y,z,w)
+            $(
+                paste::paste! {
+                    pub fn [<set_ $field>](&mut self, value: $vec_type) {
+                        self.$field = value;
+                    }
+                }
+            )+
+        }
+
+        impl std::ops::Index<i32> for $name {
+            type Output = $vec_type;
+
+            fn index(&self, index: i32) -> &Self::Output {
+                match index {
+                    $($index => &self.$field,)+
+                    _ => panic!("Index out of bounds"),
+                }
+            }
+        }
+
+        impl std::ops::IndexMut<i32> for $name {
+            fn index_mut(&mut self, index: i32) -> &mut Self::Output {
+                match index {
+                    $($index => &mut self.$field,)+
+                    _ => panic!("Index out of bounds"),
+                }
+            }
+        }
+    }
+}
+macro_rules! impl_matrix_no_pod {
+    ($name:ident, $vec_type:ty, $($field:ident, $index:expr),+) => {
         pub struct $name {
             $(pub $field: $vec_type,)+
             _force_constructor: ()
@@ -67,13 +114,33 @@ macro_rules! define_matrix_types {
         }
     };
 }
+macro_rules! define_matrix_types_no_pod {
+    ($scalar_type:ty, $suffix:ident) => {
+        paste::paste! {
+            // Mat2xN types
+            impl_matrix_no_pod!([<Mat2x2 $suffix>], [<Vec2 $suffix>], x, 0, y, 1);
+            impl_matrix_no_pod!([<Mat2x3 $suffix>], [<Vec3 $suffix>], x, 0, y, 1);
+            impl_matrix_no_pod!([<Mat2x4 $suffix>], [<Vec4 $suffix>], x, 0, y, 1);
+
+            // Mat3xN types
+            impl_matrix_no_pod!([<Mat3x2 $suffix>], [<Vec2 $suffix>], x, 0, y, 1, z, 2);
+            impl_matrix_no_pod!([<Mat3x3 $suffix>], [<Vec3 $suffix>], x, 0, y, 1, z, 2);
+            impl_matrix_no_pod!([<Mat3x4 $suffix>], [<Vec4 $suffix>], x, 0, y, 1, z, 2);
+
+            // Mat4xN types
+            impl_matrix_no_pod!([<Mat4x2 $suffix>], [<Vec2 $suffix>], x, 0, y, 1, z, 2, w, 3);
+            impl_matrix_no_pod!([<Mat4x3 $suffix>], [<Vec3 $suffix>], x, 0, y, 1, z, 2, w, 3);
+            impl_matrix_no_pod!([<Mat4x4 $suffix>], [<Vec4 $suffix>], x, 0, y, 1, z, 2, w, 3);
+        }
+    };
+}
 
 // Generate concrete types for numeric types (matrices don't make sense for booleans)
 define_matrix_types!(u32, U32);
 define_matrix_types!(i32, I32);
 define_matrix_types!(f32, F32);
 define_matrix_types!(f16, F16);
-define_matrix_types!(bool, Bool);
+define_matrix_types_no_pod!(bool, Bool);
 
 #[cfg(test)]
 mod tests {

@@ -1,19 +1,29 @@
 use bevy::prelude::{Commands, Component, EventReader, Query, Res, ResMut, Resource};
 use bytemuck::{Pod, Zeroable};
-use gpu_accelerated_bevy::{
+use gpu_compute_bevy::{
     resource::GpuAcceleratedBevy,
+    run_ids::GpuAcceleratedBevyRunIds,
     task::{
+        events::GpuComputeTaskSuccessEvent,
+        inputs::{
+            input_data::InputData,
+            input_vector_metadata_spec::{InputVectorMetadataDefinition, InputVectorsMetadataSpec},
+            input_vector_types_spec::InputVectorTypesSpec,
+        },
+        outputs::definitions::{
+            output_vector_metadata_spec::{
+                OutputVectorMetadataDefinition, OutputVectorsMetadataSpec,
+            },
+            output_vector_types_spec::OutputVectorTypesSpec,
+            type_erased_output_data::TypeErasedOutputData,
+        },
+        task_components::task_run_id::TaskRunId,
         task_specification::{
-            max_output_vector_lengths::MaxOutputVectorLengths,
+            iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputVectorLengths,
             task_specification::TaskUserSpecification,
         },
         wgsl_code::WgslCode,
     },
-};
-use rust_to_wgsl::wgsl_shader_module;
-
-use crate::task::task_specification::{
-    max_output_vector_lengths::MaxOutputVectorLengths, task_specification::TaskUserSpecification,
 };
 
 #[repr(C)]
@@ -39,66 +49,78 @@ impl OutputVectorTypesSpec for ExampleTaskOutputType {
     type Output4 = Unused;
     type Output5 = Unused;
 }
+use rust_to_wgsl::*;
+use shared::wgsl_in_rust_helpers::*;
 
-fn main(mut commands: Commands, mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
-    let task_name = "example task".to_string();
-    // #[wgsl_shader_module]
-    mod example_shader {
+fn main() {}
 
-        use rust_to_wgsl::*;
-        use shared::wgsl_in_rust_helpers::*;
+#[wgsl_shader_module]
+mod example_shader_2 {
 
-        /// unused, just for demonstration
-        // const MY_CONST: bool = true;
-        // /// unused, just for demonstration
-        // #[wgsl_config]
-        struct Config {
-            time: f32,
-            resolution: Vec2F32,
-        }
-        // #[wgsl_input_array]
-        // type Position = [f32; 2];
-        // #[wgsl_input_array]
-        // type Radius = f32;
-        // #[wgsl_output_vec]
-        // struct CollisionResult {
-        //     entity1: u32,
-        //     entity2: u32,
-        // }
-        // fn calculate_distance_squared(p1: [f32; 2], p2: [f32; 2]) -> f32 {
-        //     let dx = p1[0] - p2[0];
-        //     let dy = p1[1] - p2[1];
-        //     return dx * dx + dy * dy;
-        // }
-        // fn main(global_id: WgslGlobalId) {
-        //     let current_entity = global_id.x;
-        //     let other_entity = global_id.y;
-        //     // Early exit if invalid entity or zero radius
-        //     if current_entity >= WgslVecInput::vec_len::<Position>()
-        //         || other_entity >= WgslVecInput::vec_len::<Position>()
-        //         || current_entity == other_entity
-        //         || current_entity >= other_entity
-        //     {
-        //         return;
-        //     }
-        //     let current_radius = WgslVecInput::vec_val::<Radius>(current_entity);
-        //     let other_radius = WgslVecInput::vec_val::<Radius>(other_entity);
-        //     if current_radius <= 0.0 || other_radius <= 0.0 {
-        //         return;
-        //     }
-        //     let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
-        //     let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
-        //     let dist_squared = calculate_distance_squared(current_pos, other_pos);
-        //     let radius_sum = current_radius + other_radius;
-        //     // Compare squared distances to avoid sqrt
-        //     if dist_squared < radius_sum * radius_sum {
-        //         WgslOutput::push::<CollisionResult>(CollisionResult {
-        //             entity1: current_entity,
-        //             entity2: other_entity,
-        //         });
-        //     }
-        // }
+    use rust_to_wgsl::*;
+    use shared::wgsl_in_rust_helpers::*;
+
+    /// unused, just for demonstration
+    const MY_CONST: bool = true;
+    /// unused, just for demonstration
+    #[wgsl_config]
+    struct Config {
+        time: f32,
+        resolution: Vec2F32,
     }
+    #[wgsl_input_array]
+    type Position = [f32; 2];
+    #[wgsl_input_array]
+    type Radius = f32;
+    #[wgsl_output_vec]
+    struct CollisionResult {
+        entity1: u32,
+        entity2: u32,
+    }
+    fn calculate_distance_squared(p1: [f32; 2], p2: [f32; 2]) -> f32 {
+        let dx = p1[0] - p2[0];
+        let dy = p1[1] - p2[1];
+        return dx * dx + dy * dy;
+    }
+    fn main(global_id: WgslGlobalId) {
+        let current_entity = global_id.x;
+        let other_entity = global_id.y;
+        // Early exit if invalid entity or zero radius
+        if current_entity >= WgslVecInput::vec_len::<Position>()
+            || other_entity >= WgslVecInput::vec_len::<Position>()
+            || current_entity == other_entity
+            || current_entity >= other_entity
+        {
+            return;
+        }
+        let current_radius = WgslVecInput::vec_val::<Radius>(current_entity);
+        let other_radius = WgslVecInput::vec_val::<Radius>(other_entity);
+        if current_radius <= 0.0 || other_radius <= 0.0 {
+            return;
+        }
+        let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
+        let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
+        let dist_squared = calculate_distance_squared(current_pos, other_pos);
+        let radius_sum = current_radius + other_radius;
+        // Compare squared distances to avoid sqrt
+        if dist_squared < radius_sum * radius_sum {
+            WgslOutput::push::<CollisionResult>(CollisionResult {
+                entity1: current_entity,
+                entity2: other_entity,
+            });
+        }
+    }
+}
+
+fn example_task_creation_system(
+    mut commands: Commands,
+    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
+) {
+    let task_name = "example task".to_string();
+
+    let t = example_shader_2::parsed();
+    let task_spec = TaskUserSpecification::create_automatically(example_shader_2::parsed());
+
     let initial_iteration_space = IterationSpace::new(100, 10, 1);
     let input_definitions = [
         Some(&InputVectorMetadataDefinition { binding_number: 0 }),
@@ -124,7 +146,7 @@ fn main(mut commands: Commands, mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
         None,
         None,
     ];
-    let task_spec = TaskUserSpecification::new(
+    let task_spec = TaskUserSpecification::create_manually(
         InputVectorsMetadataSpec::from_input_vector_types_spec::<ExampleTaskInputType>(
             input_definitions,
         ),

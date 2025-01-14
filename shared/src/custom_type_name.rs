@@ -1,5 +1,3 @@
-use crate::wgsl_components::SelfToStructInitializer;
-
 #[derive(Clone, Debug)]
 
 pub struct CustomTypeName {
@@ -7,20 +5,7 @@ pub struct CustomTypeName {
     pub upper: String,
     pub lower: String,
 }
-impl SelfToStructInitializer for CustomTypeName {
-    fn to_struct_initializer(&self) -> String {
-        format!(
-            "CustomTypeName {{
-                name: \"{}\".to_string(),
-                upper: \"{}\".to_string(),
-                lower: \"{}\".to_string(),
-            }}",
-            self.name.to_string(),
-            self.upper.to_string(),
-            self.lower.to_string()
-        )
-    }
-}
+
 impl CustomTypeName {
     pub fn new(name: &String) -> Self {
         let upper = name.to_uppercase();

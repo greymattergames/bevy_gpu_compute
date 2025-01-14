@@ -57,7 +57,7 @@ use crate::state::ModuleTransformState;
   */
 mod array;
 mod expr;
-mod remove_attributes;
+pub mod remove_attributes;
 mod r#type;
 mod type_def;
 mod wgsl_builtin_constructors;

@@ -15,9 +15,9 @@ use super::{
 };
 
 pub struct WgslShaderModule {
-    user_portion: WgslShaderModuleUserPortion,
-    library_portion: WgslShaderModuleLibraryPortion,
-    wgsl_code: String,
+    pub user_portion: WgslShaderModuleUserPortion,
+    pub library_portion: WgslShaderModuleLibraryPortion,
+    pub wgsl_code: String,
 }
 
 pub fn compose_wgsl(module: WgslShaderModuleUserPortion) -> WgslShaderModule {
