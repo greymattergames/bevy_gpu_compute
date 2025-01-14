@@ -1,5 +1,5 @@
 use bevy::prelude::Component;
-use shared::misc_types::OutputVectorTypesSpec;
+use shared::misc_types::{OutputVectorTypesSpec, TypesSpec};
 
 use super::output_data::OutputData;
 
@@ -49,7 +49,7 @@ impl TypeErasedOutputData {
         }
     }
 
-    pub fn into_typed<T: OutputVectorTypesSpec>(self) -> Result<OutputData<T>, String> {
+    pub fn into_typed<T: TypesSpec>(self) -> Result<OutputData<T>, String> {
         let mut output_data = OutputData::empty();
 
         if let Some(bytes) = self.output0 {

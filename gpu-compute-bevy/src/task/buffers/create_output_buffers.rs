@@ -14,7 +14,7 @@ use crate::task::{
     task_components::task_name::TaskName,
     task_specification::{
         max_output_vector_lengths::MaxOutputVectorLengths,
-        task_specification::TaskUserSpecification,
+        task_specification::ComputeTaskSpecification,
     },
 };
 
@@ -25,7 +25,7 @@ use super::components::{
 pub fn create_output_buffers(
     mut tasks: Query<(
         &TaskName,
-        Ref<TaskUserSpecification>,
+        Ref<ComputeTaskSpecification>,
         &mut OutputBuffers,
         &mut OutputStagingBuffers,
         &mut OutputCountBuffers,

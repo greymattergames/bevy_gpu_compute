@@ -7,7 +7,7 @@ use bevy::{
 use crate::task::{
     compute_pipeline::cache::{PipelineKey, PipelineLruCache},
     task_specification::{
-        gpu_workgroup_space::GpuWorkgroupSpace, task_specification::TaskUserSpecification,
+        gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
     },
     wgsl_code::WgslCode,
 };
@@ -16,7 +16,7 @@ use super::create_bind_group::BindGroupComponent;
 
 pub fn dispatch_to_gpu(
     mut tasks: Query<(
-        &TaskUserSpecification,
+        &ComputeTaskSpecification,
         &BindGroupComponent,
         &mut PipelineLruCache,
     )>,

@@ -75,12 +75,12 @@ fn parse_main_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
 /// we have to alter the main function argument to match the wgsl spec by string replace instead of ast manipulation because the new argument is not a valid rust syntax
 fn alter_global_id_argument(func_string: String) -> String {
     let match_patterns = [
-        "global_id: WgslGlobalId",
-        "global_id : WgslGlobalId",
-        "global_id:WgslGlobalId",
-        "global_id:  WgslGlobalId",
+        "iter_pos: WgslIterationPosition",
+        "iter_pos : WgslIterationPosition",
+        "iter_pos:WgslIterationPosition",
+        "iter_pos:  WgslIterationPosition",
     ];
-    let replace_pattern = "@builtin(global_invocation_id) global_id: vec3<u32>";
+    let replace_pattern = "@builtin(global_invocation_id) iter_pos: vec3<u32>";
     let mut new_func = func_string.clone();
     let mut found = false;
     for pattern in match_patterns.iter() {
@@ -91,7 +91,7 @@ fn alter_global_id_argument(func_string: String) -> String {
     }
     if !found {
         let error_message = format!(
-            "Failed to find main function argument, we are looking for a string that exactly matches 'global_id: WgslGlobalId', found {}",
+            "Failed to find main function argument, we are looking for a string that exactly matches 'iter_pos: WgslIterationPosition', found {}",
             new_func
         );
         abort!(Span::call_site(), error_message);
@@ -110,24 +110,24 @@ fn validate_main_function(function_string: String) {
     if function.sig.inputs.len() != 1 {
         abort!(
             function.sig.span(),
-            "Main function must have exactly one parameter of type WgslGlobalId"
+            "Main function must have exactly one parameter of type WgslIterationPosition"
         );
     }
-    // Validate the parameter type is WgslGlobalId called "global_id"
+    // Validate the parameter type is WgslIterationPosition called "global_id"
     if let syn::FnArg::Typed(pat_type) = &function.sig.inputs[0] {
         match &*pat_type.pat {
             syn::Pat::Ident(_) => {}
             _ => abort!(
                 pat_type.pat.span(),
-                "Main function parameter must be called 'global_id'"
+                "Main function parameter must be called 'iter_pos'"
             ),
         }
         if let syn::Type::Path(type_path) = &*pat_type.ty {
             if let Some(segment) = type_path.path.segments.last() {
-                if segment.ident != "WgslGlobalId" {
+                if segment.ident != "WgslIterationPosition" {
                     abort!(
                         pat_type.ty.span(),
-                        "Main function parameter must be of type WgslGlobalId"
+                        "Main function parameter must be of type WgslIterationPosition"
                     );
                 }
             }

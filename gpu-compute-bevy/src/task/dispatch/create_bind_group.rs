@@ -9,7 +9,7 @@ use crate::task::{
     inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_components::{bind_group_layouts::BindGroupLayouts, task_name::TaskName},
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::task_specification::ComputeTaskSpecification,
 };
 
 /**
@@ -32,7 +32,7 @@ pub struct BindGroupComponent(pub Option<BindGroup>);
 pub fn create_bind_groups(
     mut tasks: Query<(
         &TaskName,
-        &TaskUserSpecification,
+        &ComputeTaskSpecification,
         &BindGroupLayouts,
         &InputBuffers,
         &OutputCountBuffers,

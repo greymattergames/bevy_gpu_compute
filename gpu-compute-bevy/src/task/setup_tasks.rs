@@ -11,13 +11,13 @@ use super::{
     inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_components::bind_group_layouts::BindGroupLayouts,
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::task_specification::ComputeTaskSpecification,
 };
 
 pub fn setup_new_tasks(
     mut commands: Commands,
     mut event_reader: EventReader<GpuAcceleratedTaskCreatedEvent>,
-    specs: Query<&TaskUserSpecification>,
+    specs: Query<&ComputeTaskSpecification>,
     render_device: Res<RenderDevice>,
 ) {
     log::info!("Setting up new tasks");

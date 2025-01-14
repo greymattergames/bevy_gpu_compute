@@ -26,7 +26,7 @@ These all used to be separate components, but this limited the user api, for exa
 The size of this component should still be quite small, so the tradeoff of having a larger component for a better user api is worth it.
 */
 #[derive(Component)]
-pub struct TaskUserSpecification {
+pub struct ComputeTaskSpecification {
     iteration_space: IterationSpace,
     max_output_vector_lengths: MaxOutputVectorLengths,
     wgsl_code: WgslCode,
@@ -36,9 +36,9 @@ pub struct TaskUserSpecification {
     output_vectors_metadata_spec: OutputVectorsMetadataSpec,
     input_vectors_metadata_spec: InputVectorsMetadataSpec,
 }
-impl Default for TaskUserSpecification {
+impl Default for ComputeTaskSpecification {
     fn default() -> Self {
-        TaskUserSpecification {
+        ComputeTaskSpecification {
             iteration_space: IterationSpace::default(),
             max_output_vector_lengths: MaxOutputVectorLengths::default(),
             wgsl_code: WgslCode::default(),
@@ -51,8 +51,8 @@ impl Default for TaskUserSpecification {
     }
 }
 
-impl TaskUserSpecification {
-    pub fn create_automatically<ShaderModuleTypes: TypesSpec>(
+impl ComputeTaskSpecification {
+    pub fn from_shader<ShaderModuleTypes: TypesSpec>(
         wgsl_shader_module: WgslShaderModuleUserPortion,
         iteration_space: IterationSpace,
         max_output_vector_lengths: MaxOutputVectorLengths,
@@ -101,7 +101,7 @@ impl TaskUserSpecification {
         let output_metadata = OutputVectorsMetadataSpec::from_output_vector_types_spec::<ShaderModuleTypes::OutputArrayTypes>(
             output_definitions,
         );
-        TaskUserSpecification::create_manually(
+        ComputeTaskSpecification::create_manually(
             input_metadata,
             output_metadata,
             iteration_space,
@@ -118,7 +118,7 @@ impl TaskUserSpecification {
         max_output_vector_lengths: MaxOutputVectorLengths,
         wgsl_code: WgslCode,
     ) -> Self {
-        let mut task = TaskUserSpecification::default();
+        let mut task = ComputeTaskSpecification::default();
         task.input_vectors_metadata_spec = input_vector_metadata_spec;
         task.output_vectors_metadata_spec = output_vector_metadata_spec;
         task.iteration_space = iteration_space;

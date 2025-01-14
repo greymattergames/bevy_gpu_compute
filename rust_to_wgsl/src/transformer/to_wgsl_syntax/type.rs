@@ -56,7 +56,7 @@ fn convert_path_segment(segment: PathSegment, custom_types: &Vec<CustomType>) ->
             "mat3x4" => segment.clone(),
             "mat4x2" => segment.clone(),
             "mat4x3" => segment.clone(),
-            "WgslGlobalId" => segment.clone(),
+            "WgslIterationPosition" => segment.clone(),
             "Vec2I32" => parse_quote!(vec2<i32>),
             "Vec2U32" => parse_quote!(vec2<u32>),
             "Vec2F32" => parse_quote!(vec2<f32>),

@@ -39,7 +39,7 @@ fn type_def_to_wgsl(type_def: &ItemType) -> String {
                 if mtch.is_some() {
                     abort!(
                         f.ident.span(),
-                        "Renaming helper types like Vec3F32, Mat2x2Bool, etc. is not supported"
+                        "Renaming/aliasing helper types like Vec3F32, Mat2x2Bool, etc. is not supported. For example don't do `type MyType = Vec3U32;`. Instead put it in a struct field like `struct MyType = { v: Vec3U32 }`"
                     );
                 }
             }

@@ -12,13 +12,13 @@ use syn::{ItemMod, parse_quote};
 fn test_simple_struct() {
     #[wgsl_shader_module]
     pub mod test_module {
-        use shared::wgsl_in_rust_helpers::WgslGlobalId;
+        use shared::wgsl_in_rust_helpers::WgslIterationPosition;
 
         struct TStruct {
             x: f32,
             y: f32,
         }
-        fn main(global_id: WgslGlobalId) {
+        fn main(iter_pos: WgslIterationPosition) {
             return;
         }
     }
@@ -32,7 +32,7 @@ fn test_simple_struct() {
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
         t2.main_function.unwrap().code.wgsl_code,
-        "fn main(@builtin(global_invocation_id) global_id: vec3<u32>) { return; }"
+        "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>) { return; }"
     );
 }
 
@@ -40,13 +40,13 @@ fn test_simple_struct() {
 fn test_struct_creation() {
     #[wgsl_shader_module]
     pub mod test_module {
-        use shared::wgsl_in_rust_helpers::WgslGlobalId;
+        use shared::wgsl_in_rust_helpers::WgslIterationPosition;
 
         struct TStruct {
             x: f32,
             y: f32,
         }
-        fn main(global_id: WgslGlobalId) {
+        fn main(iter_pos: WgslIterationPosition) {
             let obj = TStruct { x: 1.0, y: 2.0 };
             return;
         }
@@ -61,7 +61,7 @@ fn test_struct_creation() {
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
         t2.main_function.unwrap().code.wgsl_code,
-        "fn main(@builtin(global_invocation_id) global_id: vec3<u32>)\n{ let obj = TStruct(1.0, 2.0); return; }"
+        "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ let obj = TStruct(1.0, 2.0); return; }"
     );
 }
 
@@ -75,7 +75,7 @@ fn test_struct_creation_with_nested_transforms() {
             x: f32,
             y: Vec3F32,
         }
-        fn main(global_id: WgslGlobalId) {
+        fn main(iter_pos: WgslIterationPosition) {
             let obj = TStruct {
                 x: 1.0,
                 y: Vec3F32::new(2.0, 3.0, 4.0),
@@ -95,7 +95,7 @@ fn test_struct_creation_with_nested_transforms() {
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
         t2.main_function.unwrap().code.wgsl_code,
-        "fn main(@builtin(global_invocation_id) global_id: vec3<u32>)\n{ let obj = TStruct(1.0,vec3<f32>(2.0, 3.0, 4.0)); return; }"
+        "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ let obj = TStruct(1.0,vec3<f32>(2.0, 3.0, 4.0)); return; }"
     );
 }
 #[test]
@@ -104,7 +104,7 @@ fn test_type_alias() {
     pub mod test_module {
         use shared::wgsl_in_rust_helpers::*;
         type MyType = i32;
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
 
     let t2 = test_module::parsed();
@@ -123,9 +123,9 @@ fn test_type_alias() {
 fn test_consts() {
     #[wgsl_shader_module]
     pub mod test_module {
-        use shared::wgsl_in_rust_helpers::{WgslGlobalId, *};
+        use shared::wgsl_in_rust_helpers::{WgslIterationPosition, *};
         const MY_CONST: i32 = 3;
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
 
     let t2 = test_module::parsed();
@@ -152,7 +152,7 @@ fn test_uniforms() {
             time: f32,
             resolution: Vec2F32,
         }
-        fn main(global_id: WgslGlobalId) {
+        fn main(iter_pos: WgslIterationPosition) {
             let time = WgslConfigInput::get::<Uniforms>().time;
         }
     }
@@ -181,7 +181,7 @@ fn test_output_arrays() {
             entity1: u32,
             entity2: u32,
         }
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
     let t2 = test_module::parsed();
     assert!(t2.output_arrays.len() == 1);
@@ -219,7 +219,7 @@ fn test_helper_functions() {
             let dy = p1[1] - p2[1];
             return dx * dx + dy * dy;
         }
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
     let t2 = test_module::parsed();
     assert!(t2.output_arrays.len() == 0);
@@ -252,7 +252,7 @@ fn can_extract_types() {
         struct MyConfig {
             value: PodF16,
         }
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
     fn fun<T: TypesSpec>() -> T::InputConfigTypes {
         unimplemented!();
@@ -264,12 +264,12 @@ fn can_extract_types() {
 fn test_simple_type_transforms() {
     #[wgsl_shader_module]
     pub mod test_module {
-        use shared::wgsl_in_rust_helpers::{WgslGlobalId, *};
+        use shared::wgsl_in_rust_helpers::{WgslIterationPosition, *};
         struct TStruct {
             x: f32,
             y: Vec3F32,
         }
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
 
     let t2 = test_module::parsed();
@@ -296,7 +296,7 @@ fn test_doc_comments() {
         struct MyConfig {
             f16_val: PodF16,
         }
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
     let t2 = test_module::parsed();
     assert!(t2.output_arrays.len() == 0);
@@ -319,7 +319,7 @@ fn test_input_arrays() {
         use shared::wgsl_in_rust_helpers::*;
         #[wgsl_input_array]
         type Position = [f32; 2];
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
 
     let t2 = test_module::parsed();
@@ -352,7 +352,7 @@ fn test_output_vec() {
             entity1: u32,
             entity2: u32,
         }
-        fn main(global_id: WgslGlobalId) {}
+        fn main(iter_pos: WgslIterationPosition) {}
     }
     let t2 = test_module::parsed();
     assert!(t2.output_arrays.len() == 1);

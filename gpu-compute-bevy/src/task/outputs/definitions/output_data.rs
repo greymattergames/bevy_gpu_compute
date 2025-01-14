@@ -1,19 +1,17 @@
-use shared::misc_types::OutputVectorTypesSpec;
+use shared::misc_types::{BlankTypesSpec, OutputVectorTypesSpec, TypesSpec};
 
-use super::output_vector_types_spec::BlankOutputVectorTypesSpec;
-
-pub struct OutputData<T: OutputVectorTypesSpec> {
-    output0: Option<Vec<T::Output0>>,
-    output1: Option<Vec<T::Output1>>,
-    output2: Option<Vec<T::Output2>>,
-    output3: Option<Vec<T::Output3>>,
-    output4: Option<Vec<T::Output4>>,
-    output5: Option<Vec<T::Output5>>,
+pub struct OutputData<T: TypesSpec> {
+    output0: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output0>>,
+    output1: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output1>>,
+    output2: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output2>>,
+    output3: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output3>>,
+    output4: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output4>>,
+    output5: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output5>>,
 
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl Default for OutputData<BlankOutputVectorTypesSpec> {
+impl Default for OutputData<BlankTypesSpec> {
     fn default() -> Self {
         OutputData {
             output0: None,
@@ -28,7 +26,7 @@ impl Default for OutputData<BlankOutputVectorTypesSpec> {
     }
 }
 
-impl<T: OutputVectorTypesSpec> OutputData<T> {
+impl<T: TypesSpec> OutputData<T> {
     pub fn empty() -> Self {
         OutputData {
             output0: None,
@@ -44,7 +42,12 @@ impl<T: OutputVectorTypesSpec> OutputData<T> {
 
     // Set outputs from raw bytes
     pub fn set_output0_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
-        if bytes.len() % std::mem::size_of::<T::Output0>() != 0 {
+        if bytes.len()
+            % std::mem::size_of::<
+                <<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output0,
+            >()
+            != 0
+        {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
@@ -53,7 +56,12 @@ impl<T: OutputVectorTypesSpec> OutputData<T> {
     }
 
     pub fn set_output1_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
-        if bytes.len() % std::mem::size_of::<T::Output1>() != 0 {
+        if bytes.len()
+            % std::mem::size_of::<
+                <<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output1,
+            >()
+            != 0
+        {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
@@ -61,7 +69,12 @@ impl<T: OutputVectorTypesSpec> OutputData<T> {
         Ok(())
     }
     pub fn set_output2_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
-        if bytes.len() % std::mem::size_of::<T::Output2>() != 0 {
+        if bytes.len()
+            % std::mem::size_of::<
+                <<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output2,
+            >()
+            != 0
+        {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
@@ -69,7 +82,12 @@ impl<T: OutputVectorTypesSpec> OutputData<T> {
         Ok(())
     }
     pub fn set_output3_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
-        if bytes.len() % std::mem::size_of::<T::Output3>() != 0 {
+        if bytes.len()
+            % std::mem::size_of::<
+                <<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output3,
+            >()
+            != 0
+        {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
@@ -77,7 +95,12 @@ impl<T: OutputVectorTypesSpec> OutputData<T> {
         Ok(())
     }
     pub fn set_output4_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
-        if bytes.len() % std::mem::size_of::<T::Output4>() != 0 {
+        if bytes.len()
+            % std::mem::size_of::<
+                <<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output4,
+            >()
+            != 0
+        {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
@@ -85,7 +108,12 @@ impl<T: OutputVectorTypesSpec> OutputData<T> {
         Ok(())
     }
     pub fn set_output5_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
-        if bytes.len() % std::mem::size_of::<T::Output5>() != 0 {
+        if bytes.len()
+            % std::mem::size_of::<
+                <<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output5,
+            >()
+            != 0
+        {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
@@ -94,23 +122,35 @@ impl<T: OutputVectorTypesSpec> OutputData<T> {
     }
 
     // Type-safe getters for processed results
-    pub fn get_output0(&self) -> Option<&[T::Output0]> {
+    pub fn get_output0(
+        &self,
+    ) -> Option<&[<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output0]> {
         self.output0.as_deref()
     }
 
-    pub fn get_output1(&self) -> Option<&[T::Output1]> {
+    pub fn get_output1(
+        &self,
+    ) -> Option<&[<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output1]> {
         self.output1.as_deref()
     }
-    pub fn get_output2(&self) -> Option<&[T::Output2]> {
+    pub fn get_output2(
+        &self,
+    ) -> Option<&[<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output2]> {
         self.output2.as_deref()
     }
-    pub fn get_output3(&self) -> Option<&[T::Output3]> {
+    pub fn get_output3(
+        &self,
+    ) -> Option<&[<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output3]> {
         self.output3.as_deref()
     }
-    pub fn get_output4(&self) -> Option<&[T::Output4]> {
+    pub fn get_output4(
+        &self,
+    ) -> Option<&[<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output4]> {
         self.output4.as_deref()
     }
-    pub fn get_output5(&self) -> Option<&[T::Output5]> {
+    pub fn get_output5(
+        &self,
+    ) -> Option<&[<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output5]> {
         self.output5.as_deref()
     }
 }

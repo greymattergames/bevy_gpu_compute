@@ -15,7 +15,7 @@ use crate::task::{
     buffers::components::{OutputBuffers, OutputStagingBuffers},
     events::GpuComputeTaskSuccessEvent,
     task_components::task_run_id::TaskRunId,
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::task_specification::ComputeTaskSpecification,
 };
 
 use super::{
@@ -36,7 +36,7 @@ pub fn read_gpu_task_outputs(
         &OutputBuffers,
         &OutputStagingBuffers,
         &GpuOutputCounts,
-        &TaskUserSpecification,
+        &ComputeTaskSpecification,
         &mut TypeErasedOutputData,
     )>,
     render_device: Res<RenderDevice>,

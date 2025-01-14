@@ -1,4 +1,8 @@
-use bevy::prelude::{Commands, Component, EventReader, Query, Res, ResMut, Resource};
+use bevy::{
+    DefaultPlugins,
+    app::App,
+    prelude::{Commands, Component, EventReader, Query, Res, ResMut, Resource},
+};
 use bytemuck::{Pod, Zeroable};
 use gpu_compute_bevy::{
     resource::GpuAcceleratedBevy,
@@ -18,46 +22,46 @@ use gpu_compute_bevy::{
         task_components::task_run_id::TaskRunId,
         task_specification::{
             iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputVectorLengths,
-            task_specification::TaskUserSpecification,
+            task_specification::ComputeTaskSpecification,
         },
         wgsl_code::WgslCode,
     },
 };
 
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-pub struct Unused(u8);
-
-#[derive(Component)]
-pub struct ExampleTaskInputType {}
-impl InputVectorTypesSpec for ExampleTaskInputType {
-    type Input0 = f64;
-    type Input1 = [u8; 10];
-    type Input2 = u8;
-    type Input3 = Unused;
-    type Input4 = Unused;
-    type Input5 = Unused;
-}
-pub struct ExampleTaskOutputType {}
-impl OutputVectorTypesSpec for ExampleTaskOutputType {
-    type Output0 = u8;
-    type Output1 = [f64; 2];
-    type Output2 = Unused;
-    type Output3 = Unused;
-    type Output4 = Unused;
-    type Output5 = Unused;
-}
 use rust_to_wgsl::*;
 use shared::{
     misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec},
     wgsl_in_rust_helpers::*,
 };
 
-fn main() {}
+fn main() {
+    // todo setup minimum functioning bevy example
+    let mut binding = App::new();
+    let _app = binding
+        .add_plugins(DefaultPlugins)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .insert_resource(PerformanceMetrics::new(run_config.num_frames_to_test))
+        .init_resource::<SysInfo>()
+        .insert_resource(run_config.clone())
+        .add_plugins(GraphicsPlugin)
+        .add_systems(
+            Startup,
+            (setup, spawn_entities, setup_position_cache).chain(),
+        )
+        .add_plugins(CollisionDetectionPlugin {
+            method: collision_detection_type,
+            run_config,
+        })
+        .add_systems(PreUpdate, (move_entities_deterministic,).chain())
+        .add_systems(
+            Update,
+            (process_collisions, track_performance_and_exit).chain(),
+        )
+        .run();
+}
 
 #[wgsl_shader_module]
-mod example_shader_2 {
-
+mod collision_detection_module {
     use rust_to_wgsl::*;
     use shared::wgsl_in_rust_helpers::*;
 
@@ -70,7 +74,10 @@ mod example_shader_2 {
         resolution: Vec2F32,
     }
     #[wgsl_input_array]
-    type Position = [f32; 2];
+    struct Position {
+        //todo, check that the 'pub' is either removed or valid in wgsl, is necessary in rust
+        pub v: Vec2F32,
+    }
     #[wgsl_input_array]
     type Radius = f32;
     #[wgsl_output_vec]
@@ -78,20 +85,18 @@ mod example_shader_2 {
         entity1: u32,
         entity2: u32,
     }
-    fn calculate_distance_squared(p1: [f32; 2], p2: [f32; 2]) -> f32 {
-        let dx = p1[0] - p2[0];
-        let dy = p1[1] - p2[1];
+    fn calculate_distance_squared(p1: Vec2F32, p2: Vec2F32) -> f32 {
+        let dx = p1.x - p2[0];
+        let dy = p1.y - p2[1];
         return dx * dx + dy * dy;
     }
-    fn main(global_id: WgslGlobalId) {
-        let current_entity = global_id.x;
-        let other_entity = global_id.y;
-        // Early exit if invalid entity or zero radius
-        if current_entity >= WgslVecInput::vec_len::<Position>()
-            || other_entity >= WgslVecInput::vec_len::<Position>()
-            || current_entity == other_entity
-            || current_entity >= other_entity
-        {
+    fn main(iter_pos: WgslIterationPosition) {
+        let current_entity = iter_pos.x;
+        let other_entity = iter_pos.y;
+        // Early exit conditions
+        let out_of_bounds = current_entity >= WgslVecInput::vec_len::<Position>()
+            || other_entity >= WgslVecInput::vec_len::<Position>();
+        if out_of_bounds || current_entity == other_entity || current_entity >= other_entity {
             return;
         }
         let current_radius = WgslVecInput::vec_val::<Radius>(current_entity);
@@ -101,9 +106,8 @@ mod example_shader_2 {
         }
         let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
         let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
-        let dist_squared = calculate_distance_squared(current_pos, other_pos);
+        let dist_squared = calculate_distance_squared(current_pos.v, other_pos.v);
         let radius_sum = current_radius + other_radius;
-        // Compare squared distances to avoid sqrt
         if dist_squared < radius_sum * radius_sum {
             WgslOutput::push::<CollisionResult>(CollisionResult {
                 entity1: current_entity,
@@ -120,50 +124,11 @@ fn example_task_creation_system(
     let task_name = "example task".to_string();
     let initial_iteration_space = IterationSpace::new(100, 10, 1);
     let initial_max_output_lengths = MaxOutputVectorLengths::new(vec![10, 30, 100]);
-    let task_spec = TaskUserSpecification::create_automatically::<example_shader_2::Types>(
-        example_shader_2::parsed(),
+    let task_spec = ComputeTaskSpecification::from_shader::<collision_detection_module::Types>(
+        collision_detection_module::parsed(),
         initial_iteration_space,
         initial_max_output_lengths.clone(),
     );
-
-    //*  additional code below required if you use WGSL directly
-    let input_definitions = [
-        Some(InputVectorMetadataDefinition { binding_number: 0 }),
-        Some(InputVectorMetadataDefinition { binding_number: 1 }),
-        Some(InputVectorMetadataDefinition { binding_number: 2 }),
-        None,
-        None,
-        None,
-    ];
-    let output_definitions = [
-        Some(OutputVectorMetadataDefinition {
-            binding_number: 3,
-            include_count: true,
-            count_binding_number: Some(5),
-        }),
-        Some(OutputVectorMetadataDefinition {
-            binding_number: 4,
-            include_count: false,
-            count_binding_number: None,
-        }),
-        None,
-        None,
-        None,
-        None,
-    ];
-    let task_spec = TaskUserSpecification::create_manually(
-        InputVectorsMetadataSpec::from_input_vector_types_spec::<ExampleTaskInputType>(
-            input_definitions,
-        ),
-        // todo, ensure that this conforms with the provided input type, right now depends on which binding numbers are set
-        OutputVectorsMetadataSpec::from_output_vector_types_spec::<ExampleTaskOutputType>(
-            output_definitions,
-        ),
-        initial_iteration_space,
-        initial_max_output_lengths,
-        WgslCode::from_file("./collision.wgsl", "main".to_string()), // SHOULD be alterable
-    );
-    let task = gpu_acc_bevy.create_task(&mut commands, &task_name, task_spec);
 }
 fn delete_task_example_system(
     mut commands: Commands,
@@ -176,7 +141,7 @@ fn delete_task_example_system(
 fn alter_task_example_system(
     mut commands: Commands,
     mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
-    mut task_specifications: Query<&mut TaskUserSpecification>,
+    mut task_specifications: Query<&mut ComputeTaskSpecification>,
 ) {
     let task = gpu_acc_bevy.task(&"example task".to_string());
     // example of alteration
@@ -194,10 +159,11 @@ fn run_task_example_system(
     mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
 ) {
     let task = gpu_compute.task(&"example task".to_string());
-    let mut input_data = InputData::<ExampleTaskInputType>::empty();
-    input_data.set_input0(vec![0.3]);
-    input_data.set_input1(vec![[0u8; 10]]);
-    input_data.set_input2(vec![0]);
+    let mut input_data = InputData::<collision_detection_module::Types>::empty();
+    input_data.set_input0(vec![collision_detection_module::Position {
+        v: Vec2F32::new(0.3, 0.3),
+    }]);
+    input_data.set_input1(vec![0.3]);
     let run_id = task.run(&mut commands, input_data, task_run_ids);
 }
 
@@ -214,10 +180,12 @@ fn handle_results_example_system_with_assurance_of_run_success(
     for ev in event_reader.read() {
         if ev.id == specific_run_id.0 {
             // this ensures that the results exist
-            let results = task.result::<ExampleTaskOutputType>(specific_run_id.0, out_datas);
+            let results =
+                task.result::<collision_detection_module::Types>(specific_run_id.0, out_datas);
             if let Some(results) = results {
-                let result_1: Vec<[f64; 2]> = results.get_output1().unwrap().into();
-                let result_0 = results.get_output0();
+                //fully type-safe results
+                let result_0 = results.get_output0().unwrap();
+                let result_1 = results.get_output1().unwrap();
                 // your logic here
             }
         }
@@ -229,10 +197,12 @@ fn handle_results_example_system_no_assurances(
     specific_run_id: Res<RunID>,
 ) {
     let task = gpu_compute.task(&"example task".to_string());
-    let result_option = task.result::<ExampleTaskOutputType>(specific_run_id.0, out_datas);
+    let result_option =
+        task.result::<collision_detection_module::Types>(specific_run_id.0, out_datas);
     if let Some(result) = result_option {
-        let result_1: Vec<[f64; 2]> = result.get_output1().unwrap().into();
-        let result_0 = result.get_output0();
+        // fully type-safe results
+        let result_0 = result.get_output0().unwrap();
+        let result_1 = result.get_output1().unwrap();
         // your logic here
     }
 }

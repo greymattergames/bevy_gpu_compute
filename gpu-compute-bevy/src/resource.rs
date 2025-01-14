@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::{Commands, Resource};
 
-use crate::task::task_specification::task_specification::TaskUserSpecification;
+use crate::task::task_specification::task_specification::ComputeTaskSpecification;
 
 use super::task::{
     events::{
@@ -41,7 +41,7 @@ impl GpuAcceleratedBevy {
         &mut self,
         commands: &mut Commands,
         name: &String,
-        spec: TaskUserSpecification,
+        spec: ComputeTaskSpecification,
     ) -> TaskCommands {
         let task = GpuAcceleratedBevyTask::new();
         let entity_commands = commands.spawn((task, spec, TaskName::new(name)));

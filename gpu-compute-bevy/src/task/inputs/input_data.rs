@@ -1,25 +1,21 @@
 use bevy::{log, prelude::Component};
-use shared::misc_types::InputVectorTypesSpec;
-
-use super::{
-    input_vector_types_spec::BlankInputVectorTypesSpec, type_erased_input_data::TypeErasedInputData,
-};
+use shared::misc_types::{BlankTypesSpec, InputVectorTypesSpec, TypesSpec};
 
 pub trait InputDataTrait: Send + Sync {
     fn input_bytes(&self, index: usize) -> Option<&[u8]>;
 }
 
 #[derive(Component, Debug)]
-pub struct InputData<T: InputVectorTypesSpec> {
-    input0: Option<Vec<T::Input0>>,
-    input1: Option<Vec<T::Input1>>,
-    input2: Option<Vec<T::Input2>>,
-    input3: Option<Vec<T::Input3>>,
-    input4: Option<Vec<T::Input4>>,
-    input5: Option<Vec<T::Input5>>,
+pub struct InputData<T: TypesSpec> {
+    input0: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input0>>,
+    input1: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input1>>,
+    input2: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input2>>,
+    input3: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input3>>,
+    input4: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input4>>,
+    input5: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input5>>,
     _phantom: std::marker::PhantomData<T>,
 }
-impl Default for InputData<BlankInputVectorTypesSpec> {
+impl Default for InputData<BlankTypesSpec> {
     fn default() -> Self {
         InputData {
             input0: None,
@@ -34,7 +30,7 @@ impl Default for InputData<BlankInputVectorTypesSpec> {
     }
 }
 
-impl<T: InputVectorTypesSpec> InputData<T> {
+impl<T: TypesSpec> InputData<T> {
     pub fn empty() -> Self {
         InputData {
             input0: None,
@@ -49,23 +45,41 @@ impl<T: InputVectorTypesSpec> InputData<T> {
     }
 
     // Type-safe setters that take vectors of Pod types
-    pub fn set_input0(&mut self, input: Vec<T::Input0>) {
+    pub fn set_input0(
+        &mut self,
+        input: Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input0>,
+    ) {
         self.input0 = Some(input);
     }
 
-    pub fn set_input1(&mut self, input: Vec<T::Input1>) {
+    pub fn set_input1(
+        &mut self,
+        input: Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input1>,
+    ) {
         self.input1 = Some(input);
     }
-    pub fn set_input2(&mut self, input: Vec<T::Input2>) {
+    pub fn set_input2(
+        &mut self,
+        input: Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input2>,
+    ) {
         self.input2 = Some(input);
     }
-    pub fn set_input3(&mut self, input: Vec<T::Input3>) {
+    pub fn set_input3(
+        &mut self,
+        input: Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input3>,
+    ) {
         self.input3 = Some(input);
     }
-    pub fn set_input4(&mut self, input: Vec<T::Input4>) {
+    pub fn set_input4(
+        &mut self,
+        input: Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input4>,
+    ) {
         self.input4 = Some(input);
     }
-    pub fn set_input5(&mut self, input: Vec<T::Input5>) {
+    pub fn set_input5(
+        &mut self,
+        input: Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input5>,
+    ) {
         self.input5 = Some(input);
     }
 
@@ -114,7 +128,7 @@ impl<T: InputVectorTypesSpec> InputData<T> {
     }
 }
 
-impl<T: InputVectorTypesSpec + Send + Sync> InputDataTrait for InputData<T> {
+impl<T: TypesSpec + Send + Sync> InputDataTrait for InputData<T> {
     fn input_bytes(&self, index: usize) -> Option<&[u8]> {
         log::info!("input_bytes index: {}", index);
         match index {

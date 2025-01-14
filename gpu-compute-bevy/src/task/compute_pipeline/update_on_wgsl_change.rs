@@ -9,7 +9,7 @@ use wgpu::ComputePipelineDescriptor;
 use crate::task::{
     events::{GpuComputeTaskChangeEvent, WgslCodeChangedEvent},
     task_components::task_name::TaskName,
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::task_specification::ComputeTaskSpecification,
     wgsl_code::WgslCode,
 };
 
@@ -22,7 +22,7 @@ use super::{
 pub fn update_pipelines_on_wgsl_change(
     mut tasks: Query<(
         &TaskName,
-        &TaskUserSpecification,
+        &ComputeTaskSpecification,
         &PipelineLayoutComponent,
         &mut PipelineLruCache,
     )>,

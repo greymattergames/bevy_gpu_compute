@@ -7,10 +7,13 @@ use crate::ram_limit::RamLimit;
 
 use super::{
     task_components::task_max_output_bytes::TaskMaxOutputBytes,
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::task_specification::ComputeTaskSpecification,
 };
 
-pub fn verify_have_enough_memory(tasks: Query<&TaskUserSpecification>, ram_limit: Res<RamLimit>) {
+pub fn verify_have_enough_memory(
+    tasks: Query<&ComputeTaskSpecification>,
+    ram_limit: Res<RamLimit>,
+) {
     let total_bytes = tasks.iter().fold(0, |sum, task_spec| {
         sum + task_spec.task_max_output_bytes().get()
     });

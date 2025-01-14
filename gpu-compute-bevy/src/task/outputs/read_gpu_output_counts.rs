@@ -10,7 +10,7 @@ use wgpu::Buffer;
 
 use crate::task::{
     buffers::components::{OutputCountBuffers, OutputCountStagingBuffers},
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::task_specification::ComputeTaskSpecification,
 };
 
 use super::{
@@ -23,7 +23,7 @@ use super::{
 
 pub fn read_gpu_output_counts(
     mut tasks: Query<(
-        &TaskUserSpecification,
+        &ComputeTaskSpecification,
         &OutputCountBuffers,
         &OutputCountStagingBuffers,
         &mut GpuOutputCounts,

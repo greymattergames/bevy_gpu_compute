@@ -69,7 +69,7 @@ pub const WGSL_NATIVE_TYPES: [&str; 65] = [
 ];
 const LIB_HELPER_TYPES: [&str; 5] = [
     "WgslScalar",
-    "WgslGlobalId",
+    "WgslIterationPosition",
     "WgslConfigInput",
     "WgslVecInput",
     "WgslOutput",

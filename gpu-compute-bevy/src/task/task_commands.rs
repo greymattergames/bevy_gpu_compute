@@ -2,7 +2,7 @@ use bevy::{
     log,
     prelude::{Commands, Component, DespawnRecursiveExt, Entity, Event, Query, ResMut},
 };
-use shared::misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec};
+use shared::misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec, TypesSpec};
 
 use crate::run_ids::GpuAcceleratedBevyRunIds;
 
@@ -19,7 +19,7 @@ use super::{
     },
     task_components::task_run_id::TaskRunId,
     task_specification::{
-        iteration_space::IterationSpace, task_specification::TaskUserSpecification,
+        iteration_space::IterationSpace, task_specification::ComputeTaskSpecification,
     },
     wgsl_code::WgslCode,
 };
@@ -36,7 +36,7 @@ impl TaskCommands {
     }
 
     /// registers the input data to run in the next round, returns a unique id to identify the run
-    pub fn run<I: InputVectorTypesSpec + 'static + Send + Sync>(
+    pub fn run<I: TypesSpec + 'static + Send + Sync>(
         &self,
         commands: &mut Commands,
         inputs: InputData<I>,
@@ -52,7 +52,7 @@ impl TaskCommands {
         id
     }
 
-    pub fn result<O: OutputVectorTypesSpec>(
+    pub fn result<O: TypesSpec>(
         &self,
         run_id: u128,
         out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,

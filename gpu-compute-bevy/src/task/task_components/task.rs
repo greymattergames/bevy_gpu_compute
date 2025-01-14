@@ -1,4 +1,5 @@
 use bevy::prelude::{Component, Entity};
+use shared::misc_types::BlankTypesSpec;
 
 use crate::task::{
     buffers::components::{
@@ -7,13 +8,13 @@ use crate::task::{
     },
     compute_pipeline::cache::PipelineLruCache,
     dispatch::create_bind_group::BindGroupComponent,
-    inputs::{input_data::InputData, input_vector_types_spec::BlankInputVectorTypesSpec},
+    inputs::input_data::InputData,
     outputs::definitions::{
         gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
     },
     task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
-        iteration_space::IterationSpace, task_specification::TaskUserSpecification,
+        iteration_space::IterationSpace, task_specification::ComputeTaskSpecification,
     },
 };
 
@@ -30,7 +31,7 @@ By default this means once per frame
 #[require(
     TaskName,
     TaskRunId,
-    TaskUserSpecification,
+    ComputeTaskSpecification,
     PipelineLruCache,
     // buffers
     OutputBuffers,
@@ -40,7 +41,7 @@ By default this means once per frame
     InputBuffers,
 
     BindGroupComponent,
-    InputData<BlankInputVectorTypesSpec>,
+    InputData<BlankTypesSpec>,
     TypeErasedOutputData,
     GpuOutputCounts,
 )]

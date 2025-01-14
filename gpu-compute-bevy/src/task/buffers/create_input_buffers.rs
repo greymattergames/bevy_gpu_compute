@@ -13,7 +13,7 @@ use crate::task::{
         type_erased_input_data::TypeErasedInputData,
     },
     task_components::task_name::TaskName,
-    task_specification::task_specification::TaskUserSpecification,
+    task_specification::task_specification::ComputeTaskSpecification,
 };
 
 use super::components::InputBuffers;
@@ -22,7 +22,7 @@ pub fn create_input_buffers(
     mut tasks: Query<(
         &TaskName,
         &TypeErasedInputData,
-        &TaskUserSpecification,
+        &ComputeTaskSpecification,
         &mut InputBuffers,
     )>,
     mut input_data_change_event_listener: EventReader<InputDataChangeEvent>,
