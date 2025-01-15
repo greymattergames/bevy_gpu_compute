@@ -2,6 +2,7 @@ use bevy::prelude::{Component, Ref};
 
 use super::iteration_space::IterationSpace;
 
+#[derive(Clone, PartialEq)]
 /// Defaults should generally not be altered. Based on this resource: https://developer.arm.com/documentation/101897/0303/Compute-shading/Workgroup-sizes
 pub struct GpuWorkgroupSizes {
     x: usize,

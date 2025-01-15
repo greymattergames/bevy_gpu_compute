@@ -7,7 +7,7 @@ use super::task::{
     buffers::{
         create_input_buffers::create_input_buffers, create_output_buffers::create_output_buffers,
     },
-    compute_pipeline::update_on_wgsl_change::update_pipelines_on_wgsl_change,
+    compute_pipeline::update_on_pipeline_const_change::update_pipelines_on_wgsl_change,
     dispatch::{create_bind_group::create_bind_groups, dispatch_to_gpu::dispatch_to_gpu},
     outputs::{
         read_gpu_output_counts::read_gpu_output_counts,

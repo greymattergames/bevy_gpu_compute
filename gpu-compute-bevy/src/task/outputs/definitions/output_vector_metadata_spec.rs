@@ -1,17 +1,22 @@
 use bevy::prelude::Component;
-use shared::misc_types::OutputVectorTypesSpec;
+use shared::{
+    custom_type_name::{self, CustomTypeName},
+    misc_types::OutputVectorTypesSpec,
+};
 
-pub struct OutputVectorMetadataDefinition {
+pub struct OutputVectorMetadataDefinition<'a> {
     pub binding_number: u32,
     pub include_count: bool,
     pub count_binding_number: Option<u32>,
+    pub name: &'a CustomTypeName,
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputVectorMetadata {
     bytes: usize,
     binding_number: u32,
     include_count: bool,
     count_binding_number: Option<u32>,
+    name: CustomTypeName,
 }
 
 impl OutputVectorMetadata {
@@ -20,12 +25,14 @@ impl OutputVectorMetadata {
         binding_number: u32,
         include_count: bool,
         count_binding_number: Option<u32>,
+        name: CustomTypeName,
     ) -> Self {
         OutputVectorMetadata {
             bytes,
             binding_number,
             include_count,
             count_binding_number,
+            name,
         }
     }
     pub fn get_bytes(&self) -> usize {
@@ -40,9 +47,12 @@ impl OutputVectorMetadata {
     pub fn get_count_binding_number(&self) -> Option<u32> {
         self.count_binding_number
     }
+    pub fn get_length_const_name(&self) -> String {
+        self.name.output_array_length()
+    }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputVectorsMetadataSpec {
     output0: Option<OutputVectorMetadata>,
     output1: Option<OutputVectorMetadata>,
@@ -82,6 +92,7 @@ impl OutputVectorsMetadataSpec {
                 } else {
                     None
                 },
+                def.name.clone(),
             ))
         } else {
             None

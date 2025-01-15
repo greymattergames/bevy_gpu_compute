@@ -12,15 +12,10 @@ use crate::task::{
     outputs::definitions::{
         gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
     },
-    task_specification::{
-        gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
-        iteration_space::IterationSpace, task_specification::ComputeTaskSpecification,
-    },
+    task_specification::task_specification::ComputeTaskSpecification,
 };
 
-use super::{
-    task_max_output_bytes::TaskMaxOutputBytes, task_name::TaskName, task_run_id::TaskRunId,
-};
+use super::{task_name::TaskName, task_run_id::TaskRunId};
 
 /**
 A task can only run once per run of the GpuAcceleratedBevyRunTaskSet system set

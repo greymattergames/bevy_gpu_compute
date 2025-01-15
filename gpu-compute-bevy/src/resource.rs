@@ -6,8 +6,7 @@ use crate::task::task_specification::task_specification::ComputeTaskSpecificatio
 
 use super::task::{
     events::{
-        GpuAcceleratedTaskCreatedEvent, GpuComputeTaskChangeEvent,
-        IterationSpaceOrMaxOutVecLengthChangedEvent, WgslCodeChangedEvent,
+        GpuAcceleratedTaskCreatedEvent, GpuComputeTaskChangeEvent, MaxOutputLengthChangedEvent,
     },
     inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
@@ -52,8 +51,7 @@ impl GpuAcceleratedBevy {
             entity,
             task_name: name.clone(),
         });
-        commands.send_event(IterationSpaceOrMaxOutVecLengthChangedEvent::new(entity));
-        commands.send_event(WgslCodeChangedEvent::new(entity));
+        commands.send_event(MaxOutputLengthChangedEvent::new(entity));
         task_commands
     }
     pub fn task_exists(&self, name: &String) -> bool {

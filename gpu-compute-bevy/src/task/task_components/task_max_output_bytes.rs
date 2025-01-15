@@ -1,6 +1,6 @@
 use crate::task::{
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
-    task_specification::max_output_vector_lengths::MaxOutputVectorLengths,
+    task_specification::max_output_vector_lengths::MaxOutputLengths,
 };
 
 pub struct TaskMaxOutputBytes(usize);
@@ -15,7 +15,7 @@ impl TaskMaxOutputBytes {
         TaskMaxOutputBytes(max_output_bytes)
     }
     pub fn from_max_lengths_and_spec(
-        max_output_vector_lengths: &MaxOutputVectorLengths,
+        max_output_vector_lengths: &MaxOutputLengths,
         output_vector_metadata_spec: &OutputVectorsMetadataSpec,
     ) -> Self {
         let max_output_bytes = output_vector_metadata_spec

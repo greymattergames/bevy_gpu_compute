@@ -50,7 +50,7 @@ fn dispatch_to_gpu_single_task(
     {
         let mut compute_pass = encoder.begin_compute_pass(&Default::default());
         let key = PipelineKey {
-            wgsl_hash: wgsl_code.code_hash as u64,
+            pipeline_consts_version: wgsl_code.code_hash as u64,
         };
         compute_pass.set_pipeline(&compute_pipeline_cache.cache.get(&key).unwrap());
         compute_pass.set_bind_group(0, bind_group.0.as_ref().unwrap(), &[]);

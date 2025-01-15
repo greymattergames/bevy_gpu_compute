@@ -1,10 +1,18 @@
 use bevy::{
     DefaultPlugins,
-    app::App,
-    prelude::{Commands, Component, EventReader, Query, Res, ResMut, Resource},
+    app::{App, AppExit, Startup, Update},
+    asset::{Assets, RenderAssetUsages},
+    log,
+    math::Vec2,
+    prelude::{
+        Camera2d, Commands, Component, EventReader, EventWriter, IntoSystemConfigs, Mesh, Mesh2d,
+        OrthographicProjection, Query, Res, ResMut, Resource, Transform,
+    },
+    sprite::MeshMaterial2d,
 };
 use bytemuck::{Pod, Zeroable};
 use gpu_compute_bevy::{
+    GpuAcceleratedBevyPlugin,
     resource::GpuAcceleratedBevy,
     run_ids::GpuAcceleratedBevyRunIds,
     task::{
@@ -21,43 +29,65 @@ use gpu_compute_bevy::{
         },
         task_components::task_run_id::TaskRunId,
         task_specification::{
-            iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputVectorLengths,
+            iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputLengths,
             task_specification::ComputeTaskSpecification,
         },
         wgsl_code::WgslCode,
     },
 };
-
+mod visuals;
 use rust_to_wgsl::*;
 use shared::{
     misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec},
     wgsl_in_rust_helpers::*,
 };
+use visuals::{ColorHandles, spawn_camera, spawn_entities};
 
 fn main() {
-    // todo setup minimum functioning bevy example
     let mut binding = App::new();
     let _app = binding
         .add_plugins(DefaultPlugins)
-        .add_plugins(FrameTimeDiagnosticsPlugin::default())
-        .insert_resource(PerformanceMetrics::new(run_config.num_frames_to_test))
-        .init_resource::<SysInfo>()
-        .insert_resource(run_config.clone())
-        .add_plugins(GraphicsPlugin)
+        .add_plugins(GpuAcceleratedBevyPlugin::default())
+        .init_resource::<ColorHandles>()
+        .init_resource::<State>()
+        .add_event::<GpuComputeTaskSuccessEvent>()
         .add_systems(
             Startup,
-            (setup, spawn_entities, setup_position_cache).chain(),
+            (spawn_camera, spawn_entities, create_task, modify_task).chain(),
         )
-        .add_plugins(CollisionDetectionPlugin {
-            method: collision_detection_type,
-            run_config,
-        })
-        .add_systems(PreUpdate, (move_entities_deterministic,).chain())
         .add_systems(
             Update,
-            (process_collisions, track_performance_and_exit).chain(),
+            (
+                run_task,
+                handle_task_results,
+                delete_task,
+                exit_and_show_results,
+            )
+                .chain(),
         )
         .run();
+}
+
+const SPAWN_RANGE_MIN: i32 = -20;
+const SPAWN_RANGE_MAX: i32 = 20;
+const ENTITY_RADIUS: f32 = 5.;
+
+#[derive(Resource)]
+struct State {
+    pub run_id: u128,
+    pub num_entities: u32,
+    pub length: u32,
+    pub collisions: Vec<collision_detection_module::CollisionResult>,
+}
+impl Default for State {
+    fn default() -> Self {
+        State {
+            run_id: 0,
+            num_entities: 0,
+            length: (SPAWN_RANGE_MAX - SPAWN_RANGE_MIN).abs() as u32,
+            collisions: Vec::new(),
+        }
+    }
 }
 
 #[wgsl_shader_module]
@@ -117,92 +147,94 @@ mod collision_detection_module {
     }
 }
 
-fn example_task_creation_system(
-    mut commands: Commands,
-    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
-) {
-    let task_name = "example task".to_string();
-    let initial_iteration_space = IterationSpace::new(100, 10, 1);
-    let initial_max_output_lengths = MaxOutputVectorLengths::new(vec![10, 30, 100]);
+fn create_task(mut commands: Commands, mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
+    let task_name = "collision_detection".to_string();
+    let initial_iteration_space = IterationSpace::new(
+        // set incorrectly here, just so that we can demonstrate changing it in "alter_task"
+        100, 10, 1,
+    );
+    let initial_max_output_lengths = MaxOutputLengths::new(vec![
+        // set incorrectly here, just so that we can demonstrate changing it in "alter_task"
+        10, 30, 100,
+    ]);
     let task_spec = ComputeTaskSpecification::from_shader::<collision_detection_module::Types>(
         collision_detection_module::parsed(),
         initial_iteration_space,
         initial_max_output_lengths.clone(),
     );
+    let t = collision_detection_module::parsed();
+    t.input_arrays
 }
-fn delete_task_example_system(
-    mut commands: Commands,
-    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
-) {
-    let task = gpu_acc_bevy.task(&"example task".to_string());
-    // example of deletion
+fn delete_task(mut commands: Commands, mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
+    let task = gpu_acc_bevy.task(&"collision_detection".to_string());
     task.delete(&mut commands);
 }
-fn alter_task_example_system(
+fn modify_task(
     mut commands: Commands,
     mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
     mut task_specifications: Query<&mut ComputeTaskSpecification>,
+    state: Res<State>,
 ) {
-    let task = gpu_acc_bevy.task(&"example task".to_string());
-    // example of alteration
+    let task = gpu_acc_bevy.task(&"collision_detection".to_string());
+    // specify the correct iter space and output maxes
     if let Ok(mut spec) = task_specifications.get_mut(task.entity) {
         spec.set_iteration_space(
             &mut commands,
             task.entity,
-            IterationSpace::new_unsafe(10, 10, 1),
+            IterationSpace::new(state.length as usize, state.length as usize, 1),
+        );
+        spec.set_max_output_vector_lengths(
+            &mut commands,
+            task.entity,
+            MaxOutputLengths::new(vec![(state.length * state.length) as usize]),
         );
     }
 }
-fn run_task_example_system(
+fn run_task(
     mut commands: Commands,
     mut gpu_compute: ResMut<GpuAcceleratedBevy>,
     mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
+    mut state: ResMut<State>,
 ) {
-    let task = gpu_compute.task(&"example task".to_string());
+    let task = gpu_compute.task(&"collision_detection".to_string());
     let mut input_data = InputData::<collision_detection_module::Types>::empty();
     input_data.set_input0(vec![collision_detection_module::Position {
         v: Vec2F32::new(0.3, 0.3),
     }]);
     input_data.set_input1(vec![0.3]);
     let run_id = task.run(&mut commands, input_data, task_run_ids);
+    state.run_id = run_id;
 }
 
-#[derive(Resource)]
-struct RunID(pub u128);
-
-fn handle_results_example_system_with_assurance_of_run_success(
-    mut gpu_compute: ResMut<GpuAcceleratedBevy>,
+fn handle_task_results(
+    gpu_compute: ResMut<GpuAcceleratedBevy>,
     mut event_reader: EventReader<GpuComputeTaskSuccessEvent>,
-    out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
-    specific_run_id: Res<RunID>,
+    out_datas: Query<(&TaskRunId, &TypeErasedOutputData)>,
+    mut state: ResMut<State>,
 ) {
-    let task = gpu_compute.task(&"example task".to_string());
+    let task = gpu_compute.task(&"collision_detection".to_string());
+    // reading events ensures that the results exist
     for ev in event_reader.read() {
-        if ev.id == specific_run_id.0 {
-            // this ensures that the results exist
+        if ev.id == state.run_id {
+            // here we get the actula result
             let results =
-                task.result::<collision_detection_module::Types>(specific_run_id.0, out_datas);
+                task.result::<collision_detection_module::Types>(state.run_id, &out_datas);
             if let Some(results) = results {
                 //fully type-safe results
-                let result_0 = results.get_output0().unwrap();
-                let result_1 = results.get_output1().unwrap();
+                let collision_results: Vec<collision_detection_module::CollisionResult> = results
+                    .get_output0()
+                    .unwrap()
+                    .into_iter()
+                    .cloned()
+                    .collect();
                 // your logic here
+                state.collisions = collision_results;
             }
         }
     }
 }
-fn handle_results_example_system_no_assurances(
-    mut gpu_compute: ResMut<GpuAcceleratedBevy>,
-    out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
-    specific_run_id: Res<RunID>,
-) {
-    let task = gpu_compute.task(&"example task".to_string());
-    let result_option =
-        task.result::<collision_detection_module::Types>(specific_run_id.0, out_datas);
-    if let Some(result) = result_option {
-        // fully type-safe results
-        let result_0 = result.get_output0().unwrap();
-        let result_1 = result.get_output1().unwrap();
-        // your logic here
-    }
+
+fn exit_and_show_results(state: Res<State>, mut exit: EventWriter<AppExit>) {
+    log::info!("collisions count: {}", state.collisions.len());
+    exit.send(AppExit::Success);
 }

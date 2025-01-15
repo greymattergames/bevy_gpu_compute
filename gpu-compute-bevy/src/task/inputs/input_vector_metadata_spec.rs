@@ -1,21 +1,24 @@
 use bevy::prelude::Component;
-use shared::misc_types::InputVectorTypesSpec;
+use shared::{custom_type_name::CustomTypeName, misc_types::InputVectorTypesSpec};
 
 #[derive(Copy, Clone)]
-pub struct InputVectorMetadataDefinition {
+pub struct InputVectorMetadataDefinition<'a> {
     pub binding_number: u32,
+    pub name: &'a CustomTypeName,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Debug)]
 pub struct InputVectorMetadata {
     bytes: usize,
     binding_number: u32,
+    name: CustomTypeName,
 }
 
 impl InputVectorMetadata {
-    pub fn new(bytes: usize, binding_number: u32) -> Self {
+    pub fn new(bytes: usize, binding_number: u32, name: CustomTypeName) -> Self {
         InputVectorMetadata {
             bytes,
             binding_number,
+            name,
         }
     }
     pub fn get_bytes(&self) -> usize {
@@ -24,9 +27,12 @@ impl InputVectorMetadata {
     pub fn get_binding_number(&self) -> u32 {
         self.binding_number
     }
+    pub fn get_length_const_name(&self) -> String {
+        self.name.input_array_length()
+    }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct InputVectorsMetadataSpec {
     input0: Option<InputVectorMetadata>,
     input1: Option<InputVectorMetadata>,
@@ -61,6 +67,7 @@ impl InputVectorsMetadataSpec {
             Some(InputVectorMetadata::new(
                 std::mem::size_of::<ST>(),
                 def.binding_number,
+                def.name.clone(),
             ))
         } else {
             None

@@ -29,25 +29,24 @@ impl GpuComputeTaskChangeEvent for InputDataChangeEvent {
 }
 
 #[derive(Event)]
-pub struct IterationSpaceOrMaxOutVecLengthChangedEvent {
+pub struct PipelineConstChangedEvent {
     entity: Entity,
 }
-impl GpuComputeTaskChangeEvent for IterationSpaceOrMaxOutVecLengthChangedEvent {
+impl GpuComputeTaskChangeEvent for PipelineConstChangedEvent {
     fn new(entity: Entity) -> Self {
-        IterationSpaceOrMaxOutVecLengthChangedEvent { entity }
+        PipelineConstChangedEvent { entity }
     }
     fn entity(&self) -> Entity {
         self.entity
     }
 }
-
 #[derive(Event)]
-pub struct WgslCodeChangedEvent {
+pub struct MaxOutputLengthChangedEvent {
     entity: Entity,
 }
-impl GpuComputeTaskChangeEvent for WgslCodeChangedEvent {
+impl GpuComputeTaskChangeEvent for MaxOutputLengthChangedEvent {
     fn new(entity: Entity) -> Self {
-        WgslCodeChangedEvent { entity }
+        MaxOutputLengthChangedEvent { entity }
     }
     fn entity(&self) -> Entity {
         self.entity

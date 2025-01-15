@@ -1,28 +1,28 @@
-use std::time::SystemTime;
+use std::{collections::HashMap, time::SystemTime};
 
 use bevy::prelude::Component;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /**
 ### These vectors lengths are very important for overall performance, the lower the better
 #### But if they are too low they will cut off valid output data
 
 */
-pub struct MaxOutputVectorLengths {
+pub struct MaxOutputLengths {
     pub unique_id: usize,
-    map: Vec<usize>,
+    map: HashMap<String, usize>,
 }
-impl Default for MaxOutputVectorLengths {
+impl Default for MaxOutputLengths {
     fn default() -> Self {
         Self {
             unique_id: 0,
-            map: Vec::default(),
+            map: HashMap::default(),
         }
     }
 }
 
-impl MaxOutputVectorLengths {
-    pub fn new(map: Vec<usize>) -> Self {
+impl MaxOutputLengths {
+    pub fn new(map: HashMap<String, usize>) -> Self {
         Self {
             unique_id: SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
@@ -32,7 +32,10 @@ impl MaxOutputVectorLengths {
         }
     }
 
-    pub fn get(&self, output_index: usize) -> usize {
-        return self.map[output_index];
+    pub fn get(&self, output_item_type_name: String) -> usize {
+        return self.map[&output_item_type_name];
+    }
+    pub fn get_map(&self) -> &HashMap<String, usize> {
+        return &self.map;
     }
 }

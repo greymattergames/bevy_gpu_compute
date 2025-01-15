@@ -1,32 +1,37 @@
+use std::default;
+
 use bevy::{
     ecs::batching::BatchingStrategy,
     log,
     prelude::{Changed, EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
-use wgpu::ComputePipelineDescriptor;
+use shared::wgsl_components::{
+    WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
+};
+use wgpu::{ComputePipelineDescriptor, PipelineCompilationOptions};
 
 use crate::task::{
-    events::{GpuComputeTaskChangeEvent, WgslCodeChangedEvent},
-    task_components::task_name::TaskName,
-    task_specification::task_specification::ComputeTaskSpecification,
-    wgsl_code::WgslCode,
+    events::GpuComputeTaskChangeEvent, task_components::task_name::TaskName,
+    task_specification::task_specification::ComputeTaskSpecification, wgsl_code::WgslCode,
 };
 
 use super::{
     cache::{PipelineKey, PipelineLruCache},
+    pipeline_consts::PipelineConstants,
     pipeline_layout::PipelineLayoutComponent,
-    shader_module::shader_module_from_wgsl_string,
+    shader_module::{self, shader_module_from_wgsl_string},
 };
 
-pub fn update_pipelines_on_wgsl_change(
+pub fn update_pipelines_on_pipeline_const_change(
     mut tasks: Query<(
         &TaskName,
         &ComputeTaskSpecification,
         &PipelineLayoutComponent,
+        &WgslCode,
         &mut PipelineLruCache,
     )>,
-    mut wgsl_code_changed_event_reader: EventReader<WgslCodeChangedEvent>,
+    mut wgsl_code_changed_event_reader: EventReader<PipelineConstChangedEvent>,
     render_device: Res<RenderDevice>,
 ) {
     for (ev, _) in wgsl_code_changed_event_reader
@@ -40,38 +45,42 @@ pub fn update_pipelines_on_wgsl_change(
                 task_name,
                 &render_device,
                 &pipeline_layout,
+                task_spec.pipeline_constants(),
                 &mut pipeline_cache,
             );
         }
     }
 }
 
+//todo, whenever pipeline_consts change
+
 fn update_single_pipeline(
     wgsl: &WgslCode,
     task_name: &TaskName,
     render_device: &RenderDevice,
     pipeline_layout: &PipelineLayoutComponent,
+    pipeline_constants: &PipelineConstants,
     pipeline_cache: &mut PipelineLruCache,
 ) {
     log::info!("Updating pipeline for task {}", task_name.get());
     let key = PipelineKey {
-        wgsl_hash: wgsl.code_hash as u64,
+        pipeline_consts_version: pipeline_constants.version(),
     };
     if pipeline_cache.cache.contains_key(&key) {
         return;
     } else {
         log::info!("Creating new pipeline for task {}", task_name.get());
-        let shader_module =
-            shader_module_from_wgsl_string(&task_name.get(), &wgsl.code(), &render_device);
-        log::info!("Shader module created");
         log::info!(" layout {:?}", pipeline_layout.0);
         let compute_pipeline = render_device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some(&task_name.get()),
             layout: Some(&pipeline_layout.0),
-            module: &shader_module,
+            module: wgsl.shader_module(),
             entry_point: Some(wgsl.entry_point_function_name()),
             // this is where we specify new values for pipeline constants...
-            compilation_options: Default::default(),
+            compilation_options: PipelineCompilationOptions {
+                constants: &pipeline_constants.as_hashmap(),
+                zero_initialize_workgroup_memory: Default::default(),
+            },
             cache: None,
         });
         pipeline_cache.cache.insert(key, compute_pipeline);

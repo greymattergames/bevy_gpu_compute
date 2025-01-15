@@ -1,27 +1,18 @@
 use bevy::{
     log,
-    prelude::{Commands, Component, DespawnRecursiveExt, Entity, Event, Query, ResMut},
+    prelude::{Commands, DespawnRecursiveExt, Entity, Query, ResMut},
 };
-use shared::misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec, TypesSpec};
+use shared::misc_types::TypesSpec;
 
 use crate::run_ids::GpuAcceleratedBevyRunIds;
 
 use super::{
-    events::{
-        GpuComputeTaskChangeEvent, InputDataChangeEvent,
-        IterationSpaceOrMaxOutVecLengthChangedEvent, WgslCodeChangedEvent,
-    },
+    events::{GpuComputeTaskChangeEvent, InputDataChangeEvent},
     inputs::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
     outputs::definitions::{
-        output_data::OutputData,
-        output_vector_metadata_spec::{self, OutputVectorsMetadataSpec},
-        type_erased_output_data::TypeErasedOutputData,
+        output_data::OutputData, type_erased_output_data::TypeErasedOutputData,
     },
     task_components::task_run_id::TaskRunId,
-    task_specification::{
-        iteration_space::IterationSpace, task_specification::ComputeTaskSpecification,
-    },
-    wgsl_code::WgslCode,
 };
 #[derive(Clone, Debug)]
 pub struct TaskCommands {

@@ -6,15 +6,14 @@ use bevy::{
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
-    events::{GpuComputeTaskChangeEvent, IterationSpaceOrMaxOutVecLengthChangedEvent},
+    events::{GpuComputeTaskChangeEvent, MaxOutputLengthChangedEvent},
     outputs::definitions::{
         output_vector_metadata_spec::{OutputVectorMetadata, OutputVectorsMetadataSpec},
         wgsl_counter::WgslCounter,
     },
     task_components::task_name::TaskName,
     task_specification::{
-        max_output_vector_lengths::MaxOutputVectorLengths,
-        task_specification::ComputeTaskSpecification,
+        max_output_vector_lengths::MaxOutputLengths, task_specification::ComputeTaskSpecification,
     },
 };
 
@@ -32,7 +31,7 @@ pub fn create_output_buffers(
         &mut OutputCountStagingBuffers,
     )>,
     mut output_limits_change_event_listener: EventReader<
-        IterationSpaceOrMaxOutVecLengthChangedEvent,
+        MaxOutputLengthChangedEvent,
     >,
     render_device: Res<RenderDevice>,
 ) {
@@ -58,7 +57,7 @@ pub fn create_output_buffers(
                 task_name,
                 &render_device,
                 task_spec.output_vectors_metadata_spec(),
-                task_spec.max_output_vector_lengths(),
+                task_spec.pipeline_constants().get_output_array_lengths(),
                 &mut buffers,
                 &mut staging_buffers,
                 &mut count_buffers,
@@ -72,7 +71,7 @@ fn create_output_buffers_single_task(
     task_name: &TaskName,
     render_device: &RenderDevice,
     output_spec: &OutputVectorsMetadataSpec,
-    max_output_vector_lengths: &MaxOutputVectorLengths,
+    max_output_vector_lengths: &MaxOutputLengths,
     mut buffers: &mut OutputBuffers,
     mut staging_buffers: &mut OutputStagingBuffers,
     mut count_buffers: &mut OutputCountBuffers,
@@ -85,7 +84,7 @@ fn create_output_buffers_single_task(
                 task_name,
                 i,
                 spec,
-                max_output_vector_lengths.get(i),
+                max_output_vector_lengths.get(spec.get_length_const_name()),
                 &mut buffers,
                 &mut staging_buffers,
                 &mut count_buffers,

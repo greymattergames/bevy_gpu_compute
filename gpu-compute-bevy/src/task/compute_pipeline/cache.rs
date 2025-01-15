@@ -4,7 +4,7 @@ use crate::helpers::ecs::lru_cache::LruCache;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct PipelineKey {
-    pub wgsl_hash: u64,
+    pub pipeline_consts_version: u64,
 }
 
 #[derive(Component)]
