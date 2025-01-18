@@ -32,12 +32,14 @@ impl CustomTypeIdents {
     pub fn input_array(&self) -> Ident {
         format_ident!("{}_input_array", self.lower)
     }
+
     pub fn output_array_length(&self) -> Ident {
         format_ident!("{}_OUTPUT_ARRAY_LENGTH", self.upper)
     }
     pub fn output_array(&self) -> Ident {
         format_ident!("{}_output_array", self.lower)
     }
+
     pub fn counter(&self) -> Ident {
         format_ident!("{}_counter", self.lower)
     }

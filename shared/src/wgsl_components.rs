@@ -2,13 +2,13 @@ use crate::custom_type_name::CustomTypeName;
 
 /// includes just the parts the user has input, with any relevant metadata necessary for the library to complete the module
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WgslShaderModuleComponent {
     pub rust_code: String,
     pub wgsl_code: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WgslShaderModuleUserPortion {
     /// defined with the "const" keyword
     /// single line
@@ -46,26 +46,26 @@ impl WgslShaderModuleUserPortion {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WgslType {
     pub name: CustomTypeName,
     pub code: WgslShaderModuleComponent,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WgslDerivedType {
     pub name: String,
     pub code: WgslShaderModuleComponent,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 
 pub struct WgslFunction {
     pub name: String,
     pub code: WgslShaderModuleComponent,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 /// assignments using let can happen within functions and we don't care about them, we don't need to change anything
 pub struct WgslConstAssignment {
     pub code: WgslShaderModuleComponent,
@@ -80,26 +80,32 @@ impl WgslConstAssignment {
             },
         }
     }
+    pub fn no_default(name: &str, scalar_type: &str) -> Self {
+        Self {
+            code: WgslShaderModuleComponent {
+                rust_code: format!("const {}: {};", name, scalar_type),
+                wgsl_code: format!("override {}: {};", name, scalar_type),
+            },
+        }
+    }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 
 pub struct WgslArrayLength {
     pub name: String,
     pub code: WgslShaderModuleComponent,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 
 pub struct WgslInputArray {
     pub item_type: WgslType,
-    pub array_type: WgslDerivedType,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 
 pub struct WgslOutputArray {
     pub item_type: WgslType,
-    pub array_type: WgslDerivedType,
     pub atomic_counter_name: Option<String>,
 }
 

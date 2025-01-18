@@ -11,3 +11,6 @@ paste = "1.0.15"
 # quote = "1.0.38"
 [features]
 f16 = []  # Enable unstable f16 data type support (16 bit floating point numbers), which can improve gpu compute performance if used
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"

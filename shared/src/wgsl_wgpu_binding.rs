@@ -8,10 +8,20 @@ pub struct WgslWgpuBinding {
     pub buffer_type: WgpuBufferType,
     pub access: WgpuBufferAccessMode,
     pub name: String,
-    pub type_name: String,
+    pub type_decl: String,
 }
 impl ToString for WgslWgpuBinding {
     fn to_string(&self) -> String {
+        if self.buffer_type == WgpuBufferType::Uniform {
+            return format!(
+                "@group({}) @binding({}) var<{}> {}: {};\n",
+                self.group_num,
+                self.entry_num,
+                self.buffer_type.to_string(),
+                self.name,
+                self.type_decl
+            );
+        }
         return format!(
             "@group({}) @binding({}) var<{}, {}> {}: {};\n",
             self.group_num,
@@ -19,40 +29,40 @@ impl ToString for WgslWgpuBinding {
             self.buffer_type.to_string(),
             self.access.to_string(),
             self.name,
-            self.type_name
+            self.type_decl
         );
     }
 }
 
 impl WgslWgpuBinding {
-    pub fn uniform(group_num: u32, entry_num: u32, name: String, type_name: String) -> Self {
+    pub fn uniform(group_num: u32, entry_num: u32, name: String, type_decl: &str) -> Self {
         WgslWgpuBinding {
             group_num,
             entry_num,
             buffer_type: WgpuBufferType::Uniform,
             access: WgpuBufferAccessMode::Read,
             name,
-            type_name,
+            type_decl: type_decl.to_string(),
         }
     }
-    pub fn input_array(group_num: u32, entry_num: u32, name: String, type_name: String) -> Self {
+    pub fn input_array(group_num: u32, entry_num: u32, name: String, type_decl: String) -> Self {
         WgslWgpuBinding {
             group_num,
             entry_num,
             buffer_type: WgpuBufferType::Storage,
             access: WgpuBufferAccessMode::Read,
             name,
-            type_name,
+            type_decl: type_decl,
         }
     }
-    pub fn output_array(group_num: u32, entry_num: u32, name: String, type_name: String) -> Self {
+    pub fn output_array(group_num: u32, entry_num: u32, name: String, type_decl: String) -> Self {
         WgslWgpuBinding {
             group_num,
             entry_num,
             buffer_type: WgpuBufferType::Storage,
             access: WgpuBufferAccessMode::ReadWrite,
             name,
-            type_name,
+            type_decl: type_decl,
         }
     }
 
@@ -71,11 +81,11 @@ impl WgslWgpuBinding {
             buffer_type: WgpuBufferType::Storage,
             access: WgpuBufferAccessMode::ReadWrite,
             name: out_array.atomic_counter_name.as_ref().unwrap().clone(),
-            type_name: "atomic<u32>".to_string(),
+            type_decl: "atomic<u32>".to_string(),
         }
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum WgpuBufferType {
     Storage,
     Uniform,

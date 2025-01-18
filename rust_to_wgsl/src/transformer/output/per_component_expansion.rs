@@ -35,15 +35,9 @@ impl ToStructInitializer {
     }
 
     pub fn custom_type_name(c: CustomTypeName) -> TokenStream {
-        let n = c.name;
-        let u = c.upper;
-        let l = c.lower;
+        let n = c.name();
         quote!(
-            CustomTypeName {
-                name: (#n).to_string(),
-                upper: (#u).to_string(),
-                lower: (#l).to_string(),
-            }
+            CustomTypeName::new(#n)
         )
     }
 
@@ -90,18 +84,15 @@ impl ToStructInitializer {
 
     pub fn wgsl_input_array(c: WgslInputArray) -> TokenStream {
         let i = ToStructInitializer::wgsl_type(c.item_type);
-        let a = ToStructInitializer::wgsl_derived_type(c.array_type);
         quote!(
             WgslInputArray {
                 item_type: #i,
-                array_type: #a,
             }
         )
     }
 
     pub fn wgsl_output_array(c: WgslOutputArray) -> TokenStream {
         let i = ToStructInitializer::wgsl_type(c.item_type);
-        let a = ToStructInitializer::wgsl_derived_type(c.array_type);
         let ac: TokenStream = c
             .atomic_counter_name
             .as_ref()
@@ -114,7 +105,6 @@ impl ToStructInitializer {
         quote!(
             WgslOutputArray {
                 item_type: #i,
-                array_type: #a,
                 atomic_counter_name: #ac
 
             }

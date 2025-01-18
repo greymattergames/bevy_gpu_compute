@@ -1,9 +1,15 @@
 #![feature(f16)]
+use pretty_assertions::assert_eq;
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
 use rust_to_wgsl::wgsl_shader_module;
 use shared::{
-    misc_types::TypesSpec, wgsl_components::WgslShaderModuleComponent,
+    custom_type_name::CustomTypeName,
+    misc_types::TypesSpec,
+    wgsl_components::{
+        WgslConstAssignment, WgslDerivedType, WgslFunction, WgslInputArray, WgslOutputArray,
+        WgslShaderModuleComponent, WgslShaderModuleUserPortion, WgslType,
+    },
     wgsl_in_rust_helpers::Vec3Bool,
 };
 use syn::{ItemMod, parse_quote};
@@ -195,11 +201,7 @@ fn test_output_arrays() {
         t2.output_arrays.first().unwrap().item_type.code.wgsl_code,
         "struct CollisionResult { entity1 : u32, entity2 : u32, }"
     );
-    assert_eq!(
-        t2.output_arrays.first().unwrap().array_type.code.wgsl_code,
-        "alias collisionresult_output_array  = array < CollisionResult,
-COLLISIONRESULT_OUTPUT_ARRAY_LENGTH > ;"
-    );
+
     assert!(
         t2.output_arrays
             .first()
@@ -331,10 +333,7 @@ fn test_input_arrays() {
     assert!(t2.main_function.is_some());
     assert!(t2.static_consts.len() == 0);
     assert!(t2.helper_types.len() == 0);
-    assert_eq!(
-        t2.input_arrays.first().unwrap().array_type.code.wgsl_code,
-        "alias position_input_array  = array < Position, POSITION_INPUT_ARRAY_LENGTH > ;"
-    );
+
     assert_eq!(
         t2.input_arrays.first().unwrap().item_type.code.wgsl_code,
         "alias Position  = array < f32, 2 > ;"
@@ -366,11 +365,7 @@ fn test_output_vec() {
         t2.output_arrays.first().unwrap().item_type.code.wgsl_code,
         "struct CollisionResult { entity1 : u32, entity2 : u32, }"
     );
-    assert_eq!(
-        t2.output_arrays.first().unwrap().array_type.code.wgsl_code,
-        "alias collisionresult_output_array  = array < CollisionResult,
-COLLISIONRESULT_OUTPUT_ARRAY_LENGTH > ;"
-    );
+
     assert!(
         t2.output_arrays
             .first()
@@ -387,4 +382,69 @@ COLLISIONRESULT_OUTPUT_ARRAY_LENGTH > ;"
             .unwrap(),
         &"collisionresult_counter".to_string()
     )
+}
+
+#[test]
+fn test_entire_collision_shader() {
+    #[wgsl_shader_module]
+    pub mod collision_shader {
+
+        use rust_to_wgsl::*;
+        use shared::wgsl_in_rust_helpers::*;
+        const example_module_const: u32 = 42;
+        #[wgsl_config]
+        struct Uniforms {
+            time: f32,
+            resolution: Vec2F32,
+        }
+        #[wgsl_input_array]
+        type Position = [f32; 2];
+        #[wgsl_input_array]
+        type Radius = f32;
+        //* user output vectors
+        #[wgsl_output_vec]
+        struct CollisionResult {
+            entity1: u32,
+            entity2: u32,
+        }
+        fn calculate_distance_squared(p1: [f32; 2], p2: [f32; 2]) -> f32 {
+            let dx = p1[0] - p2[0];
+            let dy = p1[1] - p2[1];
+            return dx * dx + dy * dy;
+        }
+        fn main(iter_pos: WgslIterationPosition) {
+            //* USER GENERATED LOGIC
+            let current_entity = iter_pos.x;
+            let other_entity = iter_pos.y;
+            // Early exit if invalid entity or zero radius
+            if current_entity >= WgslVecInput::vec_len::<Position>()
+                || other_entity >= WgslVecInput::vec_len::<Position>()
+                || current_entity == other_entity
+                || current_entity >= other_entity
+            {
+                return;
+            }
+            let current_radius = WgslVecInput::vec_val::<Radius>(current_entity);
+            let other_radius = WgslVecInput::vec_val::<Radius>(other_entity);
+            if current_radius <= 0.0 || other_radius <= 0.0 {
+                return;
+            }
+            let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
+            let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
+            let dist_squared = calculate_distance_squared(current_pos, other_pos);
+            let radius_sum = current_radius + other_radius;
+            // Compare squared distances to avoid sqrt
+            if dist_squared < radius_sum * radius_sum {
+                WgslOutput::push::<CollisionResult>(CollisionResult {
+                    entity1: current_entity,
+                    entity2: other_entity,
+                });
+            }
+        }
+    }
+    let t2 = collision_shader::parsed();
+
+    let user_portion = WgslShaderModuleUserPortion { static_consts: vec![WgslConstAssignment { code: WgslShaderModuleComponent { rust_code: "const example_module_const : u32 = 42;".to_string(), wgsl_code: "const example_module_const : u32 = 42;".to_string() } }], helper_types: vec![], uniforms: vec![WgslType { name: CustomTypeName::new("Uniforms"), code: WgslShaderModuleComponent { rust_code: "#[wgsl_config] struct Uniforms { time : f32, resolution : Vec2F32, }".to_string(), wgsl_code: "struct Uniforms { time : f32, resolution : vec2 < f32 > , }".to_string() } }], input_arrays: vec![WgslInputArray { item_type: WgslType { name: CustomTypeName::new("Position"), code: WgslShaderModuleComponent { rust_code: "#[wgsl_input_array] type Position = [f32; 2];".to_string(), wgsl_code: "alias Position  = array < f32, 2 > ;".to_string() } } }, WgslInputArray { item_type: WgslType { name: CustomTypeName::new("Radius") , code: WgslShaderModuleComponent { rust_code: "#[wgsl_input_array] type Radius = f32;".to_string(), wgsl_code: "alias Radius  = f32;".to_string() } } }], output_arrays: vec![WgslOutputArray { item_type: WgslType { name: CustomTypeName::new("CollisionResult"), code: WgslShaderModuleComponent { rust_code: "#[wgsl_output_vec] struct CollisionResult { entity1 : u32, entity2 : u32, }".to_string(), wgsl_code: "struct CollisionResult { entity1 : u32, entity2 : u32, }".to_string() } }, atomic_counter_name: Some("collisionresult_counter".to_string()) }], helper_functions: vec![WgslFunction { name: "calculate_distance_squared".to_string(), code: WgslShaderModuleComponent { rust_code: "fn calculate_distance_squared(p1 : [f32; 2], p2 : [f32; 2]) -> f32\n{\n    let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *\n    dy;\n}".to_string(), wgsl_code: "fn calculate_distance_squared(p1 : array < f32, 2 > , p2 : array < f32, 2 >)\n-> f32\n{\n    let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *\n    dy;\n}".to_string() } }], main_function: Some(WgslFunction { name: "main".to_owned(), code: WgslShaderModuleComponent { rust_code: "fn main(iter_pos : WgslIterationPosition)\n{\n    let current_entity = iter_pos.x; let other_entity = iter_pos.y; if\n    current_entity >= POSITION_INPUT_ARRAY_LENGTH || other_entity >=\n    POSITION_INPUT_ARRAY_LENGTH || current_entity == other_entity ||\n    current_entity >= other_entity { return; } let current_radius =\n    radius_input_array [current_entity]; let other_radius = radius_input_array\n    [other_entity]; if current_radius <= 0.0 || other_radius <= 0.0\n    { return; } let current_pos = position_input_array [current_entity]; let\n    other_pos = position_input_array [other_entity]; let dist_squared =\n    calculate_distance_squared(current_pos, other_pos); let radius_sum =\n    current_radius + other_radius; if dist_squared < radius_sum * radius_sum\n    {\n        {\n            let collisionresult_output_array_index =\n            atomicAdd(& collisionresult_counter, 1u); if\n            collisionresult_output_array_index <\n            COLLISIONRESULT_OUTPUT_ARRAY_LENGTH\n            {\n                collisionresult_output_array\n                [collisionresult_output_array_index] = CollisionResult\n                { entity1 : current_entity, entity2 : other_entity, };\n            }\n        };\n    }\n}".to_owned(), wgsl_code: "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{\n    let current_entity = iter_pos.x; let other_entity = iter_pos.y; if\n    current_entity >= POSITION_INPUT_ARRAY_LENGTH || other_entity >=\n    POSITION_INPUT_ARRAY_LENGTH || current_entity == other_entity ||\n    current_entity >= other_entity { return; } let current_radius =\n    radius_input_array [current_entity]; let other_radius = radius_input_array\n    [other_entity]; if current_radius <= 0.0 || other_radius <= 0.0\n    { return; } let current_pos = position_input_array [current_entity]; let\n    other_pos = position_input_array [other_entity]; let dist_squared =\n    calculate_distance_squared(current_pos, other_pos); let radius_sum =\n    current_radius + other_radius; if dist_squared < radius_sum * radius_sum\n    {\n        {\n            let collisionresult_output_array_index =\n            atomicAdd(& collisionresult_counter, 1u); if\n            collisionresult_output_array_index <\n            COLLISIONRESULT_OUTPUT_ARRAY_LENGTH\n            {\n                collisionresult_output_array\n                [collisionresult_output_array_index] =
+                CollisionResult(current_entity, other_entity);\n            }\n        };\n    }\n}".to_owned() } }) };
+    assert_eq!(t2, user_portion);
 }

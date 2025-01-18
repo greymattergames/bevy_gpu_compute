@@ -3,6 +3,7 @@ use crate::task::{
     task_specification::max_output_vector_lengths::MaxOutputLengths,
 };
 
+#[derive(Debug)]
 pub struct TaskMaxOutputBytes(usize);
 
 impl Default for TaskMaxOutputBytes {
@@ -24,7 +25,7 @@ impl TaskMaxOutputBytes {
             .enumerate()
             .fold(0, |acc, (i, output_metadata)| {
                 if let Some(m) = output_metadata {
-                    acc + max_output_vector_lengths.get(i) * m.get_bytes()
+                    acc + max_output_vector_lengths.get_by_name(m.name()) * m.get_bytes()
                 } else {
                     acc
                 }

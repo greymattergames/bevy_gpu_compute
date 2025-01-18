@@ -7,7 +7,6 @@ use super::task::{
     buffers::{
         create_input_buffers::create_input_buffers, create_output_buffers::create_output_buffers,
     },
-    compute_pipeline::update_on_pipeline_const_change::update_pipelines_on_wgsl_change,
     dispatch::{create_bind_group::create_bind_groups, dispatch_to_gpu::dispatch_to_gpu},
     outputs::{
         read_gpu_output_counts::read_gpu_output_counts,
@@ -22,8 +21,6 @@ struct GpuAcceleratedBevyRunTaskSet;
 struct GpuAcceleratedBevyRespondToTaskMutSet;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyReadFromGpuSet;
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 struct GpuAcceleratedBevyRespondToInputsMutSet;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 
@@ -33,10 +30,10 @@ struct GpuAcceleratedBevyReadSet;
 
 pub fn compose_task_runner_systems()
 -> NodeConfigs<Box<dyn bevy::prelude::System<In = (), Out = ()>>> {
-    let respond_to_task_alteration = (update_pipelines_on_wgsl_change, verify_have_enough_memory)
+    let respond_to_task_alteration = (create_output_buffers, verify_have_enough_memory)
         .in_set(GpuAcceleratedBevyRespondToTaskMutSet);
-    let respond_to_new_inputs = (create_input_buffers, create_output_buffers)
-        .in_set(GpuAcceleratedBevyRespondToInputsMutSet);
+    let respond_to_new_inputs =
+        (create_input_buffers).in_set(GpuAcceleratedBevyRespondToInputsMutSet);
     let dispatch = (create_bind_groups, dispatch_to_gpu)
         .chain()
         .in_set(GpuAcceleratedBevyDispatchSet);

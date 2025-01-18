@@ -3,7 +3,6 @@ use std::hash::{Hash, Hasher};
 use bevy::{prelude::Component, render::renderer::RenderDevice};
 use wgpu::{ShaderModule, ShaderModuleDescriptor, ShaderSource};
 
-#[derive(Component)]
 pub struct WgslCode {
     code: String,
     entry_point_function_name: String,
@@ -22,7 +21,7 @@ impl Default for WgslCode {
 impl WgslCode {
     pub fn from_string(
         label: &str,
-        render_device: RenderDevice,
+        render_device: &RenderDevice,
         wgsl_code: String,
         entry_point_function_name: String,
     ) -> Self {
@@ -37,7 +36,7 @@ impl WgslCode {
     }
     pub fn from_file(
         label: &str,
-        render_device: RenderDevice,
+        render_device: &RenderDevice,
         file_path: &str,
         entry_point_function_name: String,
     ) -> Self {

@@ -54,11 +54,11 @@ pub mod collision_shader {
         //todo change name to main
         // @builtin(global_invocation_id) global_id: vec3<u32>,
         // todo this changes to the above
-        global_id: WgslGlobalId,
+        iter_pos: WgslIterationPosition,
     ) {
         //* USER GENERATED LOGIC
-        let current_entity = global_id.x;
-        let other_entity = global_id.y;
+        let current_entity = iter_pos.x;
+        let other_entity = iter_pos.y;
         // Early exit if invalid entity or zero radius
         if current_entity >= WgslVecInput::vec_len::<Position>()
             || other_entity >= WgslVecInput::vec_len::<Position>()

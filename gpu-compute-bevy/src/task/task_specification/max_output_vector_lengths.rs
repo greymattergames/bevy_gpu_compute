@@ -1,6 +1,7 @@
 use std::{collections::HashMap, time::SystemTime};
 
 use bevy::prelude::Component;
+use shared::custom_type_name::CustomTypeName;
 
 #[derive(Debug, Clone, PartialEq)]
 /**
@@ -9,33 +10,36 @@ use bevy::prelude::Component;
 
 */
 pub struct MaxOutputLengths {
-    pub unique_id: usize,
-    map: HashMap<String, usize>,
+    length_per_wgsl_output_type_name: HashMap<String, usize>,
 }
 impl Default for MaxOutputLengths {
     fn default() -> Self {
         Self {
-            unique_id: 0,
-            map: HashMap::default(),
+            length_per_wgsl_output_type_name: HashMap::default(),
         }
     }
 }
 
 impl MaxOutputLengths {
-    pub fn new(map: HashMap<String, usize>) -> Self {
+    pub fn new(length_per_wgsl_output_type_name: HashMap<String, usize>) -> Self {
         Self {
-            unique_id: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as usize,
-            map: map,
+            length_per_wgsl_output_type_name: length_per_wgsl_output_type_name,
+        }
+    }
+    pub fn empty() -> Self {
+        Self {
+            length_per_wgsl_output_type_name: HashMap::default(),
         }
     }
 
-    pub fn get(&self, output_item_type_name: String) -> usize {
-        return self.map[&output_item_type_name];
+    pub fn get_by_name(&self, output_item_name: &CustomTypeName) -> usize {
+        return self.length_per_wgsl_output_type_name[&output_item_name.output_array_length()];
+    }
+    pub fn set(&mut self, output_type_name: &str, length: usize) {
+        self.length_per_wgsl_output_type_name
+            .insert(output_type_name.to_string(), length);
     }
     pub fn get_map(&self) -> &HashMap<String, usize> {
-        return &self.map;
+        &self.length_per_wgsl_output_type_name
     }
 }

@@ -6,6 +6,7 @@ use proc_macro_error::abort;
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
 use remove_attributes::remove_attributes;
+use remove_pub_from_struct_def::PubRemover;
 use syn::{Expr, File, Item, parse, parse_quote, parse2, visit::Visit, visit_mut::VisitMut};
 use r#type::TypeToWgslTransformer;
 use type_def::TypeDefToWgslTransformer;
@@ -58,6 +59,7 @@ use crate::state::ModuleTransformState;
 mod array;
 mod expr;
 pub mod remove_attributes;
+mod remove_pub_from_struct_def;
 mod r#type;
 mod type_def;
 mod wgsl_builtin_constructors;
@@ -90,25 +92,28 @@ pub fn convert_file_to_wgsl(
             "Allowed types must be set before converting to wgsl"
         );
     };
+    PubRemover {}.visit_file_mut(&mut file);
     TypeToWgslTransformer {
         custom_types: &allowed_types.custom_types,
     }
     .visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);
-
+    ExprToWgslTransformer {}.visit_file_mut(&mut file);
     // expressions and type defs have to be transformed differently because they may change the token structure, so we have to transition to strings
     let mut string_version = file.to_token_stream().to_string();
     // transform expressions
-    let mut expression_transformer = ExprToWgslTransformer {
-        replacements: HashMap::new(),
-    };
-    expression_transformer.visit_file(&file);
-    expression_transformer
-        .replacements
-        .iter()
-        .for_each(|(k, v)| {
-            string_version = string_version.replace(k, v);
-        });
+    // let mut expression_transformer = ExprToWgslTransformer {
+    // replacements: HashMap::new(),
+    // };
+    // expression_transformer.visit_file(&file);
+    // println!("Going to replace...");
+    // expression_transformer
+    // .replacements
+    // .iter()
+    // .for_each(|(k, v)| {
+    // println!("Replacing: {} with: {}", k, v);
+    // string_version = string_version.replace(k, v);
+    // });
     // transform type defs (should not conflict with other replacements)
     let mut type_def_transformer = TypeDefToWgslTransformer {
         replacements: HashMap::new(),
@@ -117,6 +122,7 @@ pub fn convert_file_to_wgsl(
     type_def_transformer.replacements.iter().for_each(|(k, v)| {
         string_version = string_version.replace(k, v);
     });
+    println!("Final string version: {}", string_version);
     // transform vec and matrix constructors
     string_version = convert_wgsl_builtin_constructors(string_version);
     string_version

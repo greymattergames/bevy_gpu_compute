@@ -93,7 +93,7 @@ pub fn uniform_types(state: &ModuleTransformState) -> TokenStream {
     );
     let uniforms_as_idents: Vec<Ident> = uniforms
         .iter()
-        .map(|array| Ident::new(&array.name.name, Span::call_site()))
+        .map(|array| Ident::new(&array.name.name(), Span::call_site()))
         .collect();
     let unused = Ident::new("_INTERNAL_UNUSED", Span::call_site());
     let t1: &Ident = uniforms_as_idents.get(0).unwrap_or(&unused);
@@ -125,7 +125,7 @@ pub fn input_array_types(state: &ModuleTransformState) -> TokenStream {
     );
     let input_arrays_as_idents: Vec<Ident> = input_arrays
         .iter()
-        .map(|array| Ident::new(&array.item_type.name.name, Span::call_site()))
+        .map(|array| Ident::new(&array.item_type.name.name(), Span::call_site()))
         .collect();
     let unused = Ident::new("_INTERNAL_UNUSED", Span::call_site());
     let t1: &Ident = input_arrays_as_idents.get(0).unwrap_or(&unused);
@@ -157,7 +157,7 @@ pub fn output_array_types(state: &ModuleTransformState) -> TokenStream {
     );
     let output_arrays_as_idents: Vec<Ident> = output_arrays
         .iter()
-        .map(|array| Ident::new(&array.item_type.name.name, Span::call_site()))
+        .map(|array| Ident::new(&array.item_type.name.name(), Span::call_site()))
         .collect();
     let unused = Ident::new("_INTERNAL_UNUSED", Span::call_site());
     let t1: &Ident = output_arrays_as_idents.get(0).unwrap_or(&unused);

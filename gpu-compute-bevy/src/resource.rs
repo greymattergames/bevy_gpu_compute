@@ -1,13 +1,17 @@
 use std::collections::HashMap;
 
-use bevy::prelude::{Commands, Resource};
+use bevy::{
+    prelude::{Commands, Resource},
+    render::renderer::RenderDevice,
+};
+use shared::{misc_types::TypesSpec, wgsl_components::WgslShaderModuleUserPortion};
 
-use crate::task::task_specification::task_specification::ComputeTaskSpecification;
+use crate::task::task_specification::{
+    max_output_vector_lengths::MaxOutputLengths, task_specification::ComputeTaskSpecification,
+};
 
 use super::task::{
-    events::{
-        GpuAcceleratedTaskCreatedEvent, GpuComputeTaskChangeEvent, MaxOutputLengthChangedEvent,
-    },
+    events::{GpuAcceleratedTaskCreatedEvent, GpuComputeTaskChangeEvent},
     inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_commands::TaskCommands,
@@ -36,22 +40,36 @@ impl GpuAcceleratedBevy {
     }
 
     /// spawns all components needed for the task to run, and returns a TaskCommands object that can be used for altering or running the task
-    pub fn create_task(
+    pub fn create_task_from_rust_shader<ShaderModuleTypes: TypesSpec>(
         &mut self,
-        commands: &mut Commands,
-        name: &String,
-        spec: ComputeTaskSpecification,
+        name: &str,
+        mut commands: &mut Commands,
+        gpu: &RenderDevice,
+        wgsl_shader_module: WgslShaderModuleUserPortion,
+        iteration_space: IterationSpace,
+        max_output_vector_lengths: MaxOutputLengths,
     ) -> TaskCommands {
         let task = GpuAcceleratedBevyTask::new();
-        let entity_commands = commands.spawn((task, spec, TaskName::new(name)));
-        let entity = entity_commands.id();
+        let entity = {
+            let entity = commands.spawn((task, TaskName::new(name))).id();
+            entity
+        };
+        let task_spec = ComputeTaskSpecification::from_shader::<ShaderModuleTypes>(
+            name,
+            &mut commands,
+            entity,
+            &gpu,
+            wgsl_shader_module,
+            iteration_space,
+            max_output_vector_lengths,
+        );
+        commands.entity(entity).insert(task_spec);
         let task_commands = TaskCommands::new(entity);
-        self.tasks.insert(name.clone(), task_commands.clone());
+        self.tasks.insert(name.to_string(), task_commands.clone());
         commands.send_event(GpuAcceleratedTaskCreatedEvent {
             entity,
-            task_name: name.clone(),
+            task_name: name.to_string(),
         });
-        commands.send_event(MaxOutputLengthChangedEvent::new(entity));
         task_commands
     }
     pub fn task_exists(&self, name: &String) -> bool {

@@ -12,7 +12,7 @@ use crate::{
     task::{
         events::{
             GpuAcceleratedTaskCreatedEvent, GpuComputeTaskSuccessEvent, InputDataChangeEvent,
-            MaxOutputLengthChangedEvent,
+            IterSpaceOrOutputSizesChangedEvent,
         },
         setup_tasks::setup_new_tasks,
     },
@@ -56,7 +56,7 @@ impl Plugin for GpuAcceleratedBevyPlugin {
         }
         app.add_event::<GpuComputeTaskSuccessEvent>()
             .add_event::<InputDataChangeEvent>()
-            .add_event::<MaxOutputLengthChangedEvent>()
+            .add_event::<IterSpaceOrOutputSizesChangedEvent>()
             .add_event::<GpuAcceleratedTaskCreatedEvent>();
     }
 }

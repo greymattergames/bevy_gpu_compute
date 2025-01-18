@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy::{
     DefaultPlugins,
     app::{App, AppExit, Startup, Update},
@@ -8,6 +10,7 @@ use bevy::{
         Camera2d, Commands, Component, EventReader, EventWriter, IntoSystemConfigs, Mesh, Mesh2d,
         OrthographicProjection, Query, Res, ResMut, Resource, Transform,
     },
+    render::renderer::RenderDevice,
     sprite::MeshMaterial2d,
 };
 use bytemuck::{Pod, Zeroable};
@@ -147,23 +150,26 @@ mod collision_detection_module {
     }
 }
 
-fn create_task(mut commands: Commands, mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
+fn create_task(
+    mut commands: Commands,
+    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
+    gpu: Res<RenderDevice>,
+) {
     let task_name = "collision_detection".to_string();
     let initial_iteration_space = IterationSpace::new(
         // set incorrectly here, just so that we can demonstrate changing it in "alter_task"
         100, 10, 1,
     );
-    let initial_max_output_lengths = MaxOutputLengths::new(vec![
-        // set incorrectly here, just so that we can demonstrate changing it in "alter_task"
-        10, 30, 100,
-    ]);
-    let task_spec = ComputeTaskSpecification::from_shader::<collision_detection_module::Types>(
+    let mut initial_max_output_lengths = MaxOutputLengths::empty();
+    initial_max_output_lengths.set("CollisionResult", 100);
+    gpu_acc_bevy.create_task_from_rust_shader::<collision_detection_module::Types>(
+        &task_name,
+        &mut commands,
+        &gpu,
         collision_detection_module::parsed(),
         initial_iteration_space,
-        initial_max_output_lengths.clone(),
+        initial_max_output_lengths,
     );
-    let t = collision_detection_module::parsed();
-    t.input_arrays
 }
 fn delete_task(mut commands: Commands, mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
     let task = gpu_acc_bevy.task(&"collision_detection".to_string());
@@ -178,15 +184,18 @@ fn modify_task(
     let task = gpu_acc_bevy.task(&"collision_detection".to_string());
     // specify the correct iter space and output maxes
     if let Ok(mut spec) = task_specifications.get_mut(task.entity) {
-        spec.set_iteration_space(
+        let mut max_output_lengths = spec.output_array_lengths().clone();
+        max_output_lengths.set("CollisionResult", (state.length * state.length) as usize);
+        spec.mutate(
             &mut commands,
             task.entity,
-            IterationSpace::new(state.length as usize, state.length as usize, 1),
-        );
-        spec.set_max_output_vector_lengths(
-            &mut commands,
-            task.entity,
-            MaxOutputLengths::new(vec![(state.length * state.length) as usize]),
+            Some(IterationSpace::new(
+                state.length as usize,
+                state.length as usize,
+                1,
+            )),
+            Some(max_output_lengths),
+            None,
         );
     }
 }

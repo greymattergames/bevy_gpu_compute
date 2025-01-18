@@ -74,7 +74,8 @@ pub fn read_gpu_task_outputs(
                                 } else {
                                     usize::MAX
                                 },
-                                task_spec.max_output_vector_lengths().get(i) * m.get_bytes(),
+                                task_spec.output_array_lengths().get_by_name(m.name())
+                                    * m.get_bytes(),
                             );
 
                             let raw_bytes = get_gpu_output_as_bytes_vec(

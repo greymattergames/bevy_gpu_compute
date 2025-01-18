@@ -47,8 +47,8 @@ impl OutputVectorMetadata {
     pub fn get_count_binding_number(&self) -> Option<u32> {
         self.count_binding_number
     }
-    pub fn get_length_const_name(&self) -> String {
-        self.name.output_array_length()
+    pub fn name(&self) -> &CustomTypeName {
+        &self.name
     }
 }
 

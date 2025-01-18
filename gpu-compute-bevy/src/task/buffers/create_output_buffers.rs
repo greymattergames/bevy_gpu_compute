@@ -6,7 +6,7 @@ use bevy::{
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
-    events::{GpuComputeTaskChangeEvent, MaxOutputLengthChangedEvent},
+    events::{GpuComputeTaskChangeEvent, IterSpaceOrOutputSizesChangedEvent},
     outputs::definitions::{
         output_vector_metadata_spec::{OutputVectorMetadata, OutputVectorsMetadataSpec},
         wgsl_counter::WgslCounter,
@@ -30,9 +30,7 @@ pub fn create_output_buffers(
         &mut OutputCountBuffers,
         &mut OutputCountStagingBuffers,
     )>,
-    mut output_limits_change_event_listener: EventReader<
-        MaxOutputLengthChangedEvent,
-    >,
+    mut output_limits_change_event_listener: EventReader<IterSpaceOrOutputSizesChangedEvent>,
     render_device: Res<RenderDevice>,
 ) {
     for (ev, _) in output_limits_change_event_listener
@@ -57,7 +55,7 @@ pub fn create_output_buffers(
                 task_name,
                 &render_device,
                 task_spec.output_vectors_metadata_spec(),
-                task_spec.pipeline_constants().get_output_array_lengths(),
+                task_spec.output_array_lengths(),
                 &mut buffers,
                 &mut staging_buffers,
                 &mut count_buffers,
@@ -84,7 +82,7 @@ fn create_output_buffers_single_task(
                 task_name,
                 i,
                 spec,
-                max_output_vector_lengths.get(spec.get_length_const_name()),
+                max_output_vector_lengths.get_by_name(spec.name()),
                 &mut buffers,
                 &mut staging_buffers,
                 &mut count_buffers,

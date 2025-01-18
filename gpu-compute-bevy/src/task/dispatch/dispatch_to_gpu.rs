@@ -31,8 +31,8 @@ pub fn dispatch_to_gpu(
                 &render_device,
                 &render_queue,
                 bind_group,
+                task_spec.iter_space_and_out_lengths_version(),
                 task_spec.gpu_workgroup_space(),
-                task_spec.wgsl_code(),
                 &mut pipeline_cache,
             );
         });
@@ -42,22 +42,22 @@ fn dispatch_to_gpu_single_task(
     render_device: &RenderDevice,
     render_queue: &RenderQueue,
     bind_group: &BindGroupComponent,
+    pipeline_consts_version: u64,
     num_gpu_workgroups_required: &GpuWorkgroupSpace,
-    wgsl_code: &WgslCode,
     compute_pipeline_cache: &mut PipelineLruCache,
 ) {
     let mut encoder = render_device.create_command_encoder(&Default::default());
     {
         let mut compute_pass = encoder.begin_compute_pass(&Default::default());
         let key = PipelineKey {
-            pipeline_consts_version: wgsl_code.code_hash as u64,
+            pipeline_consts_version: pipeline_consts_version,
         };
         compute_pass.set_pipeline(&compute_pipeline_cache.cache.get(&key).unwrap());
         compute_pass.set_bind_group(0, bind_group.0.as_ref().unwrap(), &[]);
         compute_pass.dispatch_workgroups(
-            num_gpu_workgroups_required.x,
-            num_gpu_workgroups_required.y,
-            num_gpu_workgroups_required.z,
+            num_gpu_workgroups_required.x(),
+            num_gpu_workgroups_required.y(),
+            num_gpu_workgroups_required.z(),
         );
     }
     render_queue.submit(std::iter::once(encoder.finish()));

@@ -1,43 +1,60 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 
 pub struct CustomTypeName {
-    pub name: String,
-    pub upper: String,
-    pub lower: String,
+    name: String,
+    upper: String,
+    lower: String,
+    input_array_length: String,
+    input_array: String,
+    output_array_length: String,
+    output_array: String,
+    counter: String,
+    uniform: String,
 }
 
 impl CustomTypeName {
-    pub fn new(name: &String) -> Self {
+    pub fn new(name: &str) -> Self {
         let upper = name.to_uppercase();
         let lower = name.to_lowercase();
         Self {
-            name: name.clone(),
-            upper,
-            lower,
+            name: name.to_string(),
+            upper: upper.clone(),
+            lower: lower.clone(),
+            input_array_length: format!("{}_INPUT_ARRAY_LENGTH", upper.clone()),
+            input_array: format!("{}_input_array", lower.clone()),
+            output_array_length: format!("{}_OUTPUT_ARRAY_LENGTH", upper),
+            output_array: format!("{}_output_array", lower),
+            counter: format!("{}_counter", lower),
+            uniform: lower.clone(),
         }
     }
-    pub fn eq(&self, other: &String) -> bool {
-        self.name.to_string() == *other
+    pub fn name(&self) -> &String {
+        &self.name
     }
-    pub fn uniform(&self) -> String {
-        self.lower.to_string()
+    pub fn upper(&self) -> &String {
+        &self.upper
+    }
+    pub fn lower(&self) -> &String {
+        &self.lower
     }
     pub fn input_array_length(&self) -> String {
-        format!("{}_INPUT_ARRAY_LENGTH", self.upper)
+        self.input_array_length.clone()
     }
     pub fn input_array(&self) -> String {
-        format!("{}_input_array", self.lower)
+        self.input_array.clone()
     }
+
     pub fn output_array_length(&self) -> String {
-        format!("{}_OUTPUT_ARRAY_LENGTH", self.upper)
+        self.output_array_length.clone()
     }
     pub fn output_array(&self) -> String {
-        format!("{}_output_array", self.lower)
+        self.output_array.clone()
     }
+
     pub fn counter(&self) -> String {
-        format!("{}_counter", self.lower)
+        self.counter.clone()
     }
-    pub fn index(&self) -> String {
-        format!("{}_output_array_index", self.lower)
+    pub fn uniform(&self) -> String {
+        self.uniform.clone()
     }
 }

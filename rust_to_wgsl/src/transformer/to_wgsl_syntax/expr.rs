@@ -2,29 +2,32 @@ use std::collections::HashMap;
 
 use proc_macro_error::abort;
 use quote::{ToTokens, quote};
-use syn::{Expr, parse_quote, spanned::Spanned, visit::Visit, visit_mut::VisitMut};
+use syn::{
+    Expr, ExprCall, parse_quote, parse2, spanned::Spanned, visit::Visit, visit_mut::VisitMut,
+};
 
 use crate::transformer::allowed_types::WGSL_NATIVE_TYPES;
 
 pub struct ExprToWgslTransformer {
     // key is the rust syntax, value is the wgsl syntax
-    pub replacements: HashMap<String, String>,
+    // pub replacements: HashMap<String, String>,
 }
 
-impl<'ast> Visit<'ast> for ExprToWgslTransformer {
-    fn visit_expr(&mut self, expr: &syn::Expr) {
+impl VisitMut for ExprToWgslTransformer {
+    fn visit_expr_mut(&mut self, expr: &mut syn::Expr) {
         // First visit nested expressions
-        syn::visit::visit_expr(self, expr);
+        syn::visit_mut::visit_expr_mut(self, expr);
         if let Some(new_expr) = expr_to_wgsl(expr) {
+            *expr = new_expr;
             // Instead of direct replacement, use placeholder system
-            self.replacements
-                .insert(expr.to_token_stream().to_string(), new_expr);
+            // self.replacements
+            // .insert(expr.to_token_stream().to_string(), new_expr);
         }
     }
 }
 
 /// if none then no mutation is needed
-pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<String> {
+pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
     match expr {
         syn::Expr::Lit(lit) => None,
         syn::Expr::Array(array) => {
@@ -163,8 +166,9 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<String> {
                 abort!(struct_expr.span(), "Struct path is empty")
             };
             let s = format!("{}({})", &struct_type_name.ident.to_string(), fields);
+            let expr: syn::ExprCall = parse2::<ExprCall>(s.parse().unwrap()).unwrap();
             // Some(syn::Expr::Verbatim(quote!(#s)))
-            Some(s)
+            Some(Expr::Call(expr))
         }
         syn::Expr::Try(try_expr) => {
             abort!(try_expr.span(), "Try expressions are not supported in WGSL")
