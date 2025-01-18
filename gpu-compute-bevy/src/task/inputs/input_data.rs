@@ -3,9 +3,10 @@ use shared::misc_types::{BlankTypesSpec, InputVectorTypesSpec, TypesSpec};
 
 pub trait InputDataTrait: Send + Sync {
     fn input_bytes(&self, index: usize) -> Option<&[u8]>;
+    fn lengths(&self) -> [Option<usize>; 6];
 }
 
-#[derive(Component, Debug)]
+#[derive(Component)]
 pub struct InputData<T: TypesSpec> {
     input0: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input0>>,
     input1: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input1>>,
@@ -14,6 +15,18 @@ pub struct InputData<T: TypesSpec> {
     input4: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input4>>,
     input5: Option<Vec<<<T as TypesSpec>::InputArrayTypes as InputVectorTypesSpec>::Input5>>,
     _phantom: std::marker::PhantomData<T>,
+}
+impl<T: TypesSpec> std::fmt::Debug for InputData<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InputData")
+            .field("input0", &self.input0)
+            .field("input1", &self.input1)
+            .field("input2", &self.input2)
+            .field("input3", &self.input3)
+            .field("input4", &self.input4)
+            .field("input5", &self.input5)
+            .finish()
+    }
 }
 impl Default for InputData<BlankTypesSpec> {
     fn default() -> Self {
@@ -140,5 +153,15 @@ impl<T: TypesSpec + Send + Sync> InputDataTrait for InputData<T> {
             5 => self.input5_bytes(),
             _ => None,
         }
+    }
+    fn lengths(&self) -> [Option<usize>; 6] {
+        [
+            self.input0.as_ref().map(|v| v.len()),
+            self.input1.as_ref().map(|v| v.len()),
+            self.input2.as_ref().map(|v| v.len()),
+            self.input3.as_ref().map(|v| v.len()),
+            self.input4.as_ref().map(|v| v.len()),
+            self.input5.as_ref().map(|v| v.len()),
+        ]
     }
 }

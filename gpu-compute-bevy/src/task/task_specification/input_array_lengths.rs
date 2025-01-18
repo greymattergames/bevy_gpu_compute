@@ -3,5 +3,5 @@ use std::collections::HashMap;
 #[derive(Default, Debug)]
 
 pub struct ComputeTaskInputArrayLengths {
-    pub map: HashMap<String, f64>,
+    pub by_index: [Option<usize>; 6],
 }

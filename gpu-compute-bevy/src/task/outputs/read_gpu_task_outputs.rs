@@ -44,6 +44,7 @@ pub fn read_gpu_task_outputs(
     mut commands: Commands,
     mut success_event_writer: EventWriter<GpuComputeTaskSuccessEvent>,
 ) {
+    log::info!("Reading GPU task outputs");
     let run_ids_successfuls: Arc<Mutex<Vec<u128>>> = Arc::new(Mutex::new(Vec::new()));
     task.par_iter_mut()
         .batching_strategy(BatchingStrategy::default())
@@ -70,13 +71,16 @@ pub fn read_gpu_task_outputs(
                             let staging_buffer = output_staging_buffers.0.get(i).unwrap();
                             let total_byte_size = min(
                                 if let Some(Some(c)) = output_counts.0.get(i) {
-                                    c * m.get_bytes()
+                                    let size = c * m.get_bytes();
+                                    log::info!("using output count to size buffer, size: {}", size);
+                                    size
                                 } else {
                                     usize::MAX
                                 },
                                 task_spec.output_array_lengths().get_by_name(m.name())
                                     * m.get_bytes(),
                             );
+                            log::info!("total_byte_size: {}", total_byte_size);
 
                             let raw_bytes = get_gpu_output_as_bytes_vec(
                                 &render_device,
@@ -85,6 +89,7 @@ pub fn read_gpu_task_outputs(
                                 staging_buffer,
                                 total_byte_size as u64,
                             );
+                            log::info!("raw_bytes: {:?}", raw_bytes);
                             if let Some(raw_bytes) = raw_bytes {
                                 type_erased_output.set_output_from_bytes(i, raw_bytes);
                             } else {

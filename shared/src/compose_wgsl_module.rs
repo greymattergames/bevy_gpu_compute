@@ -77,7 +77,20 @@ pub fn compose_wgsl(module: WgslShaderModuleUserPortion) -> WgslShaderModule {
         wgsl.push_str_w_newline(&f.code.wgsl_code.clone());
     });
     // now add the main function
-    wgsl.push_str_w_newline(&lib_portion.workgroups_declaration.to_string());
+    // wgsl.push_str_w_newline(&lib_portion.workgroups_declaration.to_string());
+    // todo use bevy shader_defs to implement 3 different workgroup sizes based on dimmensionality
+    /*
+        // todo implement this via bevy shader_defs
+    #ifdef ONE_DIMMENSIONAL
+       @compute @workgroup_size(64, 1, 1)
+    #elseif TWO_DIMMENSIONAL
+       @compute @workgroup_size(8,8,1)
+    #else
+       @compute @workgroup_size(4,4,4)
+    #endif
+         */
+    // for now we are just getting the other parts of the library working, before doing another potentially major rewrite
+    wgsl.push_str_w_newline("@compute @workgroup_size(64, 1, 1)");
     wgsl.push_str_w_newline(
         &module
             .main_function

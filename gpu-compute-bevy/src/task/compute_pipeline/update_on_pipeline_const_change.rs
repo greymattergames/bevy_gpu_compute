@@ -4,12 +4,12 @@ use bevy::{
     ecs::batching::BatchingStrategy,
     log,
     prelude::{Changed, EventReader, Query, Res},
-    render::{render_resource::ComputePipelineDescriptor, renderer::RenderDevice},
+    render::renderer::RenderDevice,
 };
 use shared::wgsl_components::{
     WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
 };
-use wgpu::PipelineCompilationOptions;
+use wgpu::{ComputePipelineDescriptor, PipelineCompilationOptions};
 
 use crate::task::{
     events::{GpuComputeTaskChangeEvent, IterSpaceOrOutputSizesChangedEvent},
@@ -34,6 +34,7 @@ pub fn update_pipelines_on_pipeline_const_change(
     mut wgsl_code_changed_event_reader: EventReader<IterSpaceOrOutputSizesChangedEvent>,
     render_device: Res<RenderDevice>,
 ) {
+    log::info!("update_pipelines_on_pipeline_const_change");
     for (ev, _) in wgsl_code_changed_event_reader
         .par_read()
         .batching_strategy(BatchingStrategy::default())
@@ -50,8 +51,6 @@ pub fn update_pipelines_on_pipeline_const_change(
         }
     }
 }
-
-//todo, whenever pipeline_consts change
 
 fn update_single_pipeline(
     spec: &ComputeTaskSpecification,

@@ -4,7 +4,7 @@ use bevy::{
 };
 use shared::misc_types::TypesSpec;
 
-use crate::run_ids::GpuAcceleratedBevyRunIds;
+use crate::{run_ids::GpuAcceleratedBevyRunIds, task::inputs::input_data::InputDataTrait};
 
 use super::{
     events::{GpuComputeTaskChangeEvent, InputDataChangeEvent},
@@ -35,11 +35,12 @@ impl TaskCommands {
     ) -> u128 {
         let mut entity_commands = commands.entity(self.entity);
         let id = task_run_ids.get_next();
+        let event = InputDataChangeEvent::new(self.entity, inputs.lengths());
         log::info!("run id: {}", id);
-        // log::info!("inputs: {:?}", inputs);
+        log::info!("inputs: {:?}", inputs);
         entity_commands.insert(TypeErasedInputData::new::<I>(inputs));
         entity_commands.insert(TaskRunId(id));
-        commands.send_event(InputDataChangeEvent::new(self.entity));
+        commands.send_event(event);
         id
     }
 

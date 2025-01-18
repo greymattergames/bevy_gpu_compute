@@ -1,10 +1,5 @@
 use bevy::prelude::{Entity, Event};
 
-use super::{
-    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
-    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
-};
-
 #[derive(Event)]
 pub struct GpuAcceleratedTaskCreatedEvent {
     pub entity: Entity,
@@ -18,12 +13,13 @@ pub trait GpuComputeTaskChangeEvent {
 #[derive(Event)]
 pub struct InputDataChangeEvent {
     entity: Entity,
+    pub lengths: [Option<usize>; 6],
 }
-impl GpuComputeTaskChangeEvent for InputDataChangeEvent {
-    fn new(entity: Entity) -> Self {
-        InputDataChangeEvent { entity }
+impl InputDataChangeEvent {
+    pub fn new(entity: Entity, lengths: [Option<usize>; 6]) -> Self {
+        InputDataChangeEvent { entity, lengths }
     }
-    fn entity(&self) -> Entity {
+    pub fn entity(&self) -> Entity {
         self.entity
     }
 }

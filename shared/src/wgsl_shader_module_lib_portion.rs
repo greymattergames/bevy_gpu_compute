@@ -141,8 +141,7 @@ fn calculate_distance_squared(p1 : array < f32, 2 > , p2 : array < f32, 2 >)
     let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *
     dy;
 }
-@compute @workgroup_size(_LIB_WORKGROUP_SIZE_X, _LIB_WORKGROUP_SIZE_Y, _LIB_WORKGROUP_SIZE_Z)
-
+@compute @workgroup_size(64, 1, 1)
 fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)
 {
     let current_entity = iter_pos.x; let other_entity = iter_pos.y; if

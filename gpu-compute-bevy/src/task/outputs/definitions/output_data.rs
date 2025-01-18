@@ -10,6 +10,18 @@ pub struct OutputData<T: TypesSpec> {
 
     _phantom: std::marker::PhantomData<T>,
 }
+impl<T: TypesSpec> std::fmt::Debug for OutputData<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OutputData")
+            .field("output0", &self.output0)
+            .field("output1", &self.output1)
+            .field("output2", &self.output2)
+            .field("output3", &self.output3)
+            .field("output4", &self.output4)
+            .field("output5", &self.output5)
+            .finish()
+    }
+}
 
 impl Default for OutputData<BlankTypesSpec> {
     fn default() -> Self {

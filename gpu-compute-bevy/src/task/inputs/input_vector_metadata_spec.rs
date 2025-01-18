@@ -27,8 +27,8 @@ impl InputVectorMetadata {
     pub fn get_binding_number(&self) -> u32 {
         self.binding_number
     }
-    pub fn get_length_const_name(&self) -> String {
-        self.name.input_array_length()
+    pub fn name(&self) -> &CustomTypeName {
+        &self.name
     }
 }
 

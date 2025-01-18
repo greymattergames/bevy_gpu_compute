@@ -15,21 +15,14 @@ use bevy::{
 };
 use bytemuck::{Pod, Zeroable};
 use gpu_compute_bevy::{
-    GpuAcceleratedBevyPlugin,
+    GpuAcceleratedBevyPlugin, finished_gpu_tasks,
     resource::GpuAcceleratedBevy,
     run_ids::GpuAcceleratedBevyRunIds,
+    starting_gpu_tasks,
     task::{
         events::GpuComputeTaskSuccessEvent,
-        inputs::{
-            input_data::InputData,
-            input_vector_metadata_spec::{InputVectorMetadataDefinition, InputVectorsMetadataSpec},
-        },
-        outputs::definitions::{
-            output_vector_metadata_spec::{
-                OutputVectorMetadataDefinition, OutputVectorsMetadataSpec,
-            },
-            type_erased_output_data::TypeErasedOutputData,
-        },
+        inputs::input_data::InputData,
+        outputs::definitions::type_erased_output_data::TypeErasedOutputData,
         task_components::task_run_id::TaskRunId,
         task_specification::{
             iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputLengths,
@@ -58,14 +51,11 @@ fn main() {
             Startup,
             (spawn_camera, spawn_entities, create_task, modify_task).chain(),
         )
+        .add_systems(Update, (run_task,).before(starting_gpu_tasks))
         .add_systems(
             Update,
-            (
-                run_task,
-                handle_task_results,
-                delete_task,
-                exit_and_show_results,
-            )
+            (handle_task_results, delete_task, exit_and_show_results)
+                .after(finished_gpu_tasks)
                 .chain(),
         )
         .run();
@@ -185,7 +175,11 @@ fn modify_task(
     // specify the correct iter space and output maxes
     if let Ok(mut spec) = task_specifications.get_mut(task.entity) {
         let mut max_output_lengths = spec.output_array_lengths().clone();
-        max_output_lengths.set("CollisionResult", (state.length * state.length) as usize);
+        max_output_lengths.set(
+            "CollisionResult",
+            // (state.length * state.length) as usize
+            3 as usize,
+        );
         spec.mutate(
             &mut commands,
             task.entity,
@@ -207,10 +201,15 @@ fn run_task(
 ) {
     let task = gpu_compute.task(&"collision_detection".to_string());
     let mut input_data = InputData::<collision_detection_module::Types>::empty();
-    input_data.set_input0(vec![collision_detection_module::Position {
-        v: Vec2F32::new(0.3, 0.3),
-    }]);
-    input_data.set_input1(vec![0.3]);
+    input_data.set_input0(vec![
+        collision_detection_module::Position {
+            v: Vec2F32::new(0.3, 0.3),
+        },
+        collision_detection_module::Position {
+            v: Vec2F32::new(0.32, 0.32),
+        },
+    ]);
+    input_data.set_input1(vec![3., 3.]);
     let run_id = task.run(&mut commands, input_data, task_run_ids);
     state.run_id = run_id;
 }
@@ -228,6 +227,7 @@ fn handle_task_results(
             // here we get the actula result
             let results =
                 task.result::<collision_detection_module::Types>(state.run_id, &out_datas);
+            log::info!("results: {:?}", results);
             if let Some(results) = results {
                 //fully type-safe results
                 let collision_results: Vec<collision_detection_module::CollisionResult> = results

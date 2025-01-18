@@ -96,5 +96,7 @@ fn read_gpu_output_counts_single_output_type(
         &count_staging_buffer,
         std::mem::size_of::<WgslCounter>() as u64,
     );
-    count.unwrap().count
+    let r = count.unwrap().count;
+    log::info!("Read count: {}", r);
+    r
 }

@@ -33,7 +33,14 @@ impl MaxOutputLengths {
     }
 
     pub fn get_by_name(&self, output_item_name: &CustomTypeName) -> usize {
-        return self.length_per_wgsl_output_type_name[&output_item_name.output_array_length()];
+        assert!(
+            self.length_per_wgsl_output_type_name
+                .contains_key(output_item_name.name()),
+            " could not find {} in {:?} for max output lengths",
+            output_item_name.name(),
+            self.length_per_wgsl_output_type_name
+        );
+        return self.length_per_wgsl_output_type_name[output_item_name.name()];
     }
     pub fn set(&mut self, output_type_name: &str, length: usize) {
         self.length_per_wgsl_output_type_name

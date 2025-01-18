@@ -1,45 +1,16 @@
 use bevy::{
-    DefaultPlugins,
-    app::{App, Startup, Update},
-    asset::{Assets, RenderAssetUsages},
-    log,
-    math::{Vec2, Vec3, bounding::BoundingCircle},
-    prelude::{
-        Camera2d, Commands, Component, EventReader, Mesh, Mesh2d, OrthographicProjection, Query,
-        Res, ResMut, Resource, Transform,
-    },
-    sprite::MeshMaterial2d,
-    utils::default,
-};
-use bevy::{
     asset::Handle,
-    prelude::{Color, FromWorld, World},
+    log,
+    prelude::{Color, Component, FromWorld, Resource, World},
     sprite::ColorMaterial,
     utils::hashbrown::HashMap,
 };
-use bytemuck::{Pod, Zeroable};
-use gpu_compute_bevy::{
-    resource::GpuAcceleratedBevy,
-    run_ids::GpuAcceleratedBevyRunIds,
-    task::{
-        events::GpuComputeTaskSuccessEvent,
-        inputs::{
-            input_data::InputData,
-            input_vector_metadata_spec::{InputVectorMetadataDefinition, InputVectorsMetadataSpec},
-        },
-        outputs::definitions::{
-            output_vector_metadata_spec::{
-                OutputVectorMetadataDefinition, OutputVectorsMetadataSpec,
-            },
-            type_erased_output_data::TypeErasedOutputData,
-        },
-        task_components::task_run_id::TaskRunId,
-        task_specification::{
-            iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputLengths,
-            task_specification::ComputeTaskSpecification,
-        },
-        wgsl_code::WgslCode,
-    },
+use bevy::{
+    asset::{Assets, RenderAssetUsages},
+    math::{Vec2, Vec3, bounding::BoundingCircle},
+    prelude::{Camera2d, Commands, Mesh, Mesh2d, OrthographicProjection, Res, ResMut, Transform},
+    sprite::MeshMaterial2d,
+    utils::default,
 };
 
 use crate::{ENTITY_RADIUS, SPAWN_RANGE_MAX, SPAWN_RANGE_MIN, State};

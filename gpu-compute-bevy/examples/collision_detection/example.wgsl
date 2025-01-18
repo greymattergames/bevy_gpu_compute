@@ -26,13 +26,7 @@ COLLISIONRESULT_OUTPUT_ARRAY_LENGTH > ;
 fn calculate_distance_squared(p1 : vec2 < f32 > , p2 : vec2 < f32 >) -> f32
 { let dx = p1.x - p2 [0]; let dy = p1.y - p2 [1]; return dx * dx + dy * dy; }
 
-#ifdef ONE_DIMMENSIONAL
-   @compute @workgroup_size(64, 1, 1)
-#elseif TWO_DIMMENSIONAL
-   @compute @workgroup_size(8,8,1)
-#else 
-   @compute @workgroup_size(4,4,4)
-#endif
+
 
 fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)
 {

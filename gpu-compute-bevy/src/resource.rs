@@ -12,8 +12,6 @@ use crate::task::task_specification::{
 
 use super::task::{
     events::{GpuAcceleratedTaskCreatedEvent, GpuComputeTaskChangeEvent},
-    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
-    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_commands::TaskCommands,
     task_components::{task::GpuAcceleratedBevyTask, task_name::TaskName},
     task_specification::iteration_space::IterationSpace,

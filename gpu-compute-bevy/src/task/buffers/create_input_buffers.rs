@@ -1,6 +1,6 @@
 use bevy::{
     ecs::batching::BatchingStrategy,
-    log,
+    log::{self, info},
     prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
@@ -56,12 +56,16 @@ fn create_input_buffers_single_task(
     buffers.0.clear();
     for (i, spec) in input_spec.get_all_metadata().iter().enumerate() {
         if let Some(s) = spec {
-            let label = format!("{}-input-{}", task_name, i);
+            let label = format!("{}-input-{}", task_name, s.name().name());
             let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
                 label: Some(&label),
                 contents: input_data.input_bytes(i).unwrap(),
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
             });
+            info!(
+                "Created input buffer for task {} with label {}",
+                task_name, label
+            );
             buffers.0.push(buffer);
             continue;
         }

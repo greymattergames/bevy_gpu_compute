@@ -78,7 +78,6 @@ impl ComputeTaskMutableSpec {
         }
         if let Some(input_lengths) = input_array_lengths {
             self.input_array_lengths = input_lengths;
-            commands.send_event(InputDataChangeEvent::new(entity));
         }
         if let Some(output_lengths) = output_array_lengths {
             self.output_array_lengths = output_lengths;

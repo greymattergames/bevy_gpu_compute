@@ -181,14 +181,23 @@ impl ComputeTaskSpecification {
                 self.derived.workgroup_sizes().z() as f64,
             );
             // input and output array lengths
-            for (k, v) in &self.mutate.input_array_lengths().map {
-                n.insert(k.clone(), *v);
+            for (i, spec) in self.immutable.input_vectors_metadata_spec().get_all_metadata().iter().enumerate(){
+                if let Some(s) = spec{
+                    let length = self.mutate.input_array_lengths().by_index[i];
+                    let name = s.name().input_array_length();
+                    log::info!("input_array_lengths = {:?}, for {}", length, name);
+                    
+                    assert!(length.is_some(), "input_array_lengths not set for input array {}, {}", i, name.clone());
+                    n.insert(name.clone(), length.unwrap() as f64);
+
+                }
             }
             for o in self.immutable.output_vectors_metadata_spec().get_all_metadata().iter(){
                 if let Some(metadata) = o{
                     n.insert(metadata.name().output_array_length(), self.mutate.output_array_lengths().get_by_name(metadata.name()) as f64);
                 }
             }
+            log::info!("pipeline consts  = {:?}", n);
             n
 
     }
