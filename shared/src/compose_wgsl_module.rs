@@ -90,7 +90,7 @@ pub fn compose_wgsl(module: WgslShaderModuleUserPortion) -> WgslShaderModule {
     #endif
          */
     // for now we are just getting the other parts of the library working, before doing another potentially major rewrite
-    wgsl.push_str_w_newline("@compute @workgroup_size(64, 1, 1)");
+    wgsl.push_str_w_newline("@compute @workgroup_size(8, 8, 1)");
     wgsl.push_str_w_newline(
         &module
             .main_function

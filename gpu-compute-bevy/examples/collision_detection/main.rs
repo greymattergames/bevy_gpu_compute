@@ -37,7 +37,7 @@ use shared::{
     misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec},
     wgsl_in_rust_helpers::*,
 };
-use visuals::{ColorHandles, spawn_camera, spawn_entities};
+use visuals::{BoundingCircleComponent, ColorHandles, spawn_camera, spawn_entities};
 
 fn main() {
     let mut binding = App::new();
@@ -63,7 +63,7 @@ fn main() {
 
 const SPAWN_RANGE_MIN: i32 = -20;
 const SPAWN_RANGE_MAX: i32 = 20;
-const ENTITY_RADIUS: f32 = 5.;
+const ENTITY_RADIUS: f32 = 21.;
 
 #[derive(Resource)]
 struct State {
@@ -175,11 +175,8 @@ fn modify_task(
     // specify the correct iter space and output maxes
     if let Ok(mut spec) = task_specifications.get_mut(task.entity) {
         let mut max_output_lengths = spec.output_array_lengths().clone();
-        max_output_lengths.set(
-            "CollisionResult",
-            // (state.length * state.length) as usize
-            3 as usize,
-        );
+        let num_entities = state.num_entities;
+        max_output_lengths.set("CollisionResult", (num_entities * num_entities) as usize);
         spec.mutate(
             &mut commands,
             task.entity,
@@ -198,18 +195,19 @@ fn run_task(
     mut gpu_compute: ResMut<GpuAcceleratedBevy>,
     mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
     mut state: ResMut<State>,
+    entities: Query<&BoundingCircleComponent>,
 ) {
     let task = gpu_compute.task(&"collision_detection".to_string());
     let mut input_data = InputData::<collision_detection_module::Types>::empty();
-    input_data.set_input0(vec![
-        collision_detection_module::Position {
-            v: Vec2F32::new(0.3, 0.3),
-        },
-        collision_detection_module::Position {
-            v: Vec2F32::new(0.32, 0.32),
-        },
-    ]);
-    input_data.set_input1(vec![3., 3.]);
+    input_data.set_input0(
+        entities
+            .iter()
+            .map(|e| collision_detection_module::Position {
+                v: Vec2F32::new(e.0.center.x, e.0.center.y),
+            })
+            .collect(),
+    );
+    input_data.set_input1(entities.iter().map(|e| e.0.radius()).collect());
     let run_id = task.run(&mut commands, input_data, task_run_ids);
     state.run_id = run_id;
 }
@@ -227,7 +225,7 @@ fn handle_task_results(
             // here we get the actula result
             let results =
                 task.result::<collision_detection_module::Types>(state.run_id, &out_datas);
-            log::info!("results: {:?}", results);
+            // log::info!("results: {:?}", results);
             if let Some(results) = results {
                 //fully type-safe results
                 let collision_results: Vec<collision_detection_module::CollisionResult> = results

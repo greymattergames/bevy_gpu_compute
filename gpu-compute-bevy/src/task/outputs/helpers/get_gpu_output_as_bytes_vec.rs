@@ -13,7 +13,7 @@ pub fn get_gpu_output_as_bytes_vec(
     encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, total_byte_size);
     render_queue.submit(std::iter::once(encoder.finish()));
 
-    let slice = staging_buffer.slice(..);
+    let slice = staging_buffer.slice(0..total_byte_size);
     let (sender, receiver) = futures::channel::oneshot::channel();
     slice.map_async(wgpu::MapMode::Read, move |result| {
         sender.send(result).unwrap();

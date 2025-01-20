@@ -89,7 +89,7 @@ pub fn read_gpu_task_outputs(
                                 staging_buffer,
                                 total_byte_size as u64,
                             );
-                            log::info!("raw_bytes: {:?}", raw_bytes);
+                            // log::info!("raw_bytes: {:?}", raw_bytes);
                             if let Some(raw_bytes) = raw_bytes {
                                 type_erased_output.set_output_from_bytes(i, raw_bytes);
                             } else {

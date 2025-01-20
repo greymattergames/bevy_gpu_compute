@@ -6,8 +6,8 @@ use super::{
     wgsl_wgpu_binding::WgslWgpuBinding,
 };
 use crate::wgsl_components::{
-    WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
-    WgpuShaderType, WgslShaderModuleComponent,
+    WgpuShaderType, WgslShaderModuleComponent, WORKGROUP_SIZE_X_VAR_NAME,
+    WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
 };
 
 pub struct WgslShaderModuleLibraryPortion {

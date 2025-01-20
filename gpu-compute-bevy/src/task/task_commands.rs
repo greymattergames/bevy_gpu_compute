@@ -37,7 +37,7 @@ impl TaskCommands {
         let id = task_run_ids.get_next();
         let event = InputDataChangeEvent::new(self.entity, inputs.lengths());
         log::info!("run id: {}", id);
-        log::info!("inputs: {:?}", inputs);
+        // log::info!("inputs: {:?}", inputs);
         entity_commands.insert(TypeErasedInputData::new::<I>(inputs));
         entity_commands.insert(TaskRunId(id));
         commands.send_event(event);

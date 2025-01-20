@@ -1,5 +1,5 @@
 use bevy::{
-    app::{App, Plugin, Update},
+    app::{App, Plugin, Startup, Update},
     prelude::{AppExtStates, IntoSystemConfigs, States, in_state},
 };
 
@@ -44,7 +44,7 @@ impl Plugin for GpuAcceleratedBevyPlugin {
         if self.with_default_schedule {
             let run_tasks_system_set = compose_task_runner_systems();
 
-            app.add_systems(
+            app.add_systems(Startup, spawn_fallback_camera).add_systems(
                 Update,
                 (
                     spawn_fallback_camera.run_if(spawn_fallback_camera_runif),
