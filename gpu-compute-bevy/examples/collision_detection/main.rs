@@ -61,9 +61,9 @@ fn main() {
         .run();
 }
 
-const SPAWN_RANGE_MIN: i32 = -20;
-const SPAWN_RANGE_MAX: i32 = 20;
-const ENTITY_RADIUS: f32 = 21.;
+const SPAWN_RANGE_MIN: i32 = -2;
+const SPAWN_RANGE_MAX: i32 = 2;
+const ENTITY_RADIUS: f32 = 401.;
 
 #[derive(Resource)]
 struct State {
@@ -108,6 +108,12 @@ mod collision_detection_module {
         entity1: u32,
         entity2: u32,
     }
+    #[wgsl_output_array]
+    struct MyDebugInfo {
+        entity1: u32,
+        entity2: u32,
+        dist_squared: f32,
+    }
     fn calculate_distance_squared(p1: Vec2F32, p2: Vec2F32) -> f32 {
         let dx = p1.x - p2[0];
         let dy = p1.y - p2[1];
@@ -131,6 +137,13 @@ mod collision_detection_module {
         let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
         let dist_squared = calculate_distance_squared(current_pos.v, other_pos.v);
         let radius_sum = current_radius + other_radius;
+        // index = y * width + x
+        let debug_index = other_entity * WgslVecInput::vec_len::<Radius>() + current_entity;
+        WgslOutput::set::<MyDebugInfo>(debug_index, MyDebugInfo {
+            entity1: current_entity,
+            entity2: other_entity,
+            dist_squared: dist_squared,
+        });
         if dist_squared < radius_sum * radius_sum {
             WgslOutput::push::<CollisionResult>(CollisionResult {
                 entity1: current_entity,
@@ -152,6 +165,8 @@ fn create_task(
     );
     let mut initial_max_output_lengths = MaxOutputLengths::empty();
     initial_max_output_lengths.set("CollisionResult", 100);
+    initial_max_output_lengths.set("MyDebugInfo", 100);
+
     gpu_acc_bevy.create_task_from_rust_shader::<collision_detection_module::Types>(
         &task_name,
         &mut commands,
@@ -177,12 +192,13 @@ fn modify_task(
         let mut max_output_lengths = spec.output_array_lengths().clone();
         let num_entities = state.num_entities;
         max_output_lengths.set("CollisionResult", (num_entities * num_entities) as usize);
+        max_output_lengths.set("MyDebugInfo", (num_entities * num_entities) as usize);
         spec.mutate(
             &mut commands,
             task.entity,
             Some(IterationSpace::new(
-                state.length as usize,
-                state.length as usize,
+                state.num_entities as usize,
+                state.num_entities as usize,
                 1,
             )),
             Some(max_output_lengths),
@@ -227,6 +243,13 @@ fn handle_task_results(
                 task.result::<collision_detection_module::Types>(state.run_id, &out_datas);
             // log::info!("results: {:?}", results);
             if let Some(results) = results {
+                // let debug_results: Vec<collision_detection_module::MyDebugInfo> = results
+                //     .get_output1()
+                //     .unwrap()
+                //     .into_iter()
+                //     .cloned()
+                //     .collect();
+                // log::info!("debug results: {:?}", debug_results);
                 //fully type-safe results
                 let collision_results: Vec<collision_detection_module::CollisionResult> = results
                     .get_output0()
