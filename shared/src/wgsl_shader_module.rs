@@ -1,3 +1,5 @@
+use std::path::Iter;
+
 use crate::{
     wgsl_components::{
         WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
@@ -20,10 +22,9 @@ pub enum IterSpaceDimmension {
     TwoD,
     ThreeD,
 }
-// impl as usize
-impl From<IterSpaceDimmension> for usize {
-    fn from(dim: IterSpaceDimmension) -> usize {
-        match dim {
+impl IterSpaceDimmension {
+    pub fn to_usize(&self) -> usize {
+        match self {
             IterSpaceDimmension::OneD => 1,
             IterSpaceDimmension::TwoD => 2,
             IterSpaceDimmension::ThreeD => 3,

@@ -78,8 +78,8 @@ impl ComputeTaskMutableSpec {
             assert!(
                 iter_space.num_dimmensions() == self.iteration_space.num_dimmensions(),
                 "The number of dimmensions cannot be changed after creating the task. Currently the iteration space for this task is {:?}, but you are trying to change it to be {:?}. For example: an iteration space of x = 30, y = 20 and z = 1 has 2 dimmensions, and an iteration space of x = 30, y=1, z=1 has 1 dimmension.",
-                self.iteration_space.num_dimmensions() as usize,
-                iter_space.num_dimmensions() as usize
+                self.iteration_space.num_dimmensions().to_usize(),
+                iter_space.num_dimmensions().to_usize()
             );
             self.iteration_space = iter_space;
         }
@@ -113,7 +113,7 @@ impl ComputeTaskMutableSpec {
         ));
         let mut wg_sizes = derived.workgroup_sizes().clone();
         // update workgroup sizes
-        if self.iteration_space.num_dimmensions() as usize != wg_sizes.num_dimmensions() {
+        if self.iteration_space.num_dimmensions().to_usize() != wg_sizes.num_dimmensions() {
             wg_sizes = GpuWorkgroupSizes::from_iter_space(&self.iteration_space);
             derived._lib_only_set_workgroup_sizes(wg_sizes.clone());
         }

@@ -161,7 +161,7 @@ fn create_task(
     let task_name = "collision_detection".to_string();
     let initial_iteration_space = IterationSpace::new(
         // set incorrectly here, just so that we can demonstrate changing it in "alter_task"
-        100, 10, 1,
+        100, 100, 1,
     );
     let mut initial_max_output_lengths = MaxOutputLengths::empty();
     initial_max_output_lengths.set("CollisionResult", 100);
