@@ -1,0 +1,15 @@
+error: Renaming helper types like Vec3F32, Mat2x2Bool, etc. is not supported
+ --> tests/ui/alias_to_helper_type.rs:3:1
+  |
+3 | #[shader_module]
+  | ^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `shader_module` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused variable: `global_id`
+ --> tests/ui/alias_to_helper_type.rs:7:13
+  |
+7 |     fn main(global_id: WgslGlobalId) {}
+  |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_global_id`
+  |
+  = note: `#[warn(unused_variables)]` on by default
