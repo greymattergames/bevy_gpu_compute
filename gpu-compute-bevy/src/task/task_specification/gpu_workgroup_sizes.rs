@@ -1,7 +1,4 @@
-use bevy::{
-    log::tracing_subscriber::filter::targets::Iter,
-    prelude::{Component, Ref},
-};
+
 use shared::wgsl_shader_module::IterSpaceDimmension;
 
 use super::iteration_space::IterationSpace;

@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use crate::task::{
-    events::{GpuComputeTaskChangeEvent, InputDataChangeEvent},
+    events::InputDataChangeEvent,
     task_specification::{
         input_array_lengths::ComputeTaskInputArrayLengths,
         task_specification::ComputeTaskSpecification,
@@ -25,7 +25,7 @@ pub fn handle_input_data_change(
         let entity = ev.entity();
         let lengths_unnamed = ev.lengths;
         let mut task = tasks.get_mut(entity);
-        if let Ok(mut t) = task.as_mut() {
+        if let Ok(t) = task.as_mut() {
             t.mutate(
                 &mut commands,
                 entity,

@@ -11,11 +11,10 @@ use crate::task::task_specification::{
 };
 
 use super::task::{
-    events::{GpuAcceleratedTaskCreatedEvent, GpuComputeTaskChangeEvent},
+    events::GpuAcceleratedTaskCreatedEvent,
     task_commands::TaskCommands,
     task_components::{task::GpuAcceleratedBevyTask, task_name::TaskName},
     task_specification::iteration_space::IterationSpace,
-    wgsl_code::WgslCode,
 };
 
 #[derive(Resource)]

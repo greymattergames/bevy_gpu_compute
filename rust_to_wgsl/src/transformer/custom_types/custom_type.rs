@@ -1,7 +1,6 @@
 use std::alloc::Global;
 
 use proc_macro2::TokenStream;
-use quote::format_ident;
 use shared::wgsl_components::{WgslShaderModuleComponent, WgslType};
 use syn::{Attribute, Ident};
 

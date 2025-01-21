@@ -1,5 +1,5 @@
 use bevy::prelude::Component;
-use shared::misc_types::{OutputVectorTypesSpec, TypesSpec};
+use shared::misc_types::TypesSpec;
 
 use super::output_data::OutputData;
 

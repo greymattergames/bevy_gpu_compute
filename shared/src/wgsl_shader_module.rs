@@ -1,20 +1,6 @@
-use std::path::Iter;
+use crate::wgsl_shader_module_lib_portion::WgslShaderModuleLibraryPortion;
 
-use crate::{
-    wgsl_components::{
-        WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
-        WgpuShaderType, WgslShaderModuleComponent,
-    },
-    wgsl_shader_module_lib_portion::WgslShaderModuleLibraryPortion,
-};
-
-use super::{
-    wgsl_components::{
-        WgslConstAssignment, WgslFunction, WgslShaderModuleUserPortion, WgslType,
-        WgslWorkgroupDeclaration,
-    },
-    wgsl_wgpu_binding::WgslWgpuBinding,
-};
+use super::wgsl_components::WgslShaderModuleUserPortion;
 
 #[derive(Debug, Clone, PartialEq, Hash, Copy)]
 pub enum IterSpaceDimmension {

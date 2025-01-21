@@ -7,7 +7,7 @@ use std::{
 use bevy::{
     ecs::batching::BatchingStrategy,
     log,
-    prelude::{Commands, Entity, EventWriter, Query, Res},
+    prelude::{EventWriter, Query, Res},
     render::renderer::{RenderDevice, RenderQueue},
 };
 
@@ -20,8 +20,7 @@ use crate::task::{
 
 use super::{
     definitions::{
-        gpu_output_counts::GpuOutputCounts, output_vector_metadata_spec::OutputVectorsMetadataSpec,
-        type_erased_output_data::TypeErasedOutputData,
+        gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
     },
     helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec,
 };
@@ -31,7 +30,6 @@ use super::{
  * */
 pub fn read_gpu_task_outputs(
     mut task: Query<(
-        Entity,
         &TaskRunId,
         &OutputBuffers,
         &OutputStagingBuffers,
@@ -41,7 +39,6 @@ pub fn read_gpu_task_outputs(
     )>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
-    mut commands: Commands,
     mut success_event_writer: EventWriter<GpuComputeTaskSuccessEvent>,
 ) {
     log::info!("Reading GPU task outputs");
@@ -50,7 +47,6 @@ pub fn read_gpu_task_outputs(
         .batching_strategy(BatchingStrategy::default())
         .for_each(
             |(
-                entity,
                 run_id,
                 output_buffers,
                 output_staging_buffers,

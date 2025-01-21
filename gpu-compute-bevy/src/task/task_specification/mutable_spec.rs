@@ -1,9 +1,8 @@
-use std::collections::HashMap;
 
 use bevy::prelude::{Commands, Entity};
 
 use crate::task::{
-    events::{GpuComputeTaskChangeEvent, InputDataChangeEvent, IterSpaceOrOutputSizesChangedEvent},
+    events::{GpuComputeTaskChangeEvent,  IterSpaceOrOutputSizesChangedEvent},
     task_components::task_max_output_bytes::TaskMaxOutputBytes,
 };
 
@@ -100,9 +99,9 @@ impl ComputeTaskMutableSpec {
     }
     fn update_on_iter_space_or_max_output_lengths_change(
         &mut self,
-        mut derived: &mut ComputeTaskDerivedSpec,
+        derived: &mut ComputeTaskDerivedSpec,
         immutable: &ComputeTaskImmutableSpec,
-        mut commands: &mut Commands,
+        commands: &mut Commands,
         entity: Entity,
     ) {
         self.iter_space_and_out_lengths_version += 1;

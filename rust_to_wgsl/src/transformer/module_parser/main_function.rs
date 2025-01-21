@@ -1,21 +1,9 @@
-use crate::{
-    state::ModuleTransformState,
-    transformer::{allowed_types::AllowedRustTypes, to_wgsl_syntax::convert_file_to_wgsl},
-};
+use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_file_to_wgsl};
 use proc_macro::Span;
 use proc_macro_error::abort;
-use proc_macro2::TokenStream;
 use quote::ToTokens;
-use quote::quote;
-use shared::wgsl_components::{
-    WgslConstAssignment, WgslFunction, WgslShaderModuleComponent, WgslShaderModuleUserPortion,
-    WgslType,
-};
-use syn::{
-    Ident, Item, ItemConst, ItemFn, ItemMod, PatIdent, parse_quote,
-    spanned::Spanned,
-    visit::{self, Visit},
-};
+use shared::wgsl_components::{WgslFunction, WgslShaderModuleComponent};
+use syn::{ItemFn, spanned::Spanned, visit::Visit};
 
 pub fn find_main_function(mut state: &mut ModuleTransformState) {
     let module = state.rust_module.clone();
@@ -58,7 +46,7 @@ impl<'ast> MainFunctionsExtractor<'ast> {
 }
 
 fn parse_main_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
-    let mut func_clone = func.clone();
+    let func_clone = func.clone();
     // alter the main function argument
     WgslFunction {
         code: WgslShaderModuleComponent {

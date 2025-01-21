@@ -7,7 +7,7 @@ use shared::misc_types::TypesSpec;
 use crate::{run_ids::GpuAcceleratedBevyRunIds, task::inputs::input_data::InputDataTrait};
 
 use super::{
-    events::{GpuComputeTaskChangeEvent, InputDataChangeEvent},
+    events::InputDataChangeEvent,
     inputs::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
     outputs::definitions::{
         output_data::OutputData, type_erased_output_data::TypeErasedOutputData,

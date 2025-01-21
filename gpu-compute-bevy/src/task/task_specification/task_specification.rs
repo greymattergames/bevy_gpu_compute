@@ -1,14 +1,11 @@
 use std::collections::HashMap;
 
-use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice, state::commands};
-use futures::never::Never;
+use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice};
 use shared::{ misc_types::TypesSpec, wgsl_components::{WgslShaderModuleUserPortion, WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME}, wgsl_shader_module::WgslShaderModule};
 
 use crate::task::{
-    events::{
-        GpuComputeTaskChangeEvent,
-    }, inputs::input_vector_metadata_spec::{
-        self, InputVectorMetadataDefinition, InputVectorsMetadataSpec,
+    inputs::input_vector_metadata_spec::{
+        InputVectorMetadataDefinition, InputVectorsMetadataSpec,
     }, outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec}, task_components::task_max_output_bytes::TaskMaxOutputBytes, task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
         iteration_space::IterationSpace,

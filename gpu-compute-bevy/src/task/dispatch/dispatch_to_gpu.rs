@@ -9,7 +9,6 @@ use crate::task::{
     task_specification::{
         gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
     },
-    wgsl_code::WgslCode,
 };
 
 use super::create_bind_group::BindGroupComponent;

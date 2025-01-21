@@ -1,7 +1,6 @@
 use proc_macro_error::abort;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::token::Token;
 
 use crate::state::ModuleTransformState;
 pub fn generate_unaltered_module(state: &ModuleTransformState) -> TokenStream {

@@ -3,13 +3,11 @@ mod tests {
     use crate::{
         state::ModuleTransformState,
         transformer::{
-            allowed_types::AllowedRustTypes,
             custom_types::custom_type::{CustomType, CustomTypeKind},
             transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
         },
     };
 
-    use super::*;
     use proc_macro2::TokenStream;
     use quote::{ToTokens, format_ident};
     use syn::{ItemMod, parse_quote};
@@ -31,7 +29,7 @@ mod tests {
             CustomTypeKind::InputArray,
             TokenStream::new(),
         )];
-        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        state.custom_types = Some(custom_types);
         transform_wgsl_helper_methods(&mut state);
         let result = state.rust_module.to_token_stream().to_string();
         println!("{}", result);
@@ -60,7 +58,7 @@ mod tests {
             CustomTypeKind::InputArray,
             TokenStream::new(),
         )];
-        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        state.custom_types = Some(custom_types);
         transform_wgsl_helper_methods(&mut state);
         let result = state.rust_module.to_token_stream().to_string();
         println!("{}", result);
@@ -88,7 +86,7 @@ mod tests {
             CustomTypeKind::OutputVec,
             TokenStream::new(),
         )];
-        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        state.custom_types = Some(custom_types);
         transform_wgsl_helper_methods(&mut state);
         let result = state.rust_module.to_token_stream().to_string();
 
@@ -118,7 +116,7 @@ mod tests {
             CustomTypeKind::OutputVec,
             TokenStream::new(),
         )];
-        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        state.custom_types = Some(custom_types);
         transform_wgsl_helper_methods(&mut state);
         let result = state.rust_module.to_token_stream().to_string();
 
@@ -148,7 +146,7 @@ mod tests {
             CustomTypeKind::OutputArray,
             TokenStream::new(),
         )];
-        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        state.custom_types = Some(custom_types);
         transform_wgsl_helper_methods(&mut state);
         let result = state.rust_module.to_token_stream().to_string();
 
@@ -176,7 +174,7 @@ mod tests {
             CustomTypeKind::Uniform,
             TokenStream::new(),
         )];
-        state.allowed_types = Some(AllowedRustTypes::new(custom_types));
+        state.custom_types = Some(custom_types);
         transform_wgsl_helper_methods(&mut state);
         let result = state.rust_module.to_token_stream().to_string();
 

@@ -1,13 +1,13 @@
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 use shared::{
     custom_type_name::CustomTypeName,
     wgsl_components::{
-        WgslArrayLength, WgslConstAssignment, WgslDerivedType, WgslFunction, WgslInputArray,
-        WgslOutputArray, WgslShaderModuleComponent, WgslType,
+        WgslConstAssignment, WgslFunction, WgslInputArray, WgslOutputArray,
+        WgslShaderModuleComponent, WgslType,
     },
 };
-use syn::Ident;
+
 pub struct ToStructInitializer {}
 
 impl ToStructInitializer {
@@ -41,17 +41,6 @@ impl ToStructInitializer {
         )
     }
 
-    pub fn wgsl_derived_type(c: WgslDerivedType) -> TokenStream {
-        let n = c.name;
-        let c = ToStructInitializer::wgsl_shader_module_component(c.code);
-        quote!(
-            WgslDerivedType {
-                name: (#n).to_string(),
-                code: #c,
-            }
-        )
-    }
-
     pub fn wgsl_function(c: WgslFunction) -> TokenStream {
         let n = c.name;
         let c = ToStructInitializer::wgsl_shader_module_component(c.code);
@@ -67,16 +56,6 @@ impl ToStructInitializer {
         let c = ToStructInitializer::wgsl_shader_module_component(c.code);
         quote!(
             WgslConstAssignment {
-                code: #c,
-            }
-        )
-    }
-    pub fn wgsl_array_length(c: WgslArrayLength) -> TokenStream {
-        let n = c.name;
-        let c = ToStructInitializer::wgsl_shader_module_component(c.code);
-        quote!(
-            WgslArrayLength {
-                name: (#n).to_string(),
                 code: #c,
             }
         )

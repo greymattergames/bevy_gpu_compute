@@ -1,6 +1,4 @@
-use std::hash::{Hash, Hasher};
-
-use bevy::{prelude::Component, render::renderer::RenderDevice};
+use bevy::render::renderer::RenderDevice;
 use wgpu::{ShaderModule, ShaderModuleDescriptor, ShaderSource};
 
 pub struct WgslCode {

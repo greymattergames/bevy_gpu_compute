@@ -1,6 +1,5 @@
 use std::hash::{Hash, Hasher};
 
-use bevy::prelude::Component;
 use shared::wgsl_shader_module::IterSpaceDimmension;
 
 #[derive(Hash, Copy, Debug, Clone)]

@@ -1,5 +1,3 @@
-use proc_macro2::TokenStream;
-
 use crate::transformer::{
     custom_types::custom_type::CustomTypeKind,
     transform_wgsl_helper_methods::to_expanded_format::ToExpandedFormatMethodKind,

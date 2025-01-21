@@ -1,4 +1,3 @@
-use bevy::prelude::Component;
 
 use super::{gpu_workgroup_sizes::GpuWorkgroupSizes, iteration_space::IterationSpace};
 

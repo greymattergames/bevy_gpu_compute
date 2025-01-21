@@ -4,10 +4,10 @@ use array::ArrayToWgslTransformer;
 use expr::ExprToWgslTransformer;
 use proc_macro_error::abort;
 use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, quote};
+use quote::ToTokens;
 use remove_attributes::remove_attributes;
 use remove_pub_from_struct_def::PubRemover;
-use syn::{Expr, File, Item, parse, parse_quote, parse2, visit::Visit, visit_mut::VisitMut};
+use syn::{File, parse, visit::Visit, visit_mut::VisitMut};
 use r#type::TypeToWgslTransformer;
 use type_def::TypeDefToWgslTransformer;
 use wgsl_builtin_constructors::convert_wgsl_builtin_constructors;
@@ -84,8 +84,8 @@ pub fn convert_file_to_wgsl(
         abort!(Span::call_site(), message);
     };
 
-    let allowed_types = if let Some(at) = &state.allowed_types {
-        at
+    let custom_types = if let Some(ct) = &state.custom_types {
+        ct
     } else {
         abort!(
             state.rust_module.ident.span(),
@@ -94,7 +94,7 @@ pub fn convert_file_to_wgsl(
     };
     PubRemover {}.visit_file_mut(&mut file);
     TypeToWgslTransformer {
-        custom_types: &allowed_types.custom_types,
+        custom_types: &custom_types,
     }
     .visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);

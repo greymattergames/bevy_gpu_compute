@@ -1,9 +1,5 @@
 use proc_macro_error::abort;
-use proc_macro2::TokenStream;
-use quote::ToTokens;
 use syn::{parse_quote, spanned::Spanned, visit_mut::VisitMut};
-
-use crate::transformer::custom_types::custom_type::CustomType;
 
 pub struct ArrayToWgslTransformer {}
 
@@ -49,6 +45,7 @@ pub fn array_to_wgsl(arr: &syn::TypeArray) -> syn::TypePath {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quote::ToTokens;
     use syn::{TypeArray, parse_quote};
 
     #[test]

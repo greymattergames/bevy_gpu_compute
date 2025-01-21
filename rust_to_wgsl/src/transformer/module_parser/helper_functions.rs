@@ -1,18 +1,8 @@
-use proc_macro2::Span;
-use quote::{ToTokens, format_ident};
-use shared::wgsl_components::{
-    WgslConstAssignment, WgslFunction, WgslShaderModuleComponent, WgslShaderModuleUserPortion,
-    WgslType,
-};
-use syn::{
-    Ident, Item, ItemConst, ItemFn, ItemMod,
-    visit::{self, Visit},
-};
+use quote::ToTokens;
+use shared::wgsl_components::{WgslFunction, WgslShaderModuleComponent};
+use syn::{ItemFn, visit::Visit};
 
-use crate::{
-    state::{self, ModuleTransformState},
-    transformer::{allowed_types::AllowedRustTypes, to_wgsl_syntax::convert_file_to_wgsl},
-};
+use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_file_to_wgsl};
 
 pub fn find_helper_functions(mut state: &mut ModuleTransformState) {
     let module = state.rust_module.clone();
@@ -28,12 +18,10 @@ struct HelperFunctionsExtractor<'a> {
 impl<'ast> Visit<'ast> for HelperFunctionsExtractor<'ast> {
     fn visit_item_fn(&mut self, c: &'ast syn::ItemFn) {
         syn::visit::visit_item_fn(self, c);
-        if (c.sig.ident.to_string() == "main") {
+        if c.sig.ident.to_string() == "main" {
             return;
         }
         // ident from string
-        let test_string = "tsts".to_string();
-        let t: Ident = Ident::new(&test_string, Span::call_site());
 
         self.state
             .result

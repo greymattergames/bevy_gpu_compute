@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use proc_macro_error::abort;
 use quote::ToTokens;
-use syn::{ItemType, parse_quote, visit::Visit, visit_mut::VisitMut};
-
-use crate::transformer::{allowed_types::WGSL_NATIVE_TYPES, custom_types::custom_type::CustomType};
+use syn::{ItemType, visit::Visit};
 
 pub struct TypeDefToWgslTransformer {
     pub replacements: HashMap<String, String>,

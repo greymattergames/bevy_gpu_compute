@@ -1,11 +1,8 @@
 use proc_macro_error::abort;
-use proc_macro2::{Span, TokenStream, TokenTree};
-use quote::{ToTokens, format_ident, quote};
+use proc_macro2::TokenStream;
 
 use syn::{
-    AngleBracketedGenericArguments, Expr, ExprCall, ExprMethodCall, GenericArgument, Ident,
-    ItemMod, Path, PathArguments, Type, parse_quote, parse_str,
-    spanned::Spanned,
+    Expr, ExprCall, GenericArgument, PathArguments, Type, parse_quote,
     visit_mut::{self, VisitMut},
 };
 
@@ -110,17 +107,17 @@ impl HelperFunctionConverter {
 /// Rust's normal type checking will ensure that these helper functions are using correctly defined types
 pub fn transform_wgsl_helper_methods(state: &mut ModuleTransformState) {
     assert!(
-        state.allowed_types.is_some(),
+        state.custom_types.is_some(),
         "Allowed types must be defined"
     );
-    let allowed_types = if let Some(at) = &state.allowed_types {
-        at
+    let custom_types = if let Some(ct) = &state.custom_types {
+        ct
     } else {
         abort!(
             state.rust_module.ident.span(),
             "Allowed types must be set before transforming helper functions"
         );
     };
-    let mut converter = HelperFunctionConverter::new(&allowed_types.custom_types);
+    let mut converter = HelperFunctionConverter::new(&custom_types);
     converter.visit_item_mod_mut(&mut state.rust_module);
 }

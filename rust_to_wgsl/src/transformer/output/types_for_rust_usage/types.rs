@@ -2,14 +2,13 @@ use proc_macro_error::abort;
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
 use shared::wgsl_components::WgslShaderModuleUserPortion;
-use syn::{Ident, parse_macro_input, parse_quote, parse2, visit_mut::VisitMut};
+use syn::{Ident, parse2, visit_mut::VisitMut};
 
 use crate::{
     state::ModuleTransformState,
     transformer::{
         custom_types::custom_type::CustomTypeKind,
         output::types_for_rust_usage::make_types_public::MakeTypesPublicTransformer,
-        to_wgsl_syntax::remove_attributes::remove_attributes,
     },
 };
 
@@ -46,15 +45,13 @@ pub fn define_types_for_use_in_rust(state: &ModuleTransformState) -> TokenStream
 }
 
 pub fn user_defined_types(state: &ModuleTransformState) -> TokenStream {
-    let obj: WgslShaderModuleUserPortion = state.result.clone();
     let mut publicifier = MakeTypesPublicTransformer {};
     let mut podifier = MakeTypesPodTransformer {};
     let custom_types = remove_internal_attributes(
         state
-            .allowed_types
+            .custom_types
             .as_ref()
             .unwrap()
-            .custom_types
             .iter()
             .map(|c| {
                 // get item
@@ -62,7 +59,6 @@ pub fn user_defined_types(state: &ModuleTransformState) -> TokenStream {
                     return "".to_string();
                 }
                 let s = c.rust_code.clone();
-                let s_debug = s.clone().to_string();
                 let mut item = parse2::<syn::Item>(s);
                 if let Err(e) = item {
                     let message = format!(

@@ -1,9 +1,6 @@
 use proc_macro_error::abort;
 use quote::{ToTokens, quote};
-use syn::{
-    Item, ItemMod, ItemUse, UseTree, parse_quote, spanned::Spanned, visit::Visit,
-    visit_mut::VisitMut,
-};
+use syn::{Item, ItemUse, spanned::Spanned, visit::Visit, visit_mut::VisitMut};
 
 use crate::state::ModuleTransformState;
 

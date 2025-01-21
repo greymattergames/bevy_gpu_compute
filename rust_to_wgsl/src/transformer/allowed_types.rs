@@ -1,5 +1,3 @@
-use super::custom_types::custom_type::{CustomType, CustomTypeKind};
-
 pub const WGSL_NATIVE_TYPES: [&str; 65] = [
     "Vec2I32",
     "Vec2U32",
@@ -67,6 +65,7 @@ pub const WGSL_NATIVE_TYPES: [&str; 65] = [
     "u32",
     "bool",
 ];
+#[allow(dead_code)]
 const LIB_HELPER_TYPES: [&str; 5] = [
     "WgslScalar",
     "WgslIterationPosition",
@@ -74,23 +73,3 @@ const LIB_HELPER_TYPES: [&str; 5] = [
     "WgslVecInput",
     "WgslOutput",
 ];
-
-#[derive(Debug, Clone)]
-pub struct AllowedRustTypes {
-    pub wgsl_native_types: Vec<String>,
-    pub lib_helper_types: Vec<String>,
-    pub custom_types: Vec<CustomType>,
-}
-
-impl AllowedRustTypes {
-    pub fn new(custom_types: Vec<CustomType>) -> Self {
-        AllowedRustTypes {
-            wgsl_native_types: WGSL_NATIVE_TYPES.iter().map(|s| s.to_string()).collect(),
-            lib_helper_types: LIB_HELPER_TYPES.iter().map(|s| s.to_string()).collect(),
-            custom_types,
-        }
-    }
-    pub fn add_user_type(&mut self, custom_type: CustomType) {
-        self.custom_types.push(custom_type);
-    }
-}

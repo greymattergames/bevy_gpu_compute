@@ -1,16 +1,12 @@
-use std::alloc::Global;
+use shared::wgsl_components::WgslShaderModuleUserPortion;
+use syn::ItemMod;
 
-use shared::wgsl_components::{
-    WgslConstAssignment, WgslFunction, WgslOutputArray, WgslShaderModuleUserPortion, WgslType,
-};
-use syn::{Item, ItemMod, token::Brace};
-
-use crate::transformer::allowed_types::AllowedRustTypes;
+use crate::transformer::custom_types::custom_type::CustomType;
 
 pub struct ModuleTransformState {
     _original_content: String,
     pub rust_module: ItemMod,
-    pub allowed_types: Option<AllowedRustTypes>,
+    pub custom_types: Option<Vec<CustomType>>,
     pub module_visibility: Option<String>,
     pub module_ident: Option<String>,
     pub result: WgslShaderModuleUserPortion,
@@ -20,7 +16,7 @@ impl ModuleTransformState {
         Self {
             _original_content: content,
             rust_module,
-            allowed_types: None,
+            custom_types: None,
             module_visibility: None,
             module_ident: None,
             result: WgslShaderModuleUserPortion::empty(),

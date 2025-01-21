@@ -22,8 +22,7 @@ impl TaskMaxOutputBytes {
         let max_output_bytes = output_vector_metadata_spec
             .get_all_metadata()
             .iter()
-            .enumerate()
-            .fold(0, |acc, (i, output_metadata)| {
+            .fold(0, |acc, output_metadata| {
                 if let Some(m) = output_metadata {
                     acc + max_output_vector_lengths.get_by_name(m.name()) * m.get_bytes()
                 } else {

@@ -1,17 +1,10 @@
-use std::collections::HashMap;
-
 use proc_macro_error::abort;
-use quote::{ToTokens, quote};
-use syn::{
-    Expr, ExprCall, parse_quote, parse2, spanned::Spanned, visit::Visit, visit_mut::VisitMut,
-};
+use quote::ToTokens;
+use syn::{Expr, ExprCall, parse2, spanned::Spanned, visit_mut::VisitMut};
 
 use crate::transformer::allowed_types::WGSL_NATIVE_TYPES;
 
-pub struct ExprToWgslTransformer {
-    // key is the rust syntax, value is the wgsl syntax
-    // pub replacements: HashMap<String, String>,
-}
+pub struct ExprToWgslTransformer {}
 
 impl VisitMut for ExprToWgslTransformer {
     fn visit_expr_mut(&mut self, expr: &mut syn::Expr) {
@@ -19,15 +12,13 @@ impl VisitMut for ExprToWgslTransformer {
         syn::visit_mut::visit_expr_mut(self, expr);
         if let Some(new_expr) = expr_to_wgsl(expr) {
             *expr = new_expr;
-            // Instead of direct replacement, use placeholder system
-            // self.replacements
-            // .insert(expr.to_token_stream().to_string(), new_expr);
         }
     }
 }
 
 /// if none then no mutation is needed
 pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
+    #[allow(unused_variables)]
     match expr {
         syn::Expr::Lit(lit) => None,
         syn::Expr::Array(array) => {

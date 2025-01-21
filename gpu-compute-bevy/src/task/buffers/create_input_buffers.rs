@@ -1,13 +1,13 @@
 use bevy::{
     ecs::batching::BatchingStrategy,
-    log::{self, info},
+    log::info,
     prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
-    events::{GpuComputeTaskChangeEvent, InputDataChangeEvent},
+    events::InputDataChangeEvent,
     inputs::{
         input_vector_metadata_spec::InputVectorsMetadataSpec,
         type_erased_input_data::TypeErasedInputData,

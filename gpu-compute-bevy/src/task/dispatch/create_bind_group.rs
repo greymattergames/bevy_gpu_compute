@@ -79,7 +79,7 @@ fn create_bind_group_single_task(
     input_buffers: &InputBuffers,
     output_count_buffers: &OutputCountBuffers,
     output_buffers: &OutputBuffers,
-    mut bind_group_component: &mut BindGroupComponent,
+    bind_group_component: &mut BindGroupComponent,
 ) {
     let mut bindings = Vec::new();
     for (i, spec) in input_specs.get_all_metadata().iter().enumerate() {

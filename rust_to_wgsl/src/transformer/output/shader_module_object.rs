@@ -1,8 +1,7 @@
 use crate::{
     state::ModuleTransformState, transformer::output::per_component_expansion::ToStructInitializer,
 };
-use proc_macro_error::abort;
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 use shared::wgsl_components::WgslShaderModuleUserPortion;
 
@@ -110,7 +109,7 @@ mod test {
     #[test]
     pub fn test_parse_str() {
         let uniforms_str2 = "";
-        let uniforms2: TokenStream = if let Ok(ts) = uniforms_str2.parse() {
+        let _uniforms2: TokenStream = if let Ok(ts) = uniforms_str2.parse() {
             ts
         } else {
             abort!(

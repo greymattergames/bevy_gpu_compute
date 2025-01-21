@@ -1,10 +1,7 @@
 use proc_macro_error::abort;
-use quote::format_ident;
-use syn::{Ident, PathSegment, TypePath, parse_quote, spanned::Spanned, visit_mut::VisitMut};
+use syn::{PathSegment, parse_quote, visit_mut::VisitMut};
 
 use crate::transformer::custom_types::custom_type::CustomType;
-
-use super::array::array_to_wgsl;
 
 pub struct TypeToWgslTransformer<'a> {
     pub custom_types: &'a Vec<CustomType>,

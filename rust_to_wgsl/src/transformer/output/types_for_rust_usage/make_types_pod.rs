@@ -1,8 +1,4 @@
-use proc_macro2::Span;
-use syn::{
-    ItemStruct, ItemType, Visibility, parse_quote, spanned::Spanned, token::Pub,
-    visit_mut::VisitMut,
-};
+use syn::{ItemStruct, parse_quote, visit_mut::VisitMut};
 
 pub struct MakeTypesPodTransformer;
 

@@ -52,12 +52,6 @@ pub struct WgslType {
     pub code: WgslShaderModuleComponent,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct WgslDerivedType {
-    pub name: String,
-    pub code: WgslShaderModuleComponent,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 
 pub struct WgslFunction {
@@ -88,12 +82,6 @@ impl WgslConstAssignment {
             },
         }
     }
-}
-#[derive(Clone, Debug, PartialEq)]
-
-pub struct WgslArrayLength {
-    pub name: String,
-    pub code: WgslShaderModuleComponent,
 }
 
 #[derive(Clone, Debug, PartialEq)]

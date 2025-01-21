@@ -1,6 +1,5 @@
 use bevy::prelude::Component;
-use shared::misc_types::{InputVectorTypesSpec, TypesSpec};
-use std::any::Any;
+use shared::misc_types::TypesSpec;
 
 use super::input_data::{InputData, InputDataTrait};
 

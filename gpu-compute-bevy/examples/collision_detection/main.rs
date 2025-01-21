@@ -1,19 +1,12 @@
-use std::collections::HashMap;
-
 use bevy::{
     DefaultPlugins,
     app::{App, AppExit, Startup, Update},
-    asset::{Assets, RenderAssetUsages},
     log,
-    math::Vec2,
     prelude::{
-        Camera2d, Commands, Component, EventReader, EventWriter, IntoSystemConfigs, Mesh, Mesh2d,
-        OrthographicProjection, Query, Res, ResMut, Resource, Transform,
+        Commands, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Resource,
     },
     render::renderer::RenderDevice,
-    sprite::MeshMaterial2d,
 };
-use bytemuck::{Pod, Zeroable};
 use gpu_compute_bevy::{
     GpuAcceleratedBevyPlugin, finished_gpu_tasks,
     resource::GpuAcceleratedBevy,
@@ -28,15 +21,11 @@ use gpu_compute_bevy::{
             iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputLengths,
             task_specification::ComputeTaskSpecification,
         },
-        wgsl_code::WgslCode,
     },
 };
 mod visuals;
-use rust_to_wgsl::*;
-use shared::{
-    misc_types::{InputVectorTypesSpec, OutputVectorTypesSpec},
-    wgsl_in_rust_helpers::*,
-};
+use rust_to_wgsl::wgsl_shader_module;
+use shared::wgsl_in_rust_helpers::*;
 use visuals::{BoundingCircleComponent, ColorHandles, spawn_camera, spawn_entities};
 
 fn main() {
@@ -69,7 +58,6 @@ const ENTITY_RADIUS: f32 = 401.;
 struct State {
     pub run_id: u128,
     pub num_entities: u32,
-    pub length: u32,
     pub collisions: Vec<collision_detection_module::CollisionResult>,
 }
 impl Default for State {
@@ -77,7 +65,6 @@ impl Default for State {
         State {
             run_id: 0,
             num_entities: 0,
-            length: (SPAWN_RANGE_MAX - SPAWN_RANGE_MIN).abs() as u32,
             collisions: Vec::new(),
         }
     }
@@ -176,13 +163,13 @@ fn create_task(
         initial_max_output_lengths,
     );
 }
-fn delete_task(mut commands: Commands, mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
+fn delete_task(mut commands: Commands, gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
     let task = gpu_acc_bevy.task(&"collision_detection".to_string());
     task.delete(&mut commands);
 }
 fn modify_task(
     mut commands: Commands,
-    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
+    gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
     mut task_specifications: Query<&mut ComputeTaskSpecification>,
     state: Res<State>,
 ) {
@@ -208,8 +195,8 @@ fn modify_task(
 }
 fn run_task(
     mut commands: Commands,
-    mut gpu_compute: ResMut<GpuAcceleratedBevy>,
-    mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
+    gpu_compute: ResMut<GpuAcceleratedBevy>,
+    task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
     mut state: ResMut<State>,
     entities: Query<&BoundingCircleComponent>,
 ) {

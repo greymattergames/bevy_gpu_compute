@@ -106,7 +106,7 @@ pub enum AvailableColor {
 #[derive(Resource)]
 pub struct ColorHandles {
     pub handles: HashMap<AvailableColor, Handle<ColorMaterial>>,
-    pub colors: HashMap<AvailableColor, Color>,
+    pub _colors: HashMap<AvailableColor, Color>,
 }
 
 impl FromWorld for ColorHandles {
@@ -123,6 +123,9 @@ impl FromWorld for ColorHandles {
             let handle = materials.add(*color_value);
             handles.insert(*color, handle);
         }
-        Self { handles, colors }
+        Self {
+            handles,
+            _colors: colors,
+        }
     }
 }

@@ -1,8 +1,4 @@
-use bevy::prelude::Component;
-use shared::{
-    custom_type_name::{self, CustomTypeName},
-    misc_types::OutputVectorTypesSpec,
-};
+use shared::{custom_type_name::CustomTypeName, misc_types::OutputVectorTypesSpec};
 
 pub struct OutputVectorMetadataDefinition<'a> {
     pub binding_number: u32,

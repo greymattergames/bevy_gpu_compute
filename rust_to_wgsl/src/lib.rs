@@ -1,11 +1,9 @@
 #![feature(allocator_api)]
-use std::str::FromStr;
 
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy};
-use quote::{ToTokens, quote};
 use state::ModuleTransformState;
-use syn::{parse, parse_macro_input, token::Semi};
+use syn::parse_macro_input;
 use transformer::{
     custom_types::get_all_custom_types::get_custom_types,
     module_parser::module_parser::parse_shader_module, output::produce_expanded_output,
@@ -71,7 +69,7 @@ pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream 
     set_dummy(item.clone().into());
     let content = item.to_string();
     let content_no_doc_comments: TokenStream = remove_doc_comments(&content).parse().unwrap();
-    let mut module = parse_macro_input!(content_no_doc_comments as syn::ItemMod);
+    let module = parse_macro_input!(content_no_doc_comments as syn::ItemMod);
     let mut state = ModuleTransformState::empty(module, content);
     get_custom_types(&mut state);
     transform_wgsl_helper_methods(&mut state);

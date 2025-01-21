@@ -1,27 +1,22 @@
-use std::default;
 
 use bevy::{
     ecs::batching::BatchingStrategy,
     log,
-    prelude::{Changed, EventReader, Query, Res},
+    prelude::{ EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
-use shared::wgsl_components::{
-    WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
-};
+
 use wgpu::{ComputePipelineDescriptor, PipelineCompilationOptions};
 
 use crate::task::{
     events::{GpuComputeTaskChangeEvent, IterSpaceOrOutputSizesChangedEvent},
     task_components::task_name::TaskName,
     task_specification::task_specification::ComputeTaskSpecification,
-    wgsl_code::WgslCode,
 };
 
 use super::{
     cache::{PipelineKey, PipelineLruCache},
     pipeline_layout::PipelineLayoutComponent,
-    shader_module::{self, shader_module_from_wgsl_string},
 };
 
 pub fn update_pipelines_on_pipeline_const_change(

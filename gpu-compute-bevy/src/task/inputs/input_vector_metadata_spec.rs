@@ -1,4 +1,3 @@
-use bevy::prelude::Component;
 use shared::{custom_type_name::CustomTypeName, misc_types::InputVectorTypesSpec};
 
 #[derive(Copy, Clone)]

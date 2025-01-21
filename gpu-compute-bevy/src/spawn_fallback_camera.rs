@@ -14,7 +14,6 @@ pub struct GpuAcceleratedBevyFallbackCamera;
 Testing indicates GPU performance vastly reduced if bevy does not spawn a window or camera. Unsure why. If the user doesn't spawn a camera we spawn one for them.
  */
 pub fn spawn_fallback_camera(
-    time: Res<Time>,
     cameras: Query<&Camera>,
     fallback_cameras: Query<(Entity, &GpuAcceleratedBevyFallbackCamera)>,
     mut commands: Commands,

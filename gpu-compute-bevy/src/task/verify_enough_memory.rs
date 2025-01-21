@@ -5,10 +5,7 @@ use bevy::{
 
 use crate::ram_limit::RamLimit;
 
-use super::{
-    task_components::task_max_output_bytes::TaskMaxOutputBytes,
-    task_specification::task_specification::ComputeTaskSpecification,
-};
+use super::task_specification::task_specification::ComputeTaskSpecification;
 
 pub fn verify_have_enough_memory(
     tasks: Query<&ComputeTaskSpecification>,

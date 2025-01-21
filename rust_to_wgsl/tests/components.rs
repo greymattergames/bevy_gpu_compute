@@ -1,18 +1,14 @@
 #![feature(f16)]
 use pretty_assertions::assert_eq;
-use proc_macro2::TokenStream;
-use quote::{ToTokens, format_ident};
 use rust_to_wgsl::wgsl_shader_module;
 use shared::{
     custom_type_name::CustomTypeName,
     misc_types::TypesSpec,
     wgsl_components::{
-        WgslConstAssignment, WgslDerivedType, WgslFunction, WgslInputArray, WgslOutputArray,
+        WgslConstAssignment, WgslFunction, WgslInputArray, WgslOutputArray,
         WgslShaderModuleComponent, WgslShaderModuleUserPortion, WgslType,
     },
-    wgsl_in_rust_helpers::Vec3Bool,
 };
-use syn::{ItemMod, parse_quote};
 
 #[test]
 fn test_simple_struct() {
@@ -243,7 +239,7 @@ fn t() {}
 
 #[test]
 // expect a panic
-#[should_panic("not implemented")]
+#[should_panic(expected = "not implemented")]
 fn can_extract_types() {
     #[wgsl_shader_module]
     pub mod test_module {
@@ -259,7 +255,7 @@ fn can_extract_types() {
     fn fun<T: TypesSpec>() -> T::InputConfigTypes {
         unimplemented!();
     }
-    let t = fun::<test_module::Types>();
+    let _t = fun::<test_module::Types>();
 }
 
 #[test]
@@ -308,7 +304,7 @@ fn test_doc_comments() {
     assert!(t2.main_function.is_some());
     assert!(t2.static_consts.len() == 0);
     assert!(t2.helper_types.len() == 0);
-    let t = WgslShaderModuleComponent {
+    let _t = WgslShaderModuleComponent {
         rust_code: ("#[wgsl_config] struct MyConfig { value : PodBool, }").to_string(),
         wgsl_code: ("struct MyConfig { value : bool, }").to_string(),
     };

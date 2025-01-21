@@ -1,12 +1,5 @@
-use proc_macro::Span;
 use proc_macro_error::abort;
-use proc_macro2::TokenStream;
 use quote::ToTokens;
-use shared::wgsl_components::{
-    WgslFunction, WgslOutputArray, WgslShaderModuleUserPortion, WgslType,
-};
-use syn::{Item, ItemConst, ItemFn, ItemMod, ItemStruct, spanned::Spanned};
-use syn::{ItemUse, UseTree, Visibility};
 
 use crate::state::ModuleTransformState;
 

@@ -1,4 +1,3 @@
-use proc_macro2::Span;
 use syn::{ItemStruct, ItemType, Visibility, spanned::Spanned, token::Pub, visit_mut::VisitMut};
 
 pub struct MakeTypesPublicTransformer;

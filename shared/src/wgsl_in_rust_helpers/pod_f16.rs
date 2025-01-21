@@ -102,6 +102,7 @@ mod tests {
             use crate::wgsl_in_rust_helpers::PodF16;
             /// user types
             #[repr(C)]
+            #[allow(dead_code)]
             pub struct MyConfig {
                 f16_val: PodF16,
             }

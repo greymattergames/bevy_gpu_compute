@@ -86,7 +86,7 @@ impl WgslWgpuBinding {
     }
 }
 #[derive(Clone, Debug, PartialEq)]
-enum WgpuBufferType {
+pub enum WgpuBufferType {
     Storage,
     Uniform,
 }
@@ -109,7 +109,7 @@ impl ToString for WgpuBufferType {
     }
 }
 #[derive(Clone, Debug)]
-enum WgpuBufferAccessMode {
+pub enum WgpuBufferAccessMode {
     Read,
     ReadWrite,
 }
