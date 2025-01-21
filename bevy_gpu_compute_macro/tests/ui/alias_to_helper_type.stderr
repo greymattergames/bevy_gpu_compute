@@ -1,0 +1,15 @@
+error: Renaming/aliasing helper types like Vec3F32, Mat2x2Bool, etc. is not supported. For example don't do `type MyType = Vec3U32;`. Instead put it in a struct field like `struct MyType = { v: Vec3U32 }`
+ --> tests/ui/alias_to_helper_type.rs:3:1
+  |
+3 | #[wgsl_shader_module]
+  | ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `wgsl_shader_module` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused variable: `iter_pos`
+ --> tests/ui/alias_to_helper_type.rs:7:13
+  |
+7 |     fn main(iter_pos: WgslIterationPosition) {}
+  |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_iter_pos`
+  |
+  = note: `#[warn(unused_variables)]` on by default
