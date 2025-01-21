@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use bevy::prelude::Component;
+use shared::wgsl_shader_module::IterSpaceDimmension;
 
 #[derive(Hash, Copy, Debug, Clone)]
 /**
@@ -19,7 +20,7 @@ pub struct IterationSpace {
     x: usize,
     y: usize,
     z: usize,
-    num_dimmensions: usize,
+    num_dimmensions: IterSpaceDimmension,
 }
 impl Default for IterationSpace {
     fn default() -> Self {
@@ -31,11 +32,11 @@ impl IterationSpace {
     /// faster, but with no input validation, make sure each dimmension is greater than 0
     pub fn new_unsafe(x: usize, y: usize, z: usize) -> Self {
         let num_dimmensions = if z > 1 {
-            3
+            IterSpaceDimmension::ThreeD
         } else if y > 1 {
-            2
+            IterSpaceDimmension::TwoD
         } else {
-            1
+            IterSpaceDimmension::OneD
         };
         IterationSpace {
             x,
@@ -50,11 +51,11 @@ impl IterationSpace {
             panic!("Each dimmension must be greater than 0");
         }
         let num_dimmensions = if x > 1 && y > 1 && z > 1 {
-            3
+            IterSpaceDimmension::ThreeD
         } else if x > 1 && y > 1 {
-            2
+            IterSpaceDimmension::TwoD
         } else {
-            1
+            IterSpaceDimmension::OneD
         };
         IterationSpace {
             x,
@@ -69,7 +70,7 @@ impl IterationSpace {
         self.hash(&mut hasher);
         hasher.finish()
     }
-    pub fn num_dimmensions(&self) -> usize {
+    pub fn num_dimmensions(&self) -> IterSpaceDimmension {
         self.num_dimmensions
     }
     pub fn x(&self) -> usize {

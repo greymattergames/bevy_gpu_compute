@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice, state::commands};
 use futures::never::Never;
-use shared::{compose_wgsl_module::{compose_wgsl, WgslShaderModule}, misc_types::TypesSpec, wgsl_components::{WgslShaderModuleUserPortion, WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME}};
+use shared::{ misc_types::TypesSpec, wgsl_components::{WgslShaderModuleUserPortion, WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME}, wgsl_shader_module::WgslShaderModule};
 
 use crate::task::{
     events::{
@@ -41,8 +41,8 @@ impl ComputeTaskSpecification {
         iteration_space: IterationSpace,
         max_output_vector_lengths: MaxOutputLengths,
     )->Self {
-        let full_module = compose_wgsl(wgsl_shader_module);
-        log::info!("wgsl: {}",full_module.wgsl_code);
+        let full_module = WgslShaderModule::new(wgsl_shader_module);
+        log::info!("wgsl: {}",full_module.wgsl_code(iteration_space.num_dimmensions()));
         let mut input_definitions = [None; 6];
         full_module.user_portion
         .input_arrays.iter().enumerate().for_each(|(i,a)|{
@@ -99,7 +99,7 @@ impl ComputeTaskSpecification {
             WgslCode::from_string(
                 name,
                     render_device,
-                full_module.wgsl_code,"main".to_string()),
+                full_module.wgsl_code(iteration_space.num_dimmensions()),"main".to_string()),
         )
     }
 

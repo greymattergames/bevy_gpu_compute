@@ -1,4 +1,8 @@
-use bevy::prelude::{Component, Ref};
+use bevy::{
+    log::tracing_subscriber::filter::targets::Iter,
+    prelude::{Component, Ref},
+};
+use shared::wgsl_shader_module::IterSpaceDimmension;
 
 use super::iteration_space::IterationSpace;
 
@@ -28,14 +32,14 @@ impl GpuWorkgroupSizes {
     }
     pub fn from_iter_space(iter_space: &IterationSpace) -> Self {
         let num_dimmensions = iter_space.num_dimmensions();
-        if num_dimmensions == 3 {
+        if num_dimmensions == IterSpaceDimmension::ThreeD {
             Self {
                 x: 4,
                 y: 4,
                 z: 4,
                 num_dimmensions: 3,
             }
-        } else if num_dimmensions == 2 {
+        } else if num_dimmensions == IterSpaceDimmension::TwoD {
             Self {
                 x: 8,
                 y: 8,

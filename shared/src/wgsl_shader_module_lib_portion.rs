@@ -6,8 +6,8 @@ use super::{
     wgsl_wgpu_binding::WgslWgpuBinding,
 };
 use crate::wgsl_components::{
-    WgpuShaderType, WgslShaderModuleComponent, WORKGROUP_SIZE_X_VAR_NAME,
-    WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
+    WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME,
+    WgpuShaderType, WgslShaderModuleComponent,
 };
 
 pub struct WgslShaderModuleLibraryPortion {
@@ -102,9 +102,9 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        compose_wgsl_module::compose_wgsl,
         custom_type_name::CustomTypeName,
         wgsl_components::{WgslDerivedType, WgslInputArray, WgslOutputArray},
+        wgsl_shader_module::{IterSpaceDimmension, WgslShaderModule},
     };
 
     use super::*;
@@ -169,6 +169,10 @@ fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)
     }
 }
 ";
-        assert_eq!(compose_wgsl(user_portion).wgsl_code, expected_wgsl_code);
+        let module = WgslShaderModule::new(user_portion);
+        assert_eq!(
+            module.wgsl_code(IterSpaceDimmension::OneD),
+            expected_wgsl_code
+        );
     }
 }
