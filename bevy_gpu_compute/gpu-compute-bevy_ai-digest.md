@@ -54,9 +54,9 @@ use bevy::{
     render::renderer::RenderDevice,
 };
 use gpu_compute_bevy::{
-    GpuAcceleratedBevyPlugin, finished_gpu_tasks,
-    resource::GpuAcceleratedBevy,
-    run_ids::GpuAcceleratedBevyRunIds,
+    BevyGpuComputePlugin, finished_gpu_tasks,
+    resource::BevyGpuCompute,
+    run_ids::BevyGpuComputeRunIds,
     starting_gpu_tasks,
     task::{
         events::GpuComputeTaskSuccessEvent,
@@ -78,7 +78,7 @@ fn main() {
     let mut binding = App::new();
     let _app = binding
         .add_plugins(DefaultPlugins)
-        .add_plugins(GpuAcceleratedBevyPlugin::default())
+        .add_plugins(BevyGpuComputePlugin::default())
         .init_resource::<ColorHandles>()
         .init_resource::<State>()
         .add_event::<GpuComputeTaskSuccessEvent>()
@@ -188,7 +188,7 @@ mod collision_detection_module {
 
 fn create_task(
     mut commands: Commands,
-    mut gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
+    mut bevy_gpu_compute: ResMut<BevyGpuCompute>,
     gpu: Res<RenderDevice>,
 ) {
     let task_name = "collision_detection".to_string();
@@ -200,7 +200,7 @@ fn create_task(
     initial_max_output_lengths.set("CollisionResult", 100);
     initial_max_output_lengths.set("MyDebugInfo", 100);
 
-    gpu_acc_bevy.create_task_from_rust_shader::<collision_detection_module::Types>(
+    bevy_gpu_compute.create_task_from_rust_shader::<collision_detection_module::Types>(
         &task_name,
         &mut commands,
         &gpu,
@@ -209,17 +209,17 @@ fn create_task(
         initial_max_output_lengths,
     );
 }
-fn delete_task(mut commands: Commands, gpu_acc_bevy: ResMut<GpuAcceleratedBevy>) {
-    let task = gpu_acc_bevy.task(&"collision_detection".to_string());
+fn delete_task(mut commands: Commands, bevy_gpu_compute: ResMut<BevyGpuCompute>) {
+    let task = bevy_gpu_compute.task(&"collision_detection".to_string());
     task.delete(&mut commands);
 }
 fn modify_task(
     mut commands: Commands,
-    gpu_acc_bevy: ResMut<GpuAcceleratedBevy>,
+    bevy_gpu_compute: ResMut<BevyGpuCompute>,
     mut task_specifications: Query<&mut ComputeTaskSpecification>,
     state: Res<State>,
 ) {
-    let task = gpu_acc_bevy.task(&"collision_detection".to_string());
+    let task = bevy_gpu_compute.task(&"collision_detection".to_string());
     // specify the correct iter space and output maxes
     if let Ok(mut spec) = task_specifications.get_mut(task.entity) {
         let mut max_output_lengths = spec.output_array_lengths().clone();
@@ -241,8 +241,8 @@ fn modify_task(
 }
 fn run_task(
     mut commands: Commands,
-    gpu_compute: ResMut<GpuAcceleratedBevy>,
-    task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
+    gpu_compute: ResMut<BevyGpuCompute>,
+    task_run_ids: ResMut<BevyGpuComputeRunIds>,
     mut state: ResMut<State>,
     entities: Query<&BoundingCircleComponent>,
 ) {
@@ -262,7 +262,7 @@ fn run_task(
 }
 
 fn handle_task_results(
-    gpu_compute: ResMut<GpuAcceleratedBevy>,
+    gpu_compute: ResMut<BevyGpuCompute>,
     mut event_reader: EventReader<GpuComputeTaskSuccessEvent>,
     out_datas: Query<(&TaskRunId, &TypeErasedOutputData)>,
     mut state: ResMut<State>,
@@ -1261,8 +1261,8 @@ use bevy::{
 
 use crate::{
     ram_limit::RamLimit,
-    resource::GpuAcceleratedBevy,
-    run_ids::GpuAcceleratedBevyRunIds,
+    resource::BevyGpuCompute,
+    run_ids::BevyGpuComputeRunIds,
     spawn_fallback_camera::{spawn_fallback_camera, spawn_fallback_camera_runif},
     system_sets::compose_task_runner_systems,
     task::{
@@ -1276,26 +1276,26 @@ use crate::{
 
 /// state for activating or deactivating the plugin
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GpuAcceleratedBevyState {
+pub enum BevyGpuComputeState {
     Running,
     Stopped,
 }
-impl Default for GpuAcceleratedBevyState {
+impl Default for BevyGpuComputeState {
     fn default() -> Self {
-        GpuAcceleratedBevyState::Running
+        BevyGpuComputeState::Running
     }
 }
 
-pub struct GpuAcceleratedBevyPlugin {
+pub struct BevyGpuComputePlugin {
     with_default_schedule: bool,
 }
 
-impl Plugin for GpuAcceleratedBevyPlugin {
+impl Plugin for BevyGpuComputePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GpuAcceleratedBevy>()
-            .init_resource::<GpuAcceleratedBevyRunIds>()
+        app.init_resource::<BevyGpuCompute>()
+            .init_resource::<BevyGpuComputeRunIds>()
             .init_resource::<RamLimit>()
-            .init_state::<GpuAcceleratedBevyState>()
+            .init_state::<BevyGpuComputeState>()
             .add_systems(Update, (starting_gpu_tasks, finished_gpu_tasks));
         if self.with_default_schedule {
             let run_tasks_system_set = compose_task_runner_systems();
@@ -1310,7 +1310,7 @@ impl Plugin for GpuAcceleratedBevyPlugin {
                     .chain()
                     .before(finished_gpu_tasks)
                     .after(starting_gpu_tasks)
-                    .run_if(in_state(GpuAcceleratedBevyState::Running)),
+                    .run_if(in_state(BevyGpuComputeState::Running)),
             );
         } else {
             app.add_systems(
@@ -1319,7 +1319,7 @@ impl Plugin for GpuAcceleratedBevyPlugin {
                     .run_if(spawn_fallback_camera_runif)
                     .before(finished_gpu_tasks)
                     .after(starting_gpu_tasks)
-                    .run_if(in_state(GpuAcceleratedBevyState::Running)),
+                    .run_if(in_state(BevyGpuComputeState::Running)),
             );
         }
         app.add_event::<GpuComputeTaskSuccessEvent>()
@@ -1329,16 +1329,16 @@ impl Plugin for GpuAcceleratedBevyPlugin {
     }
 }
 
-impl Default for GpuAcceleratedBevyPlugin {
+impl Default for BevyGpuComputePlugin {
     fn default() -> Self {
-        GpuAcceleratedBevyPlugin {
+        BevyGpuComputePlugin {
             with_default_schedule: true,
         }
     }
 }
-impl GpuAcceleratedBevyPlugin {
+impl BevyGpuComputePlugin {
     pub fn no_default_schedule() -> Self {
-        GpuAcceleratedBevyPlugin {
+        BevyGpuComputePlugin {
             with_default_schedule: false,
         }
     }
@@ -1393,25 +1393,25 @@ use crate::task::task_specification::{
 use super::task::{
     events::GpuAcceleratedTaskCreatedEvent,
     task_commands::TaskCommands,
-    task_components::{task::GpuAcceleratedBevyTask, task_name::TaskName},
+    task_components::{task::BevyGpuComputeTask, task_name::TaskName},
     task_specification::iteration_space::IterationSpace,
 };
 
 #[derive(Resource)]
-pub struct GpuAcceleratedBevy {
+pub struct BevyGpuCompute {
     tasks: HashMap<String, TaskCommands>,
 }
-impl Default for GpuAcceleratedBevy {
+impl Default for BevyGpuCompute {
     fn default() -> Self {
-        GpuAcceleratedBevy {
+        BevyGpuCompute {
             tasks: HashMap::new(),
         }
     }
 }
 
-impl GpuAcceleratedBevy {
+impl BevyGpuCompute {
     pub fn new() -> Self {
-        GpuAcceleratedBevy {
+        BevyGpuCompute {
             tasks: HashMap::new(),
         }
     }
@@ -1426,7 +1426,7 @@ impl GpuAcceleratedBevy {
         iteration_space: IterationSpace,
         max_output_vector_lengths: MaxOutputLengths,
     ) -> TaskCommands {
-        let task = GpuAcceleratedBevyTask::new();
+        let task = BevyGpuComputeTask::new();
         let entity = {
             let entity = commands.spawn((task, TaskName::new(name))).id();
             entity
@@ -1470,15 +1470,15 @@ use bevy::prelude::Resource;
 
 #[derive(Resource)]
 
-pub struct GpuAcceleratedBevyRunIds {
+pub struct BevyGpuComputeRunIds {
     last_id: u128,
 }
-impl Default for GpuAcceleratedBevyRunIds {
+impl Default for BevyGpuComputeRunIds {
     fn default() -> Self {
-        GpuAcceleratedBevyRunIds { last_id: 0 }
+        BevyGpuComputeRunIds { last_id: 0 }
     }
 }
-impl GpuAcceleratedBevyRunIds {
+impl BevyGpuComputeRunIds {
     pub fn get_next(&mut self) -> u128 {
         self.last_id += 1;
         self.last_id
@@ -1500,14 +1500,14 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub struct GpuAcceleratedBevyFallbackCamera;
+pub struct BevyGpuComputeFallbackCamera;
 
 /**
 Testing indicates GPU performance vastly reduced if bevy does not spawn a window or camera. Unsure why. If the user doesn't spawn a camera we spawn one for them.
  */
 pub fn spawn_fallback_camera(
     cameras: Query<&Camera>,
-    fallback_cameras: Query<(Entity, &GpuAcceleratedBevyFallbackCamera)>,
+    fallback_cameras: Query<(Entity, &BevyGpuComputeFallbackCamera)>,
     mut commands: Commands,
 ) {
     let len = cameras.iter().len();
@@ -1524,7 +1524,7 @@ pub fn spawn_fallback_camera(
             Transform::from_xyz(
                 0., 0., 10.0, // 100.0,
             ),
-            GpuAcceleratedBevyFallbackCamera,
+            BevyGpuComputeFallbackCamera,
         ));
     } else if len == 1 {
         // do nothing
@@ -1583,34 +1583,34 @@ use super::task::{
 };
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyRunTaskSet;
+struct BevyGpuComputeRunTaskSet;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyRespondToTaskMutSet;
+struct BevyGpuComputeRespondToTaskMutSet;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyRespondToInputsMutSet;
+struct BevyGpuComputeRespondToInputsMutSet;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 
-struct GpuAcceleratedBevyDispatchSet;
+struct BevyGpuComputeDispatchSet;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyReadSet;
+struct BevyGpuComputeReadSet;
 
 pub fn compose_task_runner_systems()
 -> NodeConfigs<Box<dyn bevy::prelude::System<In = (), Out = ()>>> {
     let respond_to_new_inputs = (handle_input_data_change, create_input_buffers)
-        .in_set(GpuAcceleratedBevyRespondToInputsMutSet);
+        .in_set(BevyGpuComputeRespondToInputsMutSet);
     let respond_to_task_alteration = (
         update_pipelines_on_pipeline_const_change,
         create_output_buffers,
         verify_have_enough_memory,
     )
-        .in_set(GpuAcceleratedBevyRespondToTaskMutSet);
+        .in_set(BevyGpuComputeRespondToTaskMutSet);
     let dispatch = (create_bind_groups, dispatch_to_gpu)
         .chain()
-        .in_set(GpuAcceleratedBevyDispatchSet);
+        .in_set(BevyGpuComputeDispatchSet);
     let read = (read_gpu_output_counts, read_gpu_task_outputs)
         .chain()
-        .in_set(GpuAcceleratedBevyReadSet);
+        .in_set(BevyGpuComputeReadSet);
     let run_task_set = (
         respond_to_new_inputs,
         respond_to_task_alteration,
@@ -1618,7 +1618,7 @@ pub fn compose_task_runner_systems()
         read,
     )
         .chain()
-        .in_set(GpuAcceleratedBevyRunTaskSet);
+        .in_set(BevyGpuComputeRunTaskSet);
     return run_task_set;
 }
 
@@ -3628,7 +3628,7 @@ use bevy::{
 };
 use bevy_gpu_compute_core::misc_types::TypesSpec;
 
-use crate::{run_ids::GpuAcceleratedBevyRunIds, task::inputs::input_data::InputDataTrait};
+use crate::{run_ids::BevyGpuComputeRunIds, task::inputs::input_data::InputDataTrait};
 
 use super::{
     events::InputDataChangeEvent,
@@ -3655,7 +3655,7 @@ impl TaskCommands {
         &self,
         commands: &mut Commands,
         inputs: InputData<I>,
-        mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
+        mut task_run_ids: ResMut<BevyGpuComputeRunIds>,
     ) -> u128 {
         let mut entity_commands = commands.entity(self.entity);
         let id = task_run_ids.get_next();
@@ -3812,7 +3812,7 @@ use crate::task::{
 use super::{task_name::TaskName, task_run_id::TaskRunId};
 
 /**
-A task can only run once per run of the GpuAcceleratedBevyRunTaskSet system set
+A task can only run once per run of the BevyGpuComputeRunTaskSet system set
 By default this means once per frame
 */
 
@@ -3835,14 +3835,14 @@ By default this means once per frame
     GpuOutputCounts,
 )]
 
-pub struct GpuAcceleratedBevyTask
+pub struct BevyGpuComputeTask
 // <I: InputVectorTypesSpec, O: OutputVectorTypesSpec>
 {
     entity: Option<Entity>,
     // phantom: std::marker::PhantomData<(I, O)>,
 }
 
-impl GpuAcceleratedBevyTask
+impl BevyGpuComputeTask
 // <I, O>
 {
     pub fn new() -> Self {

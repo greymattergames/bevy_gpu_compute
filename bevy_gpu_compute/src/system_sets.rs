@@ -22,17 +22,17 @@ use super::task::{
 };
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyRunTaskSet;
+struct BevyGpuComputeRunTaskSet;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyRespondToTaskMutSet;
+struct BevyGpuComputeRespondToTaskMutSet;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyRespondToInputsMutSet;
+struct BevyGpuComputeRespondToInputsMutSet;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 
-struct GpuAcceleratedBevyDispatchSet;
+struct BevyGpuComputeDispatchSet;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct GpuAcceleratedBevyReadSet;
+struct BevyGpuComputeReadSet;
 
 pub fn compose_task_runner_systems()
 -> NodeConfigs<Box<dyn bevy::prelude::System<In = (), Out = ()>>> {
@@ -41,19 +41,19 @@ pub fn compose_task_runner_systems()
         create_input_buffers,
         create_config_input_buffers,
     )
-        .in_set(GpuAcceleratedBevyRespondToInputsMutSet);
+        .in_set(BevyGpuComputeRespondToInputsMutSet);
     let respond_to_task_alteration = (
         update_pipelines_on_pipeline_const_change,
         create_output_buffers,
         verify_have_enough_memory,
     )
-        .in_set(GpuAcceleratedBevyRespondToTaskMutSet);
+        .in_set(BevyGpuComputeRespondToTaskMutSet);
     let dispatch = (create_bind_groups, dispatch_to_gpu)
         .chain()
-        .in_set(GpuAcceleratedBevyDispatchSet);
+        .in_set(BevyGpuComputeDispatchSet);
     let read = (read_gpu_output_counts, read_gpu_task_outputs)
         .chain()
-        .in_set(GpuAcceleratedBevyReadSet);
+        .in_set(BevyGpuComputeReadSet);
     let run_task_set = (
         respond_to_new_inputs,
         respond_to_task_alteration,
@@ -61,6 +61,6 @@ pub fn compose_task_runner_systems()
         read,
     )
         .chain()
-        .in_set(GpuAcceleratedBevyRunTaskSet);
+        .in_set(BevyGpuComputeRunTaskSet);
     return run_task_set;
 }

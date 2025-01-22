@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use bevy::{
-    prelude::{Commands, Resource},
-    render::renderer::RenderDevice,
+    ecs::system::SystemParam,
+    prelude::{Commands, Entity, Query, Res, Resource},
+    render::renderer::{RenderDevice, RenderQueue},
 };
 use bevy_gpu_compute_core::{
     TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
@@ -15,29 +16,19 @@ use crate::task::task_specification::{
 use super::task::{
     events::GpuAcceleratedTaskCreatedEvent,
     task_commands::TaskCommands,
-    task_components::{task::GpuAcceleratedBevyTask, task_name::TaskName},
+    task_components::{task::BevyGpuComputeTask, task_name::TaskName},
     task_specification::iteration_space::IterationSpace,
 };
 
-#[derive(Resource)]
-pub struct GpuAcceleratedBevy {
-    tasks: HashMap<String, TaskCommands>,
-}
-impl Default for GpuAcceleratedBevy {
-    fn default() -> Self {
-        GpuAcceleratedBevy {
-            tasks: HashMap::new(),
-        }
-    }
+#[derive(SystemParam)]
+
+pub struct BevyGpuCompute<'w, 's> {
+    tasks: Query<'w, 's, (Entity, &'static TaskName)>,
+    render_device: Res<'s, RenderDevice>,
+    render_queue: Res<'s, RenderQueue>,
 }
 
-impl GpuAcceleratedBevy {
-    pub fn new() -> Self {
-        GpuAcceleratedBevy {
-            tasks: HashMap::new(),
-        }
-    }
-
+impl<'w, 's> BevyGpuCompute<'w, 's> {
     /// spawns all components needed for the task to run, and returns a TaskCommands object that can be used for altering or running the task
     pub fn create_task_from_rust_shader<ShaderModuleTypes: TypesSpec>(
         &mut self,
@@ -48,7 +39,7 @@ impl GpuAcceleratedBevy {
         iteration_space: IterationSpace,
         max_output_vector_lengths: MaxOutputLengths,
     ) -> TaskCommands {
-        let task = GpuAcceleratedBevyTask::new();
+        let task = BevyGpuComputeTask::new();
         let entity = {
             let entity = commands.spawn((task, TaskName::new(name))).id();
             entity
@@ -74,7 +65,7 @@ impl GpuAcceleratedBevy {
     pub fn task_exists(&self, name: &String) -> bool {
         self.tasks.contains_key(name)
     }
-    pub fn task(&self, name: &String) -> &TaskCommands {
+    pub fn task(&self, name: &str) -> &TaskCommands {
         if let Some(tc) = self.tasks.get(name) {
             &tc
         } else {

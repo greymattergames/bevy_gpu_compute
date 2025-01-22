@@ -6,7 +6,7 @@ use bevy_gpu_compute_core::TypesSpec;
 
 use crate::{
     prelude::{ComputeTaskSpecification, IterationSpace, MaxOutputLengths},
-    run_ids::GpuAcceleratedBevyRunIds,
+    run_ids::BevyGpuComputeRunIds,
     task::inputs::array_type::input_data::InputDataTrait,
 };
 
@@ -24,27 +24,32 @@ use super::{
     task_components::task_run_id::TaskRunId,
     task_specification::{self, input_array_lengths::ComputeTaskInputArrayLengths},
 };
-#[derive(Clone, Debug)]
-pub struct TaskCommands {
-    pub entity: Entity,
+pub struct TaskCommands<'w, 's> {
+    entity: Entity,
+    commands: &'w mut Commands<'w, 's>,
+    spec: &'w mut ComputeTaskSpecification,
 }
-impl TaskCommands {
-    pub fn new(entity: Entity) -> Self {
-        TaskCommands { entity }
+impl<'w, 's> TaskCommands<'w, 's> {
+    pub fn new(
+        entity: Entity,
+        commands: &'w mut Commands<'w, 's>,
+        spec: &'w mut ComputeTaskSpecification,
+    ) -> Self {
+        TaskCommands {
+            entity,
+            commands,
+            spec,
+        }
     }
-    pub fn delete(&self, commands: &mut Commands) {
-        commands.entity(self.entity).despawn_recursive();
+    pub fn delete(&mut self) {
+        self.commands.entity(self.entity).despawn_recursive();
     }
     pub fn mutate(
         &self,
-        mut commands: &mut Commands,
-        task_specs_query: &mut Query<&mut ComputeTaskSpecification>,
         new_iteration_space: Option<IterationSpace>,
         new_max_output_array_lengths: Option<MaxOutputLengths>,
-        new_input_array_lengths: Option<ComputeTaskInputArrayLengths>,
     ) {
-        let mut spec = task_specs_query.get_mut(self.entity).unwrap();
-        spec.mutate(
+        self.spec.mutate(
             &mut commands,
             self.entity,
             new_iteration_space,
@@ -54,7 +59,6 @@ impl TaskCommands {
     }
     pub fn set_config_inputs<I: TypesSpec + 'static + Send + Sync>(
         &self,
-        commands: &mut Commands,
         inputs: ConfigInputData<I>,
     ) {
         let mut entity_commands = commands.entity(self.entity);
@@ -68,7 +72,7 @@ impl TaskCommands {
         &self,
         commands: &mut Commands,
         inputs: InputData<I>,
-        mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
+        mut task_run_ids: ResMut<BevyGpuComputeRunIds>,
     ) -> u128 {
         let mut entity_commands = commands.entity(self.entity);
         let id = task_run_ids.get_next();

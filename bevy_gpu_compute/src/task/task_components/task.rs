@@ -21,7 +21,7 @@ use crate::{
 use super::{task_name::TaskName, task_run_id::TaskRunId};
 
 /**
-A task can only run once per run of the GpuAcceleratedBevyRunTaskSet system set
+A task can only run once per run of the BevyGpuComputeRunTaskSet system set
 By default this means once per frame
 */
 
@@ -46,9 +46,9 @@ By default this means once per frame
     GpuOutputCounts,
 )]
 
-pub struct GpuAcceleratedBevyTask {}
+pub struct BevyGpuComputeTask {}
 
-impl GpuAcceleratedBevyTask {
+impl BevyGpuComputeTask {
     pub fn new() -> Self {
         Self {}
     }

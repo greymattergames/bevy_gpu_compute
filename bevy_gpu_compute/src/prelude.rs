@@ -8,11 +8,11 @@ pub use bevy_gpu_compute_macro::wgsl_shader_module;
 //helpers when writing the shader module:
 pub use bevy_gpu_compute_core::wgsl_helpers::*;
 
-pub use crate::plugin::GpuAcceleratedBevyPlugin;
+pub use crate::plugin::BevyGpuComputePlugin;
 pub use crate::plugin::finished_gpu_tasks;
 pub use crate::plugin::starting_gpu_tasks;
-pub use crate::resource::GpuAcceleratedBevy;
-pub use crate::run_ids::GpuAcceleratedBevyRunIds;
+pub use crate::resource::BevyGpuCompute;
+pub use crate::run_ids::BevyGpuComputeRunIds;
 pub use crate::task::events::GpuComputeTaskSuccessEvent;
 pub use crate::task::inputs::array_type::input_data::InputData;
 pub use crate::task::inputs::config_type::config_data::ConfigInputData;

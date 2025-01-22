@@ -305,6 +305,30 @@ fn test_doc_comments() {
     assert!(t2.helper_types.len() == 0);
 }
 #[test]
+fn test_type_casting() {
+    #[wgsl_shader_module]
+    pub mod test_module {
+        use bevy_gpu_compute_core::wgsl_helpers::*;
+        fn main(iter_pos: WgslIterationPosition) {
+            let x = 1.0 as i32;
+            let y = 1 as f32;
+            return;
+        }
+    }
+    let t2 = test_module::parsed();
+    assert!(t2.output_arrays.len() == 0);
+    assert!(t2.input_arrays.len() == 0);
+    assert!(t2.uniforms.len() == 0);
+    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.main_function.is_some());
+    assert!(t2.static_consts.len() == 0);
+    assert!(t2.helper_types.len() == 0);
+    assert_eq!(
+        t2.main_function.unwrap().code.wgsl_code,
+        "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ let x = i32(1.0); let y = f32(1); return; }"
+    );
+}
+#[test]
 fn test_mutable_variables() {
     #[wgsl_shader_module]
     pub mod test_module {

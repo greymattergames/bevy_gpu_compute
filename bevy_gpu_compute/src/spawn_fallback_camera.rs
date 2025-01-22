@@ -8,14 +8,14 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub struct GpuAcceleratedBevyFallbackCamera;
+pub struct BevyGpuComputeFallbackCamera;
 
 /**
 Testing indicates GPU performance vastly reduced if bevy does not spawn a window or camera. Unsure why. If the user doesn't spawn a camera we spawn one for them.
  */
 pub fn spawn_fallback_camera(
     cameras: Query<&Camera>,
-    fallback_cameras: Query<(Entity, &GpuAcceleratedBevyFallbackCamera)>,
+    fallback_cameras: Query<(Entity, &BevyGpuComputeFallbackCamera)>,
     mut commands: Commands,
 ) {
     let len = cameras.iter().len();
@@ -32,7 +32,7 @@ pub fn spawn_fallback_camera(
             Transform::from_xyz(
                 0., 0., 10.0, // 100.0,
             ),
-            GpuAcceleratedBevyFallbackCamera,
+            BevyGpuComputeFallbackCamera,
         ));
     } else if len == 1 {
         // do nothing

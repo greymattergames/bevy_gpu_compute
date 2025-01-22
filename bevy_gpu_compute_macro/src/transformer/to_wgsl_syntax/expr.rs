@@ -1,6 +1,6 @@
 use proc_macro_error::abort;
 use quote::ToTokens;
-use syn::{Expr, ExprCall, parse2, spanned::Spanned, visit_mut::VisitMut};
+use syn::{Expr, ExprCall, parse_quote, parse2, spanned::Spanned, visit_mut::VisitMut};
 
 use crate::transformer::allowed_types::WGSL_NATIVE_TYPES;
 
@@ -42,7 +42,15 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
         syn::Expr::Break(break_expr) => None,
         syn::Expr::Call(call) => None,
         syn::Expr::Cast(cast) => {
-            todo!("casts have this syntax in wgsl: `f32(x)`");
+            let cast_type = cast.ty.clone();
+            let cast_expr = cast.expr.clone();
+            match *cast_type {
+                syn::Type::Path(path) => {
+                    let ident = path.path.segments.first().unwrap().ident.clone();
+                    Some(parse_quote! (#ident(#cast_expr)))
+                }
+                _ => None,
+            }
         }
         syn::Expr::Closure(closure) => {
             abort!(

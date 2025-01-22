@@ -5,8 +5,8 @@ use bevy::{
 
 use crate::{
     ram_limit::RamLimit,
-    resource::GpuAcceleratedBevy,
-    run_ids::GpuAcceleratedBevyRunIds,
+    resource::BevyGpuCompute,
+    run_ids::BevyGpuComputeRunIds,
     spawn_fallback_camera::{spawn_fallback_camera, spawn_fallback_camera_runif},
     system_sets::compose_task_runner_systems,
     task::{
@@ -20,26 +20,26 @@ use crate::{
 
 /// state for activating or deactivating the plugin
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GpuAcceleratedBevyState {
+pub enum BevyGpuComputeState {
     Running,
     Stopped,
 }
-impl Default for GpuAcceleratedBevyState {
+impl Default for BevyGpuComputeState {
     fn default() -> Self {
-        GpuAcceleratedBevyState::Running
+        BevyGpuComputeState::Running
     }
 }
 
-pub struct GpuAcceleratedBevyPlugin {
+pub struct BevyGpuComputePlugin {
     with_default_schedule: bool,
 }
 
-impl Plugin for GpuAcceleratedBevyPlugin {
+impl Plugin for BevyGpuComputePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GpuAcceleratedBevy>()
-            .init_resource::<GpuAcceleratedBevyRunIds>()
+        app.init_resource::<BevyGpuCompute>()
+            .init_resource::<BevyGpuComputeRunIds>()
             .init_resource::<RamLimit>()
-            .init_state::<GpuAcceleratedBevyState>()
+            .init_state::<BevyGpuComputeState>()
             .add_systems(Update, (starting_gpu_tasks, finished_gpu_tasks));
         if self.with_default_schedule {
             let run_tasks_system_set = compose_task_runner_systems();
@@ -54,7 +54,7 @@ impl Plugin for GpuAcceleratedBevyPlugin {
                     .chain()
                     .before(finished_gpu_tasks)
                     .after(starting_gpu_tasks)
-                    .run_if(in_state(GpuAcceleratedBevyState::Running)),
+                    .run_if(in_state(BevyGpuComputeState::Running)),
             );
         } else {
             app.add_systems(
@@ -63,27 +63,23 @@ impl Plugin for GpuAcceleratedBevyPlugin {
                     .run_if(spawn_fallback_camera_runif)
                     .before(finished_gpu_tasks)
                     .after(starting_gpu_tasks)
-                    .run_if(in_state(GpuAcceleratedBevyState::Running)),
+                    .run_if(in_state(BevyGpuComputeState::Running)),
             );
         }
-        app.add_event::<GpuComputeTaskSuccessEvent>()
-            .add_event::<InputDataChangeEvent>()
-            .add_event::<IterSpaceOrOutputSizesChangedEvent>()
-            .add_event::<ConfigInputDataChangeEvent>()
-            .add_event::<GpuAcceleratedTaskCreatedEvent>();
+        app.add_event::<GpuComputeTaskSuccessEvent>();
     }
 }
 
-impl Default for GpuAcceleratedBevyPlugin {
+impl Default for BevyGpuComputePlugin {
     fn default() -> Self {
-        GpuAcceleratedBevyPlugin {
+        BevyGpuComputePlugin {
             with_default_schedule: true,
         }
     }
 }
-impl GpuAcceleratedBevyPlugin {
+impl BevyGpuComputePlugin {
     pub fn no_default_schedule() -> Self {
-        GpuAcceleratedBevyPlugin {
+        BevyGpuComputePlugin {
             with_default_schedule: false,
         }
     }
