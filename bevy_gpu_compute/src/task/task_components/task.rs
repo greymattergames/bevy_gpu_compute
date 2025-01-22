@@ -1,18 +1,21 @@
 use bevy::prelude::{Component, Entity};
-use bevy_gpu_compute_core::misc_types::BlankTypesSpec;
+use bevy_gpu_compute_core::BlankTypesSpec;
 
-use crate::task::{
-    buffers::components::{
-        InputBuffers, OutputBuffers, OutputCountBuffers, OutputCountStagingBuffers,
-        OutputStagingBuffers,
+use crate::{
+    prelude::ConfigInputData,
+    task::{
+        buffers::components::{
+            ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
+            OutputCountStagingBuffers, OutputStagingBuffers,
+        },
+        compute_pipeline::cache::PipelineLruCache,
+        dispatch::create_bind_group::BindGroupComponent,
+        inputs::array_type::input_data::InputData,
+        outputs::definitions::{
+            gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
+        },
+        task_specification::task_specification::ComputeTaskSpecification,
     },
-    compute_pipeline::cache::PipelineLruCache,
-    dispatch::create_bind_group::BindGroupComponent,
-    inputs::input_data::InputData,
-    outputs::definitions::{
-        gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
-    },
-    task_specification::task_specification::ComputeTaskSpecification,
 };
 
 use super::{task_name::TaskName, task_run_id::TaskRunId};
@@ -34,30 +37,19 @@ By default this means once per frame
     OutputStagingBuffers,
     OutputCountStagingBuffers,
     InputBuffers,
-
+    ConfigInputBuffers,
+    // other stuff
     BindGroupComponent,
+    ConfigInputData<BlankTypesSpec>,
     InputData<BlankTypesSpec>,
     TypeErasedOutputData,
     GpuOutputCounts,
 )]
 
-pub struct GpuAcceleratedBevyTask
-// <I: InputVectorTypesSpec, O: OutputVectorTypesSpec>
-{
-    entity: Option<Entity>,
-    // phantom: std::marker::PhantomData<(I, O)>,
-}
+pub struct GpuAcceleratedBevyTask {}
 
-impl GpuAcceleratedBevyTask
-// <I, O>
-{
+impl GpuAcceleratedBevyTask {
     pub fn new() -> Self {
-        Self {
-            entity: None,
-            // phantom: std::marker::PhantomData,
-        }
-    }
-    pub fn set_entity(&mut self, entity: Entity) {
-        self.entity = Some(entity);
+        Self {}
     }
 }

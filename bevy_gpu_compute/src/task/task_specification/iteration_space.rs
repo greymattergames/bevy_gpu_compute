@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use bevy_gpu_compute_core::wgsl_shader_module::IterSpaceDimmension;
+use bevy_gpu_compute_core::IterSpaceDimmension;
 
 #[derive(Hash, Copy, Debug, Clone)]
 /**

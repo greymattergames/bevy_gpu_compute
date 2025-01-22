@@ -56,11 +56,20 @@ impl WgslHelperMethodMatcher {
                 );
                 method.method_expander_kind = Some(ToExpandedFormatMethodKind::OutputPush);
             }
-            (WgslHelperCategory::Output, WgslHelperMethodName::Len) => {
+            (WgslHelperCategory::Output, WgslHelperMethodName::MaxLen) => {
                 assert!(
                     method.t_def.kind == CustomTypeKind::OutputArray
                         || method.t_def.kind == CustomTypeKind::OutputVec,
-                    "Expected {} to be an output array or vec type, since WgslOutput::len is called, instead found it was of type {:?}. Put #[wgsl_output_array] or #[wgsl_output_vec] above your type declaration to fix this. A given type cannot be used for multiple purposes, for example a type T cannot be both an input array and an output array.",
+                    "Expected {} to be an output array or vec type, since WgslOutput::max_len is called, instead found it was of type {:?}. Put #[wgsl_output_array] or #[wgsl_output_vec] above your type declaration to fix this. A given type cannot be used for multiple purposes, for example a type T cannot be both an input array and an output array.",
+                    method.t_def.name.name,
+                    method.t_def.kind
+                );
+                method.method_expander_kind = Some(ToExpandedFormatMethodKind::OutputMaxLen);
+            }
+            (WgslHelperCategory::Output, WgslHelperMethodName::Len) => {
+                assert!(
+                    method.t_def.kind == CustomTypeKind::OutputVec,
+                    "Expected {} to be an output vec type, since WgslOutput::len is called, instead found it was of type {:?}. Put #[wgsl_output_vec] above your type declaration to fix this. A given type cannot be used for multiple purposes, for example a type T cannot be both an input array and an output array.",
                     method.t_def.name.name,
                     method.t_def.kind
                 );

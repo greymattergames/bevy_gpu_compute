@@ -7,28 +7,28 @@ use bevy::{
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
-    events::InputDataChangeEvent,
-    inputs::array_type::{
-        input_vector_metadata_spec::InputVectorsMetadataSpec,
-        type_erased_input_data::TypeErasedInputData,
+    events::{ConfigInputDataChangeEvent, InputDataChangeEvent},
+    inputs::config_type::{
+        config_input_metadata_spec::ConfigInputsMetadataSpec,
+        type_erased_config_input_data::TypeErasedConfigInputData,
     },
     task_components::task_name::TaskName,
     task_specification::task_specification::ComputeTaskSpecification,
 };
 
-use super::components::InputBuffers;
+use super::components::{ConfigInputBuffers, InputBuffers};
 
-pub fn create_input_buffers(
+pub fn create_config_input_buffers(
     mut tasks: Query<(
         &TaskName,
-        &TypeErasedInputData,
+        &TypeErasedConfigInputData,
         &ComputeTaskSpecification,
-        &mut InputBuffers,
+        &mut ConfigInputBuffers,
     )>,
-    mut input_data_change_event_listener: EventReader<InputDataChangeEvent>,
+    mut input_config_data_change_event_listener: EventReader<ConfigInputDataChangeEvent>,
     render_device: Res<RenderDevice>,
 ) {
-    for (ev, _) in input_data_change_event_listener
+    for (ev, _) in input_config_data_change_event_listener
         .par_read()
         .batching_strategy(BatchingStrategy::default())
     {
@@ -39,7 +39,7 @@ pub fn create_input_buffers(
                 &task_name.get(),
                 &render_device,
                 &input_data,
-                &task_spec.input_vectors_metadata_spec(),
+                &task_spec.config_input_metadata_spec(),
                 &mut buffers,
             );
         }
@@ -49,9 +49,9 @@ pub fn create_input_buffers(
 fn create_input_buffers_single_task(
     task_name: &str,
     render_device: &RenderDevice,
-    input_data: &TypeErasedInputData,
-    input_spec: &InputVectorsMetadataSpec,
-    buffers: &mut InputBuffers,
+    input_data: &TypeErasedConfigInputData,
+    input_spec: &ConfigInputsMetadataSpec,
+    buffers: &mut ConfigInputBuffers,
 ) {
     buffers.0.clear();
     for (i, spec) in input_spec.get_all_metadata().iter().enumerate() {
@@ -60,7 +60,7 @@ fn create_input_buffers_single_task(
             let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
                 label: Some(&label),
                 contents: input_data.input_bytes(i).unwrap(),
-                usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+                usage: BufferUsages::UNIFORM,
             });
             info!(
                 "Created input buffer for task {} with label {}",

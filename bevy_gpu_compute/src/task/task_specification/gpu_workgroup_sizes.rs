@@ -1,4 +1,4 @@
-use bevy_gpu_compute_core::wgsl_shader_module::IterSpaceDimmension;
+use bevy_gpu_compute_core::IterSpaceDimmension;
 
 use super::iteration_space::IterationSpace;
 

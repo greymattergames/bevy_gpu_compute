@@ -4,8 +4,9 @@ use bevy::{
 };
 
 use crate::task::{
+    buffers::create_config_input_buffers::create_config_input_buffers,
     compute_pipeline::update_on_pipeline_const_change::update_pipelines_on_pipeline_const_change,
-    inputs::handle_input_data_change::handle_input_data_change,
+    inputs::array_type::handle_input_data_change::handle_input_data_change,
 };
 
 use super::task::{
@@ -35,7 +36,11 @@ struct GpuAcceleratedBevyReadSet;
 
 pub fn compose_task_runner_systems()
 -> NodeConfigs<Box<dyn bevy::prelude::System<In = (), Out = ()>>> {
-    let respond_to_new_inputs = (handle_input_data_change, create_input_buffers)
+    let respond_to_new_inputs = (
+        handle_input_data_change,
+        create_input_buffers,
+        create_config_input_buffers,
+    )
         .in_set(GpuAcceleratedBevyRespondToInputsMutSet);
     let respond_to_task_alteration = (
         update_pipelines_on_pipeline_const_change,

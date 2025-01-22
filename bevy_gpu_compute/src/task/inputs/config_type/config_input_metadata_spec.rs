@@ -1,22 +1,22 @@
 use bevy_gpu_compute_core::{
-    custom_type_name::ShaderCustomTypeName, misc_types::InputVectorTypesSpec,
+    ConfigInputTypesSpec, wgsl::shader_custom_type_name::ShaderCustomTypeName,
 };
 
 #[derive(Copy, Clone)]
-pub struct InputVectorMetadataDefinition<'a> {
+pub struct ConfigInputMetadataDefinition<'a> {
     pub binding_number: u32,
     pub name: &'a ShaderCustomTypeName,
 }
 #[derive(Clone, Debug)]
-pub struct InputVectorMetadata {
+pub struct ConfigInputMetadata {
     bytes: usize,
     binding_number: u32,
     name: ShaderCustomTypeName,
 }
 
-impl InputVectorMetadata {
+impl ConfigInputMetadata {
     pub fn new(bytes: usize, binding_number: u32, name: ShaderCustomTypeName) -> Self {
-        InputVectorMetadata {
+        ConfigInputMetadata {
             bytes,
             binding_number,
             name,
@@ -34,24 +34,24 @@ impl InputVectorMetadata {
 }
 
 #[derive(Clone)]
-pub struct InputVectorsMetadataSpec {
-    input0: Option<InputVectorMetadata>,
-    input1: Option<InputVectorMetadata>,
-    input2: Option<InputVectorMetadata>,
-    input3: Option<InputVectorMetadata>,
-    input4: Option<InputVectorMetadata>,
-    input5: Option<InputVectorMetadata>,
+pub struct ConfigInputsMetadataSpec {
+    input0: Option<ConfigInputMetadata>,
+    input1: Option<ConfigInputMetadata>,
+    input2: Option<ConfigInputMetadata>,
+    input3: Option<ConfigInputMetadata>,
+    input4: Option<ConfigInputMetadata>,
+    input5: Option<ConfigInputMetadata>,
 }
 
-impl Default for InputVectorsMetadataSpec {
+impl Default for ConfigInputsMetadataSpec {
     fn default() -> Self {
         Self::empty()
     }
 }
 
-impl InputVectorsMetadataSpec {
+impl ConfigInputsMetadataSpec {
     pub fn empty() -> Self {
-        InputVectorsMetadataSpec {
+        ConfigInputsMetadataSpec {
             input0: None,
             input1: None,
             input2: None,
@@ -62,10 +62,10 @@ impl InputVectorsMetadataSpec {
     }
     fn get_input<ST>(
         i: usize,
-        definitions: [Option<InputVectorMetadataDefinition>; 6],
-    ) -> Option<InputVectorMetadata> {
+        definitions: [Option<ConfigInputMetadataDefinition>; 6],
+    ) -> Option<ConfigInputMetadata> {
         if let Some(def) = definitions[i] {
-            Some(InputVectorMetadata::new(
+            Some(ConfigInputMetadata::new(
                 std::mem::size_of::<ST>(),
                 def.binding_number,
                 def.name.clone(),
@@ -74,8 +74,8 @@ impl InputVectorsMetadataSpec {
             None
         }
     }
-    pub fn from_input_vector_types_spec<T: InputVectorTypesSpec>(
-        definitions: [Option<InputVectorMetadataDefinition>; 6],
+    pub fn from_config_input_types_spec<T: ConfigInputTypesSpec>(
+        definitions: [Option<ConfigInputMetadataDefinition>; 6],
     ) -> Self {
         Self {
             input0: Self::get_input::<T::Input0>(0, definitions),
@@ -86,7 +86,7 @@ impl InputVectorsMetadataSpec {
             input5: Self::get_input::<T::Input5>(5, definitions),
         }
     }
-    pub fn get_all_metadata(&self) -> [Option<&InputVectorMetadata>; 6] {
+    pub fn get_all_metadata(&self) -> [Option<&ConfigInputMetadata>; 6] {
         [
             self.input0.as_ref(),
             self.input1.as_ref(),
@@ -96,40 +96,40 @@ impl InputVectorsMetadataSpec {
             self.input5.as_ref(),
         ]
     }
-    pub fn get_input0_metadata(&self) -> Option<&InputVectorMetadata> {
+    pub fn get_input0_metadata(&self) -> Option<&ConfigInputMetadata> {
         self.input0.as_ref()
     }
-    pub fn get_input1_metadata(&self) -> Option<&InputVectorMetadata> {
+    pub fn get_input1_metadata(&self) -> Option<&ConfigInputMetadata> {
         self.input1.as_ref()
     }
-    pub fn get_input2_metadata(&self) -> Option<&InputVectorMetadata> {
+    pub fn get_input2_metadata(&self) -> Option<&ConfigInputMetadata> {
         self.input2.as_ref()
     }
-    pub fn get_input3_metadata(&self) -> Option<&InputVectorMetadata> {
+    pub fn get_input3_metadata(&self) -> Option<&ConfigInputMetadata> {
         self.input3.as_ref()
     }
-    pub fn get_input4_metadata(&self) -> Option<&InputVectorMetadata> {
+    pub fn get_input4_metadata(&self) -> Option<&ConfigInputMetadata> {
         self.input4.as_ref()
     }
-    pub fn get_input5_metadata(&self) -> Option<&InputVectorMetadata> {
+    pub fn get_input5_metadata(&self) -> Option<&ConfigInputMetadata> {
         self.input5.as_ref()
     }
-    pub fn set_input0_metadata(&mut self, metadata: InputVectorMetadata) {
+    pub fn set_input0_metadata(&mut self, metadata: ConfigInputMetadata) {
         self.input0 = Some(metadata);
     }
-    pub fn set_input1_metadata(&mut self, metadata: InputVectorMetadata) {
+    pub fn set_input1_metadata(&mut self, metadata: ConfigInputMetadata) {
         self.input1 = Some(metadata);
     }
-    pub fn set_input2_metadata(&mut self, metadata: InputVectorMetadata) {
+    pub fn set_input2_metadata(&mut self, metadata: ConfigInputMetadata) {
         self.input2 = Some(metadata);
     }
-    pub fn set_input3_metadata(&mut self, metadata: InputVectorMetadata) {
+    pub fn set_input3_metadata(&mut self, metadata: ConfigInputMetadata) {
         self.input3 = Some(metadata);
     }
-    pub fn set_input4_metadata(&mut self, metadata: InputVectorMetadata) {
+    pub fn set_input4_metadata(&mut self, metadata: ConfigInputMetadata) {
         self.input4 = Some(metadata);
     }
-    pub fn set_input5_metadata(&mut self, metadata: InputVectorMetadata) {
+    pub fn set_input5_metadata(&mut self, metadata: ConfigInputMetadata) {
         self.input5 = Some(metadata);
     }
 }

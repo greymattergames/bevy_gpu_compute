@@ -125,14 +125,13 @@ fn create_output_buffer_single_output(
         .0
         .insert(output_index.clone(), output_staging_buffer);
     if output_spec.get_include_count() {
-        let counter = WgslCounter { count: 0 };
         let counter_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some(&format!(
                 "{:}-output-counter-{:}",
                 task_name.get(),
                 output_index
             )),
-            contents: bytemuck::cast_slice(&[counter]),
+            contents: bytemuck::cast_slice(&[WgslCounter { count: 0 }]),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
         });
         count_buffers.0.insert(output_index.clone(), counter_buffer);

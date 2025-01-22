@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use array::ArrayToWgslTransformer;
 use expr::ExprToWgslTransformer;
+use local_var::replace_let_mut_with_var;
 use proc_macro_error::abort;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
@@ -58,6 +59,7 @@ use crate::state::ModuleTransformState;
   */
 mod array;
 mod expr;
+mod local_var;
 pub mod remove_attributes;
 mod remove_pub_from_struct_def;
 mod r#type;
@@ -125,5 +127,6 @@ pub fn convert_file_to_wgsl(
     println!("Final string version: {}", string_version);
     // transform vec and matrix constructors
     string_version = convert_wgsl_builtin_constructors(string_version);
+    string_version = replace_let_mut_with_var(&string_version);
     string_version
 }

@@ -1,4 +1,6 @@
-use bevy_gpu_compute_core::{custom_type_name::ShaderCustomTypeName, misc_types::OutputVectorTypesSpec};
+use bevy_gpu_compute_core::{
+    OutputVectorTypesSpec, wgsl::shader_custom_type_name::ShaderCustomTypeName,
+};
 
 pub struct OutputVectorMetadataDefinition<'a> {
     pub binding_number: u32,

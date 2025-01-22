@@ -23,6 +23,18 @@ impl InputDataChangeEvent {
         self.entity
     }
 }
+#[derive(Event)]
+pub struct ConfigInputDataChangeEvent {
+    entity: Entity,
+}
+impl ConfigInputDataChangeEvent {
+    pub fn new(entity: Entity) -> Self {
+        ConfigInputDataChangeEvent { entity }
+    }
+    pub fn entity(&self) -> Entity {
+        self.entity
+    }
+}
 
 #[derive(Event)]
 pub struct IterSpaceOrOutputSizesChangedEvent {

@@ -1,5 +1,5 @@
 use bevy::prelude::Component;
-use bevy_gpu_compute_core::misc_types::TypesSpec;
+use bevy_gpu_compute_core::TypesSpec;
 
 use super::output_data::OutputData;
 

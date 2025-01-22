@@ -4,7 +4,9 @@ use bevy::{
     prelude::{Commands, Resource},
     render::renderer::RenderDevice,
 };
-use bevy_gpu_compute_core::{misc_types::TypesSpec, wgsl_components::WgslShaderModuleUserPortion};
+use bevy_gpu_compute_core::{
+    TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
+};
 
 use crate::task::task_specification::{
     max_output_vector_lengths::MaxOutputLengths, task_specification::ComputeTaskSpecification,

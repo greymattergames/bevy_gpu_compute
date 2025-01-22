@@ -29,18 +29,24 @@ pub fn get_gpu_output_counter_value(
     let result = if receiver.block_on().unwrap().is_ok() {
         let data = slice.get_mapped_range();
         let transformed_data = &*data;
+        log::info!("Raw counter value: {:?}", transformed_data);
         if transformed_data.len() != std::mem::size_of::<WgslCounter>() {
             return None;
         }
         let result = Some(bytemuck::pod_read_unaligned(transformed_data));
         drop(data);
+        log::info!("Reading GPU output counter value - map completed");
+        staging_buffer.unmap();
+        log::info!("Reading GPU output counter value - unmap staging completed");
         result
     } else {
         None
     };
-    log::info!("Reading GPU output counter value - map completed");
-    staging_buffer.unmap();
-    log::info!("Reading GPU output counter value - unmap staging completed");
+    // reset the counter
+    let mut encoder2 = render_device.create_command_encoder(&Default::default());
+    encoder2.clear_buffer(&output_buffer, 0, None);
+    render_queue.submit(std::iter::once(encoder2.finish()));
+
     log::info!("Gpu counter result: {:?}", result);
     result
 }

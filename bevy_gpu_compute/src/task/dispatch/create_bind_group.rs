@@ -1,12 +1,17 @@
 use bevy::{
     ecs::batching::BatchingStrategy,
+    log,
     prelude::{Component, Query, Res},
     render::{render_resource::BindGroup, renderer::RenderDevice},
 };
+use futures::task;
 
 use crate::task::{
-    buffers::components::{InputBuffers, OutputBuffers, OutputCountBuffers},
-    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
+    buffers::components::{ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers},
+    inputs::{
+        array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
+        config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
+    },
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     task_components::{bind_group_layouts::BindGroupLayouts, task_name::TaskName},
     task_specification::task_specification::ComputeTaskSpecification,
@@ -34,6 +39,7 @@ pub fn create_bind_groups(
         &TaskName,
         &ComputeTaskSpecification,
         &BindGroupLayouts,
+        &ConfigInputBuffers,
         &InputBuffers,
         &OutputCountBuffers,
         &OutputBuffers,
@@ -41,6 +47,7 @@ pub fn create_bind_groups(
     )>,
     render_device: Res<RenderDevice>,
 ) {
+    log::info!("Creating bind groups");
     // must run for every run of each task
     tasks
         .par_iter_mut()
@@ -50,6 +57,7 @@ pub fn create_bind_groups(
                 task_name,
                 task_spec,
                 bind_group_layouts,
+                config_input_buffers,
                 input_buffers,
                 output_count_buffers,
                 output_buffers,
@@ -60,7 +68,9 @@ pub fn create_bind_groups(
                     &render_device,
                     bind_group_layouts,
                     task_spec.input_vectors_metadata_spec(),
+                    task_spec.config_input_metadata_spec(),
                     task_spec.output_vectors_metadata_spec(),
+                    config_input_buffers,
                     input_buffers,
                     output_count_buffers,
                     output_buffers,
@@ -71,17 +81,29 @@ pub fn create_bind_groups(
 }
 
 fn create_bind_group_single_task(
-    task_name: &TaskName, //when this changes
+    task_name: &TaskName,
     render_device: &RenderDevice,
-    bind_group_layouts: &BindGroupLayouts,  // when this changes
-    input_specs: &InputVectorsMetadataSpec, // when binding number changes
-    output_specs: &OutputVectorsMetadataSpec, // when binding number changes, or include count or count binding number
+    bind_group_layouts: &BindGroupLayouts,
+    input_specs: &InputVectorsMetadataSpec,
+    config_input_specs: &ConfigInputsMetadataSpec,
+    output_specs: &OutputVectorsMetadataSpec,
+    config_input_buffers: &ConfigInputBuffers,
     input_buffers: &InputBuffers,
     output_count_buffers: &OutputCountBuffers,
     output_buffers: &OutputBuffers,
     bind_group_component: &mut BindGroupComponent,
 ) {
+    log::info!("Creating bind group for task {}", task_name.get());
     let mut bindings = Vec::new();
+    for (i, spec) in config_input_specs.get_all_metadata().iter().enumerate() {
+        if let Some(s) = spec {
+            let buffer = config_input_buffers.0.get(i).unwrap();
+            bindings.push(wgpu::BindGroupEntry {
+                binding: s.get_binding_number(),
+                resource: buffer.as_entire_binding(),
+            });
+        }
+    }
     for (i, spec) in input_specs.get_all_metadata().iter().enumerate() {
         if let Some(s) = spec {
             let buffer = input_buffers.0.get(i).unwrap();
@@ -109,4 +131,5 @@ fn create_bind_group_single_task(
     }
     bind_group_component.0 =
         Some(render_device.create_bind_group(task_name.get(), &bind_group_layouts.0, &bindings));
+    log::info!("Created bind group for task {}", task_name.get());
 }

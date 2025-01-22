@@ -11,8 +11,8 @@ use crate::{
     system_sets::compose_task_runner_systems,
     task::{
         events::{
-            GpuAcceleratedTaskCreatedEvent, GpuComputeTaskSuccessEvent, InputDataChangeEvent,
-            IterSpaceOrOutputSizesChangedEvent,
+            ConfigInputDataChangeEvent, GpuAcceleratedTaskCreatedEvent, GpuComputeTaskSuccessEvent,
+            InputDataChangeEvent, IterSpaceOrOutputSizesChangedEvent,
         },
         setup_tasks::setup_new_tasks,
     },
@@ -69,6 +69,7 @@ impl Plugin for GpuAcceleratedBevyPlugin {
         app.add_event::<GpuComputeTaskSuccessEvent>()
             .add_event::<InputDataChangeEvent>()
             .add_event::<IterSpaceOrOutputSizesChangedEvent>()
+            .add_event::<ConfigInputDataChangeEvent>()
             .add_event::<GpuAcceleratedTaskCreatedEvent>();
     }
 }

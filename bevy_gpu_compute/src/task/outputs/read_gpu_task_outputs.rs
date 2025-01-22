@@ -77,19 +77,22 @@ pub fn read_gpu_task_outputs(
                                     * m.get_bytes(),
                             );
                             log::info!("total_byte_size: {}", total_byte_size);
-
-                            let raw_bytes = get_gpu_output_as_bytes_vec(
-                                &render_device,
-                                &render_queue,
-                                &out_buffer,
-                                staging_buffer,
-                                total_byte_size as u64,
-                            );
-                            // log::info!("raw_bytes: {:?}", raw_bytes);
-                            if let Some(raw_bytes) = raw_bytes {
-                                type_erased_output.set_output_from_bytes(i, raw_bytes);
+                            if total_byte_size < 1 {
+                                type_erased_output.set_output_from_bytes(i, Vec::new());
                             } else {
-                                panic!("Failed to read output from GPU");
+                                let raw_bytes = get_gpu_output_as_bytes_vec(
+                                    &render_device,
+                                    &render_queue,
+                                    &out_buffer,
+                                    staging_buffer,
+                                    total_byte_size as u64,
+                                );
+                                // log::info!("raw_bytes: {:?}", raw_bytes);
+                                if let Some(raw_bytes) = raw_bytes {
+                                    type_erased_output.set_output_from_bytes(i, raw_bytes);
+                                } else {
+                                    panic!("Failed to read output from GPU");
+                                }
                             }
                         }
                     });

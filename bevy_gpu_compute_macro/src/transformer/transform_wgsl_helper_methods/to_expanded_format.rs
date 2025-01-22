@@ -12,6 +12,8 @@ pub enum ToExpandedFormatMethodKind {
     InputVal,
     OutputPush,
     OutputLen,
+
+    OutputMaxLen,
     OutputSet,
 }
 
@@ -59,9 +61,15 @@ impl ToExpandedFormat {
                     }
                 }
             }
-            Some(ToExpandedFormatMethodKind::OutputLen) => {
+            Some(ToExpandedFormatMethodKind::OutputMaxLen) => {
                 let len = method.t_def.name.output_array_length();
                 len.to_token_stream()
+            }
+            Some(ToExpandedFormatMethodKind::OutputLen) => {
+                let counter_name = method.t_def.name.counter();
+                quote! {
+                    #counter_name
+                }
             }
             Some(ToExpandedFormatMethodKind::OutputSet) => {
                 let arr = method.t_def.name.output_array().to_token_stream();

@@ -18,11 +18,3 @@ impl Default for PipelineLruCache {
         }
     }
 }
-
-impl PipelineLruCache {
-    pub fn new(capacity: usize) -> Self {
-        Self {
-            cache: LruCache::new(capacity),
-        }
-    }
-}

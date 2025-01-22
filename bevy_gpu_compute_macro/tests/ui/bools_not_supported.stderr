@@ -1,0 +1,29 @@
+error: Standard rust bools are not "Pods". There are ways we could probably work around this, but currently you should use u32 or i32 instead of bools (0 = false, 1 = true).
+ --> tests/ui/bools_not_supported.rs:2:1
+  |
+2 | #[wgsl_shader_module]
+  | ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `wgsl_shader_module` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0601]: `main` function not found in crate `$CRATE`
+  --> tests/ui/bools_not_supported.rs:11:2
+   |
+11 | }
+   |  ^ the main function must be defined at the crate level (in `$DIR/tests/ui/bools_not_supported.rs`)
+   |
+note: here is a function named `main`
+  --> tests/ui/bools_not_supported.rs:10:5
+   |
+10 |     fn main(iter_pos: WgslIterationPosition) {}
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: you have one or more functions named `main` not defined at the crate level
+   = help: consider moving the `main` function definitions
+
+warning: unused variable: `iter_pos`
+  --> tests/ui/bools_not_supported.rs:10:13
+   |
+10 |     fn main(iter_pos: WgslIterationPosition) {}
+   |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_iter_pos`
+   |
+   = note: `#[warn(unused_variables)]` on by default

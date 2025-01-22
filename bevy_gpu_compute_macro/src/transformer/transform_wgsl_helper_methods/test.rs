@@ -99,6 +99,36 @@ mod tests {
     }
 
     #[test]
+    fn test_output_max_len() {
+        let input: ItemMod = parse_quote! {
+            mod test {
+                fn example() {
+                    let x = WgslOutput::max_len::<CollisionResult>();
+                }
+            }
+        };
+        let expected_output =
+            "mod test { fn example () { let x = COLLISIONRESULT_OUTPUT_ARRAY_LENGTH ; } }";
+
+        let mut state = ModuleTransformState::empty(input, "".to_string());
+        let custom_types = vec![CustomType::new(
+            &format_ident!("CollisionResult"),
+            CustomTypeKind::OutputVec,
+            TokenStream::new(),
+        )];
+        state.custom_types = Some(custom_types);
+        transform_wgsl_helper_methods(&mut state);
+        let result = state.rust_module.to_token_stream().to_string();
+
+        println!("{}", result);
+        assert_eq!(
+            result, expected_output,
+            "Expected: {}\nGot: {}",
+            expected_output, result
+        );
+    }
+
+    #[test]
     fn test_output_len() {
         let input: ItemMod = parse_quote! {
             mod test {
@@ -107,8 +137,7 @@ mod tests {
                 }
             }
         };
-        let expected_output =
-            "mod test { fn example () { let x = COLLISIONRESULT_OUTPUT_ARRAY_LENGTH ; } }";
+        let expected_output = "mod test { fn example () { let x = collisionresult_counter ; } }";
 
         let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(

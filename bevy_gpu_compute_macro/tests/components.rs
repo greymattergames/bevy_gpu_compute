@@ -246,14 +246,13 @@ fn can_extract_types() {
     pub mod test_module {
         use bevy_gpu_compute_core::wgsl_helpers::*;
         use bevy_gpu_compute_macro::wgsl_config;
-        /// some doc comment, should be removed
         #[wgsl_config]
         struct MyConfig {
             value: PodF16,
         }
         fn main(iter_pos: WgslIterationPosition) {}
     }
-    fn fun<T: TypesSpec>() -> T::InputConfigTypes {
+    fn fun<T: TypesSpec>() -> T::ConfigInputTypes {
         unimplemented!();
     }
     let _t = fun::<test_module::Types>();
@@ -290,7 +289,6 @@ fn test_doc_comments() {
     pub mod test_module {
         use bevy_gpu_compute_core::wgsl_helpers::*;
         use bevy_gpu_compute_macro::wgsl_config;
-        /// some doc comment, should be removed
         #[wgsl_config]
         struct MyConfig {
             f16_val: PodF16,
@@ -305,11 +303,33 @@ fn test_doc_comments() {
     assert!(t2.main_function.is_some());
     assert!(t2.static_consts.len() == 0);
     assert!(t2.helper_types.len() == 0);
-    let _t = WgslShaderModuleSectionCode {
-        rust_code: ("#[wgsl_config] struct MyConfig { value : PodBool, }").to_string(),
-        wgsl_code: ("struct MyConfig { value : bool, }").to_string(),
-    };
 }
+#[test]
+fn test_mutable_variables() {
+    #[wgsl_shader_module]
+    pub mod test_module {
+        use bevy_gpu_compute_core::wgsl_helpers::*;
+        fn main(iter_pos: WgslIterationPosition) {
+            let mut x = 1;
+            let mut x1 = 2;
+            x = 2;
+            return;
+        }
+    }
+    let t2 = test_module::parsed();
+    assert!(t2.output_arrays.len() == 0);
+    assert!(t2.input_arrays.len() == 0);
+    assert!(t2.uniforms.len() == 0);
+    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.main_function.is_some());
+    assert!(t2.static_consts.len() == 0);
+    assert!(t2.helper_types.len() == 0);
+    assert_eq!(
+        t2.main_function.unwrap().code.wgsl_code,
+        "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ var x = 1; var x1 = 2; x = 2; return; }"
+    );
+}
+
 #[test]
 fn test_input_arrays() {
     #[wgsl_shader_module]

@@ -3,11 +3,11 @@
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy};
 use state::ModuleTransformState;
-use syn::parse_macro_input;
+use syn::{parse_macro_input, visit::Visit};
 use transformer::{
     custom_types::get_all_custom_types::get_custom_types,
     module_parser::module_parser::parse_shader_module, output::produce_expanded_output,
-    remove_doc_comments::remove_doc_comments,
+    remove_doc_comments::DocCommentRemover,
     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
 };
 mod state;
@@ -67,9 +67,10 @@ let x = my_vec3.x();
 pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     println!("Entered shader_module proc macro");
     set_dummy(item.clone().into());
+    //todo, as soon as we convert everything to string we lose the span info for future error messages
     let content = item.to_string();
-    let content_no_doc_comments: TokenStream = remove_doc_comments(&content).parse().unwrap();
-    let module = parse_macro_input!(content_no_doc_comments as syn::ItemMod);
+    let module = parse_macro_input!(item as syn::ItemMod);
+    DocCommentRemover {}.visit_item_mod(&module);
     let mut state = ModuleTransformState::empty(module, content);
     get_custom_types(&mut state);
     transform_wgsl_helper_methods(&mut state);

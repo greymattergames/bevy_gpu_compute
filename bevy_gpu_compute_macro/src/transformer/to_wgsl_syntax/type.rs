@@ -40,7 +40,12 @@ fn convert_path_segment(segment: PathSegment, custom_types: &Vec<CustomType>) ->
                     "Standard rust f16s are not \"Pods\", use `PodF16` instead of `f16`. This is because we use `bytemuck` for creating and reading GPU buffers."
                 )
             }
-            "bool" => segment.clone(),
+            "bool" => {
+                abort!(
+                    ident.span(),
+                    "Standard rust bools are not \"Pods\". There are ways we could probably work around this, but currently you should use u32 or i32 instead of bools (0 = false, 1 = true)."
+                )
+            }
             "vec3" => segment.clone(),
             "vec2" => segment.clone(),
             "vec4" => segment.clone(),

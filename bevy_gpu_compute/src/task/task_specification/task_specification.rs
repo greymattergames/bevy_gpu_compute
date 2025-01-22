@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice};
-use bevy_gpu_compute_core::{ misc_types::TypesSpec, wgsl_components::{WgslShaderModuleUserPortion, WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME}, wgsl_shader_module::WgslShaderModule};
+use bevy_gpu_compute_core::{TypesSpec, wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}};
 
 use crate::task::{
-    inputs::input_vector_metadata_spec::{
+    inputs::{array_type::input_vector_metadata_spec::{
         InputVectorMetadataDefinition, InputVectorsMetadataSpec,
-    }, outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec}, task_components::task_max_output_bytes::TaskMaxOutputBytes, task_specification::{
+    }, config_type::config_input_metadata_spec::{ConfigInputMetadataDefinition, ConfigInputsMetadataSpec}}, outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec}, task_components::task_max_output_bytes::TaskMaxOutputBytes, task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
         iteration_space::IterationSpace,
     }, wgsl_code::WgslCode
@@ -39,7 +39,7 @@ impl ComputeTaskSpecification {
         max_output_vector_lengths: MaxOutputLengths,
     )->Self {
         let full_module = WgslShaderModule::new(wgsl_shader_module);
-        log::info!("wgsl: {}",full_module.wgsl_code(iteration_space.num_dimmensions()));
+        log:: info!("wgsl: {}",full_module.wgsl_code(iteration_space.num_dimmensions()));
         let mut input_definitions = [None; 6];
         full_module.user_portion
         .input_arrays.iter().enumerate().for_each(|(i,a)|{
@@ -58,6 +58,27 @@ impl ComputeTaskSpecification {
             
         });
         
+        let mut config_input_definitions = [None; 6];
+        full_module.user_portion
+        .uniforms.iter().enumerate().for_each(|(i,a)|{
+            // get correct binding
+            if let Some(binding) = full_module.library_portion.bindings.iter().find(|b| b.name == *a.name.lower()){
+                
+                if i < config_input_definitions.len() {
+                    config_input_definitions[i] = Some(ConfigInputMetadataDefinition { binding_number: binding.entry_num, name: &a.name });
+                    //todo support variety of binding groups
+                }else {
+                    panic!("Too many input configs in wgsl_shader_module, max is {}", config_input_definitions.len());
+                }
+            }else {
+                panic!("Could not find binding for input config {}, something has gone wrong with the library", a.name.name());
+            }
+            
+        });
+        
+        let config_inputs_metadata = ConfigInputsMetadataSpec::from_config_input_types_spec::<ShaderModuleTypes::ConfigInputTypes>( 
+            config_input_definitions,
+        );
         let input_metadata = InputVectorsMetadataSpec::from_input_vector_types_spec::<ShaderModuleTypes::InputArrayTypes>( 
             input_definitions,
         );
@@ -91,6 +112,7 @@ impl ComputeTaskSpecification {
             entity,
             input_metadata,
             output_metadata,
+            config_inputs_metadata,
             iteration_space,
             max_output_vector_lengths,
             WgslCode::from_string(
@@ -106,12 +128,15 @@ impl ComputeTaskSpecification {
         entity: Entity,
         input_vectors_metadata_spec: InputVectorsMetadataSpec,
         output_vectors_metadata_spec: OutputVectorsMetadataSpec,
+        config_inputs_metadata_spec: ConfigInputsMetadataSpec,
         iteration_space: IterationSpace,
         max_output_array_lengths: MaxOutputLengths,
         wgsl_code: WgslCode,
     ) -> Self {
       
-        let immutable = ComputeTaskImmutableSpec::new( output_vectors_metadata_spec, input_vectors_metadata_spec, wgsl_code );
+        let immutable = ComputeTaskImmutableSpec::new( output_vectors_metadata_spec, input_vectors_metadata_spec, 
+            config_inputs_metadata_spec,
+            wgsl_code );
         let mut derived = ComputeTaskDerivedSpec::new(
             GpuWorkgroupSpace::default(),
             TaskMaxOutputBytes::default(),
@@ -146,6 +171,9 @@ impl ComputeTaskSpecification {
     pub fn input_vectors_metadata_spec(&self) -> &InputVectorsMetadataSpec {
         &self.immutable.input_vectors_metadata_spec()
     }
+    pub fn config_input_metadata_spec(&self) -> &ConfigInputsMetadataSpec {
+        &self.immutable.config_input_metadata_spec()
+    }
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.mutate.iter_space_and_out_lengths_version()
     }
@@ -165,18 +193,7 @@ impl ComputeTaskSpecification {
   
     pub fn get_pipeline_consts(&self) -> HashMap<String, f64>{
             let mut n: HashMap<String, f64> = HashMap::new();
-            n.insert(
-                WORKGROUP_SIZE_X_VAR_NAME.to_string(),
-                self.derived.workgroup_sizes().x() as f64,
-            );
-            n.insert(
-                WORKGROUP_SIZE_Y_VAR_NAME.to_string(),
-                self.derived.workgroup_sizes().y() as f64,
-            );
-            n.insert(
-                WORKGROUP_SIZE_Z_VAR_NAME.to_string(),
-                self.derived.workgroup_sizes().z() as f64,
-            );
+            
             // input and output array lengths
             for (i, spec) in self.immutable.input_vectors_metadata_spec().get_all_metadata().iter().enumerate(){
                 if let Some(s) = spec{

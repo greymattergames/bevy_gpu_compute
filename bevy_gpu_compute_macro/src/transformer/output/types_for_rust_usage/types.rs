@@ -36,7 +36,7 @@ pub fn define_types_for_use_in_rust(state: &ModuleTransformState) -> TokenStream
 
         pub struct Types;
         impl TypesSpec for Types {
-            type InputConfigTypes = _InputConfigTypes;
+            type ConfigInputTypes = _ConfigInputTypes;
             type InputArrayTypes = _InputArrayTypes;
             type OutputArrayTypes = _OutputArrayTypes;
         }
@@ -101,8 +101,8 @@ pub fn uniform_types(state: &ModuleTransformState) -> TokenStream {
 
     quote!(
 
-         pub struct _InputConfigTypes {}
-    impl InputConfigTypesSpec for _InputConfigTypes {
+         pub struct _ConfigInputTypes {}
+    impl ConfigInputTypesSpec for _ConfigInputTypes {
         type Input0 = #t1;
         type Input1 = #t2;
         type Input2 = #t3;

@@ -15,11 +15,7 @@ pub struct WgslShaderModuleDerivedPortion {
 
 impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
     fn from(user_portion: &WgslShaderModuleUserPortion) -> Self {
-        let mut pipeline_consts = vec![
-            WgslConstAssignment::no_default(WORKGROUP_SIZE_X_VAR_NAME, "u32"),
-            WgslConstAssignment::no_default(WORKGROUP_SIZE_Y_VAR_NAME, "u32"),
-            WgslConstAssignment::no_default(WORKGROUP_SIZE_Z_VAR_NAME, "u32"),
-        ];
+        let mut pipeline_consts = vec![];
         let mut binding_counter = 0;
         let mut bindings = Vec::new();
         user_portion.uniforms.iter().for_each(|u| {

@@ -14,6 +14,10 @@ impl WgslOutput {
         unimplemented!()
     }
     /// returns the user-input maximum number of elements that can be stored in the output for this specific type.
+    pub fn max_len<T>() -> u32 {
+        unimplemented!()
+    }
+    /// returns the number of times this vector has been pushed to. (Or, for the power-user, the value of the atomic counter)
     pub fn len<T>() -> u32 {
         unimplemented!()
     }

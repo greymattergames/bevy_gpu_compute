@@ -2,17 +2,27 @@ use bevy::{
     log,
     prelude::{Commands, DespawnRecursiveExt, Entity, Query, ResMut},
 };
-use bevy_gpu_compute_core::misc_types::TypesSpec;
+use bevy_gpu_compute_core::TypesSpec;
 
-use crate::{run_ids::GpuAcceleratedBevyRunIds, task::inputs::input_data::InputDataTrait};
+use crate::{
+    prelude::{ComputeTaskSpecification, IterationSpace, MaxOutputLengths},
+    run_ids::GpuAcceleratedBevyRunIds,
+    task::inputs::array_type::input_data::InputDataTrait,
+};
 
 use super::{
-    events::InputDataChangeEvent,
-    inputs::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
+    events::{ConfigInputDataChangeEvent, InputDataChangeEvent},
+    inputs::{
+        array_type::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
+        config_type::{
+            config_data::ConfigInputData, type_erased_config_input_data::TypeErasedConfigInputData,
+        },
+    },
     outputs::definitions::{
         output_data::OutputData, type_erased_output_data::TypeErasedOutputData,
     },
     task_components::task_run_id::TaskRunId,
+    task_specification::{self, input_array_lengths::ComputeTaskInputArrayLengths},
 };
 #[derive(Clone, Debug)]
 pub struct TaskCommands {
@@ -24,6 +34,33 @@ impl TaskCommands {
     }
     pub fn delete(&self, commands: &mut Commands) {
         commands.entity(self.entity).despawn_recursive();
+    }
+    pub fn mutate(
+        &self,
+        mut commands: &mut Commands,
+        task_specs_query: &mut Query<&mut ComputeTaskSpecification>,
+        new_iteration_space: Option<IterationSpace>,
+        new_max_output_array_lengths: Option<MaxOutputLengths>,
+        new_input_array_lengths: Option<ComputeTaskInputArrayLengths>,
+    ) {
+        let mut spec = task_specs_query.get_mut(self.entity).unwrap();
+        spec.mutate(
+            &mut commands,
+            self.entity,
+            new_iteration_space,
+            new_max_output_array_lengths,
+            new_input_array_lengths,
+        );
+    }
+    pub fn set_config_inputs<I: TypesSpec + 'static + Send + Sync>(
+        &self,
+        commands: &mut Commands,
+        inputs: ConfigInputData<I>,
+    ) {
+        let mut entity_commands = commands.entity(self.entity);
+        let event = ConfigInputDataChangeEvent::new(self.entity);
+        entity_commands.insert(TypeErasedConfigInputData::new::<I>(inputs));
+        commands.send_event(event);
     }
 
     /// registers the input data to run in the next round, returns a unique id to identify the run

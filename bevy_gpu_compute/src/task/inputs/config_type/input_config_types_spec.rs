@@ -1,7 +1,8 @@
-use bevy_gpu_compute_core::misc_types::InputConfigTypesSpec;
+use bevy_gpu_compute_core::ConfigInputTypesSpec;
 
+//todo implement configs
 pub struct BlankInputConfigTypesSpec {}
-impl InputConfigTypesSpec for BlankInputConfigTypesSpec {
+impl ConfigInputTypesSpec for BlankInputConfigTypesSpec {
     type Input0 = ();
     type Input1 = ();
     type Input2 = ();

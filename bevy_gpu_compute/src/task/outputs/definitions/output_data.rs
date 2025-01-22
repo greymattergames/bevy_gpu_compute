@@ -1,4 +1,4 @@
-use bevy_gpu_compute_core::misc_types::{BlankTypesSpec, OutputVectorTypesSpec, TypesSpec};
+use bevy_gpu_compute_core::{BlankTypesSpec, OutputVectorTypesSpec, TypesSpec};
 
 pub struct OutputData<T: TypesSpec> {
     output0: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output0>>,
@@ -62,8 +62,11 @@ impl<T: TypesSpec> OutputData<T> {
         {
             return Err("Byte length not aligned with output type size".to_string());
         }
-
-        self.output0 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output0 = Some(Vec::new());
+        } else {
+            self.output0 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
 
@@ -77,7 +80,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output1 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output1 = Some(Vec::new());
+        } else {
+            self.output1 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output2_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -90,7 +97,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output2 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output2 = Some(Vec::new());
+        } else {
+            self.output2 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output3_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -103,7 +114,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output3 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output3 = Some(Vec::new());
+        } else {
+            self.output3 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output4_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -116,7 +131,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output4 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output4 = Some(Vec::new());
+        } else {
+            self.output4 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output5_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -129,7 +148,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output5 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output5 = Some(Vec::new());
+        } else {
+            self.output5 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
 

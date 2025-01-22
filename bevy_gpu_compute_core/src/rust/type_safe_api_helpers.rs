@@ -9,7 +9,7 @@ The types in this file are used by the main crate to provide a type-safe API to 
 pub struct _INTERNAL_UNUSED {}
 
 pub trait TypesSpec {
-    type InputConfigTypes: InputConfigTypesSpec;
+    type ConfigInputTypes: ConfigInputTypesSpec;
     type InputArrayTypes: InputVectorTypesSpec;
     type OutputArrayTypes: OutputVectorTypesSpec;
 }
@@ -26,8 +26,8 @@ impl InputVectorTypesSpec for BlankInputVectorTypesSpec {
 }
 #[derive(Debug)]
 
-pub struct BlankInputConfigTypesSpec {}
-impl InputConfigTypesSpec for BlankInputConfigTypesSpec {
+pub struct BlankConfigInputTypesSpec {}
+impl ConfigInputTypesSpec for BlankConfigInputTypesSpec {
     type Input0 = ();
     type Input1 = ();
     type Input2 = ();
@@ -50,12 +50,12 @@ impl OutputVectorTypesSpec for BlankOutputVectorTypesSpec {
 
 pub struct BlankTypesSpec {}
 impl TypesSpec for BlankTypesSpec {
-    type InputConfigTypes = BlankInputConfigTypesSpec;
+    type ConfigInputTypes = BlankConfigInputTypesSpec;
     type InputArrayTypes = BlankInputVectorTypesSpec;
     type OutputArrayTypes = BlankOutputVectorTypesSpec;
 }
 
-pub trait InputConfigTypesSpec {
+pub trait ConfigInputTypesSpec {
     type Input0: Pod + Send + Sync + std::fmt::Debug;
     type Input1: Pod + Send + Sync + std::fmt::Debug;
     type Input2: Pod + Send + Sync + std::fmt::Debug;
