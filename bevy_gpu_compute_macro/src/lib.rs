@@ -43,7 +43,6 @@ let x = my_vec3.x();
     ```
 
     We wrap the inner type in an array for you automatically, so that you don't have to worry about data length or alignments.
-    // todo
 * You cannot use rust's struct-literal syntax for initializing structs from the helper types module. You must use the `new` method instead. For example:
     ## Wrong:
      ```compile_fail
@@ -65,9 +64,8 @@ let x = my_vec3.x();
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    println!("Entered shader_module proc macro");
+    // println!("Entered shader_module proc macro");
     set_dummy(item.clone().into());
-    //todo, as soon as we convert everything to string we lose the span info for future error messages
     let content = item.to_string();
     let module = parse_macro_input!(item as syn::ItemMod);
     DocCommentRemover {}.visit_item_mod(&module);

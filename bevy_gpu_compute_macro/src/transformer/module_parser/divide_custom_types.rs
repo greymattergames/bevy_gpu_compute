@@ -28,7 +28,6 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                     CustomTypeKind::ArrayLengthVariable,
                     quote!(),
                 ));
-                println!("HERE");
                 state.result.input_arrays.push(WgslInputArray {
                     item_type: custom_type.clone().into_wgsl_type(&state),
                 });

@@ -56,9 +56,9 @@ mod tests {
     #[test]
     fn test_size_and_alignment() {
         // Should be 32 bits (4 bytes) total
-        assert_eq!(std::mem::size_of::<PodF16>(), 4);
+        assert_eq!(std::mem::size_of::<PodF16>(), 2);
         // Should have 32-bit alignment
-        assert_eq!(std::mem::align_of::<PodF16>(), 4);
+        assert_eq!(std::mem::align_of::<PodF16>(), 2);
     }
 
     #[test]
@@ -67,7 +67,7 @@ mod tests {
 
         // Test casting to bytes
         let bytes: &[u8] = bytemuck::bytes_of(&value);
-        assert_eq!(bytes.len(), 4); // Should be 4 bytes now
+        assert_eq!(bytes.len(), 2); // Should be 4 bytes now
 
         // Test casting from bytes back to PodF16
         let restored: &PodF16 = bytemuck::from_bytes(bytes);

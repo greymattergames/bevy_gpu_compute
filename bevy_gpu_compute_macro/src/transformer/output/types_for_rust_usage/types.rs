@@ -8,7 +8,13 @@ use crate::{
     state::ModuleTransformState,
     transformer::{
         custom_types::custom_type::CustomTypeKind,
-        output::types_for_rust_usage::make_types_public::MakeTypesPublicTransformer,
+        output::types_for_rust_usage::{
+            config_input_data_builder::create_config_input_data_builder,
+            input_data_builder::create_input_data_builder,
+            make_types_public::MakeTypesPublicTransformer,
+            max_output_lengths_builder::create_max_output_lengths_builder,
+            output_data_builder::create_output_data_builder,
+        },
     },
 };
 
@@ -21,6 +27,10 @@ pub fn define_types_for_use_in_rust(state: &ModuleTransformState) -> TokenStream
     let uniforms: TokenStream = uniform_types(state);
     let input_arrays = input_array_types(state);
     let output_arrays = output_array_types(state);
+    let max_output_lengths_builder = create_max_output_lengths_builder(state);
+    let config_input_data_builder = create_config_input_data_builder(state);
+    let input_data_builder = create_input_data_builder(state);
+    let output_data_builder = create_output_data_builder(state);
     quote!(
         /// user types
     #user_types
@@ -34,12 +44,22 @@ pub fn define_types_for_use_in_rust(state: &ModuleTransformState) -> TokenStream
 
 
 
+        /// For passing as a generic argument in the user-facing api, the user should not need to know anything about what "Types" contains
         pub struct Types;
         impl TypesSpec for Types {
             type ConfigInputTypes = _ConfigInputTypes;
             type InputArrayTypes = _InputArrayTypes;
             type OutputArrayTypes = _OutputArrayTypes;
         }
+
+        #max_output_lengths_builder
+
+        #config_input_data_builder
+
+        #input_data_builder
+
+        #output_data_builder
+
 
     )
 }

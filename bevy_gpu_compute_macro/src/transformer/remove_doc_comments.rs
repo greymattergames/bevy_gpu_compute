@@ -1,5 +1,5 @@
 use proc_macro_error::abort;
-use syn::{spanned::Spanned, visit::Visit, visit_mut::VisitMut};
+use syn::{spanned::Spanned, visit::Visit};
 
 pub struct DocCommentRemover {}
 impl<'ast> Visit<'ast> for DocCommentRemover {

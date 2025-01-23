@@ -1,98 +1,81 @@
-use bevy::{
-    log,
-    prelude::{Commands, DespawnRecursiveExt, Entity, Query, ResMut},
-};
-use bevy_gpu_compute_core::TypesSpec;
-
-use crate::{
-    prelude::{ComputeTaskSpecification, IterationSpace, MaxOutputLengths},
-    run_ids::GpuAcceleratedBevyRunIds,
-    task::inputs::array_type::input_data::InputDataTrait,
+use bevy::prelude::Entity;
+use bevy_gpu_compute_core::{
+    MaxOutputLengths, TypeErasedArrayInputData, TypeErasedConfigInputData,
 };
 
-use super::{
-    events::{ConfigInputDataChangeEvent, InputDataChangeEvent},
-    inputs::{
-        array_type::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
-        config_type::{
-            config_data::ConfigInputData, type_erased_config_input_data::TypeErasedConfigInputData,
-        },
-    },
-    outputs::definitions::{
-        output_data::OutputData, type_erased_output_data::TypeErasedOutputData,
-    },
-    task_components::task_run_id::TaskRunId,
-    task_specification::{self, input_array_lengths::ComputeTaskInputArrayLengths},
-};
-#[derive(Clone, Debug)]
-pub struct TaskCommands {
-    pub entity: Entity,
+use crate::prelude::IterationSpace;
+
+pub struct GpuTaskCommands {
+    entity: Entity,
+    pub commands: Vec<GpuTaskCommand>,
 }
-impl TaskCommands {
-    pub fn new(entity: Entity) -> Self {
-        TaskCommands { entity }
-    }
-    pub fn delete(&self, commands: &mut Commands) {
-        commands.entity(self.entity).despawn_recursive();
-    }
-    pub fn mutate(
-        &self,
-        mut commands: &mut Commands,
-        task_specs_query: &mut Query<&mut ComputeTaskSpecification>,
-        new_iteration_space: Option<IterationSpace>,
-        new_max_output_array_lengths: Option<MaxOutputLengths>,
-        new_input_array_lengths: Option<ComputeTaskInputArrayLengths>,
-    ) {
-        let mut spec = task_specs_query.get_mut(self.entity).unwrap();
-        spec.mutate(
-            &mut commands,
-            self.entity,
-            new_iteration_space,
-            new_max_output_array_lengths,
-            new_input_array_lengths,
-        );
-    }
-    pub fn set_config_inputs<I: TypesSpec + 'static + Send + Sync>(
-        &self,
-        commands: &mut Commands,
-        inputs: ConfigInputData<I>,
-    ) {
-        let mut entity_commands = commands.entity(self.entity);
-        let event = ConfigInputDataChangeEvent::new(self.entity);
-        entity_commands.insert(TypeErasedConfigInputData::new::<I>(inputs));
-        commands.send_event(event);
-    }
 
-    /// registers the input data to run in the next round, returns a unique id to identify the run
-    pub fn run<I: TypesSpec + 'static + Send + Sync>(
-        &self,
-        commands: &mut Commands,
-        inputs: InputData<I>,
-        mut task_run_ids: ResMut<GpuAcceleratedBevyRunIds>,
-    ) -> u128 {
-        let mut entity_commands = commands.entity(self.entity);
-        let id = task_run_ids.get_next();
-        let event = InputDataChangeEvent::new(self.entity, inputs.lengths());
-        log::info!("run id: {}", id);
-        // log::info!("inputs: {:?}", inputs);
-        entity_commands.insert(TypeErasedInputData::new::<I>(inputs));
-        entity_commands.insert(TaskRunId(id));
-        commands.send_event(event);
-        id
-    }
-
-    pub fn result<O: TypesSpec>(
-        &self,
-        run_id: u128,
-        out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
-    ) -> Option<OutputData<O>> {
-        log::info!("looking for output data for run id: {}", run_id);
-        for (task_run_id, type_erased_data) in out_datas.iter() {
-            if task_run_id.0 == run_id {
-                log::info!("found output data for run id: {}", run_id);
-                return type_erased_data.clone().into_typed::<O>().ok();
-            }
+pub enum GpuTaskCommand {
+    SetConfigInputs(Box<TypeErasedConfigInputData>),
+    SetInputs(Box<TypeErasedArrayInputData>),
+    Mutate {
+        iteration_space: Option<IterationSpace>,
+        max_output_lengths: Option<MaxOutputLengths>,
+    },
+    Run,
+}
+impl std::fmt::Display for GpuTaskCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GpuTaskCommand::SetConfigInputs(_) => write!(f, "SetConfigInputs"),
+            GpuTaskCommand::SetInputs(_) => write!(f, "SetInputs"),
+            GpuTaskCommand::Mutate {
+                iteration_space,
+                max_output_lengths,
+            } => write!(
+                f,
+                "Mutate {{ iteration_space: {:?}, max_output_lengths: {:?} }}",
+                iteration_space, max_output_lengths
+            ),
+            GpuTaskCommand::Run => write!(f, "Run"),
         }
-        None
+    }
+}
+
+impl GpuTaskCommands {
+    pub fn new(entity: Entity) -> Self {
+        GpuTaskCommands {
+            entity,
+            commands: Vec::new(),
+        }
+    }
+    pub fn entity(&self) -> Entity {
+        self.entity
+    }
+    /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
+    pub fn set_config_inputs(mut self, inputs: TypeErasedConfigInputData) -> Self {
+        self.commands
+            .push(GpuTaskCommand::SetConfigInputs(Box::new(inputs)));
+        self
+    }
+
+    /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
+    pub fn set_inputs(mut self, data: TypeErasedArrayInputData) -> Self {
+        self.commands
+            .push(GpuTaskCommand::SetInputs(Box::new(data)));
+        self
+    }
+    /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
+    pub fn mutate(
+        mut self,
+        iteration_space: Option<IterationSpace>,
+        max_output_lengths: Option<MaxOutputLengths>,
+    ) -> Self {
+        self.commands.push(GpuTaskCommand::Mutate {
+            iteration_space,
+            max_output_lengths,
+        });
+        self
+    }
+
+    /// This queues a run of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
+    pub fn run(mut self) -> Self {
+        self.commands.push(GpuTaskCommand::Run);
+        self
     }
 }

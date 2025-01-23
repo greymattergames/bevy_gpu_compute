@@ -1,0 +1,10 @@
+{
+  "folders": [
+	{
+		"path": "bevy_gpu_compute_core"
+	},
+	{
+		"path": "bevy_gpu_compute_macro"
+	}
+]
+}

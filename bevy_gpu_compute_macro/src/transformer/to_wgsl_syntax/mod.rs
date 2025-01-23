@@ -101,30 +101,17 @@ pub fn convert_file_to_wgsl(
     .visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);
     ExprToWgslTransformer {}.visit_file_mut(&mut file);
-    // expressions and type defs have to be transformed differently because they may change the token structure, so we have to transition to strings
-    let mut string_version = file.to_token_stream().to_string();
-    // transform expressions
-    // let mut expression_transformer = ExprToWgslTransformer {
-    // replacements: HashMap::new(),
-    // };
-    // expression_transformer.visit_file(&file);
-    // println!("Going to replace...");
-    // expression_transformer
-    // .replacements
-    // .iter()
-    // .for_each(|(k, v)| {
-    // println!("Replacing: {} with: {}", k, v);
-    // string_version = string_version.replace(k, v);
-    // });
-    // transform type defs (should not conflict with other replacements)
     let mut type_def_transformer = TypeDefToWgslTransformer {
         replacements: HashMap::new(),
     };
     type_def_transformer.visit_file(&file);
+    // expressions and type defs have to be transformed differently because they may change the token structure, so we have to transition to strings
+    let mut string_version = file.to_token_stream().to_string();
+
     type_def_transformer.replacements.iter().for_each(|(k, v)| {
         string_version = string_version.replace(k, v);
     });
-    println!("Final string version: {}", string_version);
+    // println!("Final string version: {}", string_version);
     // transform vec and matrix constructors
     string_version = convert_wgsl_builtin_constructors(string_version);
     string_version = replace_let_mut_with_var(&string_version);

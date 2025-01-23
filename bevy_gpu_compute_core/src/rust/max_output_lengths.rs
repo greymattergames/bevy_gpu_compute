@@ -1,7 +1,5 @@
+use crate::wgsl::shader_custom_type_name::ShaderCustomTypeName;
 use std::collections::HashMap;
-
-use bevy_gpu_compute_core::wgsl::shader_custom_type_name::ShaderCustomTypeName;
-
 #[derive(Debug, Clone, PartialEq)]
 /**
 ### These vectors lengths are very important for overall performance, the lower the better
