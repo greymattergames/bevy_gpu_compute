@@ -1,10 +1,6 @@
-
 use bevy::prelude::{Commands, Entity};
 
-use crate::task::{
-    events::{GpuComputeTaskChangeEvent,  IterSpaceOrOutputSizesChangedEvent},
-    task_components::task_max_output_bytes::TaskMaxOutputBytes,
-};
+use crate::task::task_components::task_max_output_bytes::TaskMaxOutputBytes;
 
 use super::{
     derived_spec::ComputeTaskDerivedSpec, gpu_workgroup_sizes::GpuWorkgroupSizes,
@@ -28,8 +24,6 @@ impl ComputeTaskMutableSpec {
         output_array_lengths: MaxOutputLengths,
         derived: &mut ComputeTaskDerivedSpec,
         immutable: &ComputeTaskImmutableSpec,
-        mut commands: &mut Commands,
-        entity: Entity,
     ) -> Self {
         let mut mutable = ComputeTaskMutableSpec {
             iteration_space,
@@ -37,12 +31,7 @@ impl ComputeTaskMutableSpec {
             output_array_lengths,
             iter_space_and_out_lengths_version: 0,
         };
-        mutable.update_on_iter_space_or_max_output_lengths_change(
-            derived,
-            immutable,
-            &mut commands,
-            entity,
-        );
+        mutable.update_on_iter_space_or_max_output_lengths_change(derived, immutable);
         mutable
     }
 
@@ -58,18 +47,17 @@ impl ComputeTaskMutableSpec {
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.iter_space_and_out_lengths_version
     }
+    pub fn set_input_array_lengths(&mut self, input_array_lengths: ComputeTaskInputArrayLengths) {
+        self.input_array_lengths = input_array_lengths;
+    }
 
-    /// one of each event type maximum is sent per call, so this is more efficient than updating each field individually
     /// If a parameter is None then the existing value is retained
     pub fn multiple(
         &mut self,
         iteration_space: Option<IterationSpace>,
-        input_array_lengths: Option<ComputeTaskInputArrayLengths>,
         output_array_lengths: Option<MaxOutputLengths>,
         immutable: &ComputeTaskImmutableSpec,
         mut derived: &mut ComputeTaskDerivedSpec,
-        mut commands: &mut Commands,
-        entity: Entity,
     ) {
         let iter_or_outputs_changed = iteration_space.is_some() || output_array_lengths.is_some();
         if let Some(iter_space) = iteration_space {
@@ -82,27 +70,17 @@ impl ComputeTaskMutableSpec {
             );
             self.iteration_space = iter_space;
         }
-        if let Some(input_lengths) = input_array_lengths {
-            self.input_array_lengths = input_lengths;
-        }
         if let Some(output_lengths) = output_array_lengths {
             self.output_array_lengths = output_lengths;
         }
         if iter_or_outputs_changed {
-            self.update_on_iter_space_or_max_output_lengths_change(
-                &mut derived,
-                &immutable,
-                &mut commands,
-                entity,
-            );
+            self.update_on_iter_space_or_max_output_lengths_change(&mut derived, &immutable);
         }
     }
     fn update_on_iter_space_or_max_output_lengths_change(
         &mut self,
         derived: &mut ComputeTaskDerivedSpec,
         immutable: &ComputeTaskImmutableSpec,
-        commands: &mut Commands,
-        entity: Entity,
     ) {
         self.iter_space_and_out_lengths_version += 1;
         // update task max output bytes
@@ -119,6 +97,5 @@ impl ComputeTaskMutableSpec {
         derived._lib_only_set_gpu_workgroup_space(
             GpuWorkgroupSpace::from_iter_space_and_wrkgrp_sizes(&self.iteration_space, &wg_sizes),
         );
-        commands.send_event(IterSpaceOrOutputSizesChangedEvent::new(entity));
     }
 }

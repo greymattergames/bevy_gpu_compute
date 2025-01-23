@@ -1,102 +1,105 @@
 use bevy::{
+    gizmos::config,
     log,
-    prelude::{Commands, DespawnRecursiveExt, Entity, Query, ResMut},
+    prelude::{Commands, DespawnRecursiveExt, Entity, Mut, Query, ResMut},
+    render::renderer::{RenderDevice, RenderQueue},
 };
 use bevy_gpu_compute_core::TypesSpec;
 
 use crate::{
-    prelude::{ComputeTaskSpecification, IterationSpace, MaxOutputLengths},
+    prelude::{
+        ComputeTaskSpecification, ConfigInputData, InputData, IterationSpace, MaxOutputLengths,
+    },
     run_ids::BevyGpuComputeRunIds,
-    task::inputs::array_type::input_data::InputDataTrait,
+    task::{
+        buffers::components::{
+            ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
+            OutputCountStagingBuffers, OutputStagingBuffers,
+        },
+        inputs::{
+            array_type::{
+                input_data::InputDataTrait, input_vector_metadata_spec::InputVectorsMetadataSpec,
+            },
+            config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
+        },
+        outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
+        task_components::{task::BevyGpuComputeTask, task_name::TaskName},
+    },
 };
 
 use super::{
-    events::{ConfigInputDataChangeEvent, InputDataChangeEvent},
     inputs::{
-        array_type::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
-        config_type::{
-            config_data::ConfigInputData, type_erased_config_input_data::TypeErasedConfigInputData,
-        },
+        array_type::type_erased_input_data::TypeErasedInputData,
+        config_type::type_erased_config_input_data::TypeErasedConfigInputData,
     },
-    outputs::definitions::{
-        output_data::OutputData, type_erased_output_data::TypeErasedOutputData,
-    },
-    task_components::task_run_id::TaskRunId,
-    task_specification::{self, input_array_lengths::ComputeTaskInputArrayLengths},
+    outputs::definitions::output_data::OutputData,
+    task_specification::input_array_lengths::ComputeTaskInputArrayLengths,
 };
-pub struct TaskCommands<'w, 's> {
+
+pub struct GpuTaskCommands {
     entity: Entity,
-    commands: &'w mut Commands<'w, 's>,
-    spec: &'w mut ComputeTaskSpecification,
+    pub commands: Vec<GpuTaskCommand>,
 }
-impl<'w, 's> TaskCommands<'w, 's> {
-    pub fn new(
-        entity: Entity,
-        commands: &'w mut Commands<'w, 's>,
-        spec: &'w mut ComputeTaskSpecification,
-    ) -> Self {
-        TaskCommands {
+
+pub enum GpuTaskCommand {
+    SetConfigInputs(Box<TypeErasedConfigInputData>),
+    SetInputs {
+        data: Box<TypeErasedInputData>,
+        lengths: ComputeTaskInputArrayLengths,
+    },
+    Mutate {
+        iteration_space: Option<IterationSpace>,
+        max_output_lengths: Option<MaxOutputLengths>,
+    },
+    Run,
+}
+
+impl GpuTaskCommands {
+    pub fn new(entity: Entity) -> Self {
+        GpuTaskCommands {
             entity,
-            commands,
-            spec,
+            commands: Vec::new(),
         }
     }
-    pub fn delete(&mut self) {
-        self.commands.entity(self.entity).despawn_recursive();
+    pub fn entity(&self) -> Entity {
+        self.entity
     }
+    /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
+    pub fn set_config_inputs<T: TypesSpec + 'static + Send + Sync>(
+        mut self,
+        inputs: ConfigInputData<T>,
+    ) -> Self {
+        self.commands.push(GpuTaskCommand::SetConfigInputs(Box::new(
+            TypeErasedConfigInputData::new(inputs),
+        )));
+        self
+    }
+
+    /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
+    pub fn set_inputs<T: TypesSpec + Send + Sync + 'static>(mut self, data: InputData<T>) -> Self {
+        let lengths = data.lengths();
+        self.commands.push(GpuTaskCommand::SetInputs {
+            data: Box::new(TypeErasedInputData::new(data)),
+            lengths: ComputeTaskInputArrayLengths { by_index: lengths },
+        });
+        self
+    }
+    /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
     pub fn mutate(
-        &self,
-        new_iteration_space: Option<IterationSpace>,
-        new_max_output_array_lengths: Option<MaxOutputLengths>,
-    ) {
-        self.spec.mutate(
-            &mut commands,
-            self.entity,
-            new_iteration_space,
-            new_max_output_array_lengths,
-            new_input_array_lengths,
-        );
-    }
-    pub fn set_config_inputs<I: TypesSpec + 'static + Send + Sync>(
-        &self,
-        inputs: ConfigInputData<I>,
-    ) {
-        let mut entity_commands = commands.entity(self.entity);
-        let event = ConfigInputDataChangeEvent::new(self.entity);
-        entity_commands.insert(TypeErasedConfigInputData::new::<I>(inputs));
-        commands.send_event(event);
+        mut self,
+        iteration_space: Option<IterationSpace>,
+        max_output_lengths: Option<MaxOutputLengths>,
+    ) -> Self {
+        self.commands.push(GpuTaskCommand::Mutate {
+            iteration_space,
+            max_output_lengths,
+        });
+        self
     }
 
-    /// registers the input data to run in the next round, returns a unique id to identify the run
-    pub fn run<I: TypesSpec + 'static + Send + Sync>(
-        &self,
-        commands: &mut Commands,
-        inputs: InputData<I>,
-        mut task_run_ids: ResMut<BevyGpuComputeRunIds>,
-    ) -> u128 {
-        let mut entity_commands = commands.entity(self.entity);
-        let id = task_run_ids.get_next();
-        let event = InputDataChangeEvent::new(self.entity, inputs.lengths());
-        log::info!("run id: {}", id);
-        // log::info!("inputs: {:?}", inputs);
-        entity_commands.insert(TypeErasedInputData::new::<I>(inputs));
-        entity_commands.insert(TaskRunId(id));
-        commands.send_event(event);
-        id
-    }
-
-    pub fn result<O: TypesSpec>(
-        &self,
-        run_id: u128,
-        out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
-    ) -> Option<OutputData<O>> {
-        log::info!("looking for output data for run id: {}", run_id);
-        for (task_run_id, type_erased_data) in out_datas.iter() {
-            if task_run_id.0 == run_id {
-                log::info!("found output data for run id: {}", run_id);
-                return type_erased_data.clone().into_typed::<O>().ok();
-            }
-        }
-        None
+    /// This queues a run of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
+    pub fn run(mut self) -> Self {
+        self.commands.push(GpuTaskCommand::Run);
+        self
     }
 }

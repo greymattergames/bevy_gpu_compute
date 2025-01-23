@@ -8,7 +8,10 @@ use crate::{
     state::ModuleTransformState,
     transformer::{
         custom_types::custom_type::CustomTypeKind,
-        output::types_for_rust_usage::make_types_public::MakeTypesPublicTransformer,
+        output::types_for_rust_usage::{
+            make_types_public::MakeTypesPublicTransformer,
+            max_output_lengths_builder::{self, create_max_output_lengths_builder},
+        },
     },
 };
 
@@ -21,6 +24,7 @@ pub fn define_types_for_use_in_rust(state: &ModuleTransformState) -> TokenStream
     let uniforms: TokenStream = uniform_types(state);
     let input_arrays = input_array_types(state);
     let output_arrays = output_array_types(state);
+    let max_output_lengths_builder = create_max_output_lengths_builder(state);
     quote!(
         /// user types
     #user_types
@@ -34,12 +38,15 @@ pub fn define_types_for_use_in_rust(state: &ModuleTransformState) -> TokenStream
 
 
 
+
         pub struct Types;
         impl TypesSpec for Types {
             type ConfigInputTypes = _ConfigInputTypes;
             type InputArrayTypes = _InputArrayTypes;
             type OutputArrayTypes = _OutputArrayTypes;
         }
+
+        #max_output_lengths_builder
 
     )
 }

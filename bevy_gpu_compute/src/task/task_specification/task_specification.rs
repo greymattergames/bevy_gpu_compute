@@ -31,8 +31,6 @@ pub struct ComputeTaskSpecification {
 impl ComputeTaskSpecification {
     pub fn from_shader<ShaderModuleTypes: TypesSpec>(
         name: &str,
-        mut commands: &mut Commands,
-        entity: Entity,
         render_device: &RenderDevice, 
         wgsl_shader_module: WgslShaderModuleUserPortion,
         iteration_space: IterationSpace,
@@ -108,8 +106,6 @@ impl ComputeTaskSpecification {
             output_definitions,
         );
         ComputeTaskSpecification::create_manually(
-            &mut commands,
-            entity,
             input_metadata,
             output_metadata,
             config_inputs_metadata,
@@ -124,8 +120,6 @@ impl ComputeTaskSpecification {
 
     /// ensure that you send relevant update events after calling this function
     pub fn create_manually(
-        mut commands: &mut Commands,
-        entity: Entity,
         input_vectors_metadata_spec: InputVectorsMetadataSpec,
         output_vectors_metadata_spec: OutputVectorsMetadataSpec,
         config_inputs_metadata_spec: ConfigInputsMetadataSpec,
@@ -142,7 +136,7 @@ impl ComputeTaskSpecification {
             TaskMaxOutputBytes::default(),
             GpuWorkgroupSizes::default(),
         );
-        let mutable= ComputeTaskMutableSpec::new(iteration_space, ComputeTaskInputArrayLengths::default(), max_output_array_lengths,&mut derived, &immutable, &mut commands, entity);
+        let mutable= ComputeTaskMutableSpec::new(iteration_space, ComputeTaskInputArrayLengths::default(), max_output_array_lengths,&mut derived, &immutable);
         ComputeTaskSpecification {
             immutable,
             mutate: mutable,
@@ -177,18 +171,18 @@ impl ComputeTaskSpecification {
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.mutate.iter_space_and_out_lengths_version()
     }
+    pub fn set_input_array_lengths(&mut self, input_array_lengths: ComputeTaskInputArrayLengths) {
+        self.mutate.set_input_array_lengths(input_array_lengths);
+    }
     // setters
      /// one of each event type maximum is sent per call, so this is more efficient than updating each field individually
     /// If a parameter is None then the existing value is retained
     pub fn mutate(
         &mut self,
-       mut commands: &mut Commands,
-        entity: Entity,
         new_iteration_space: Option<IterationSpace>,
         new_max_output_array_lengths: Option<MaxOutputLengths>,
-        new_input_array_lengths: Option<ComputeTaskInputArrayLengths>,
     ) {
-        self.mutate.multiple(new_iteration_space, new_input_array_lengths, new_max_output_array_lengths, &self.immutable, &mut self.derived, &mut commands, entity);
+        self.mutate.multiple(new_iteration_space, new_max_output_array_lengths, &self.immutable, &mut self.derived);
     }
   
     pub fn get_pipeline_consts(&self) -> HashMap<String, f64>{

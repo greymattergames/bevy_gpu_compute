@@ -14,6 +14,6 @@ impl TypeErasedInputData {
         }
     }
     pub fn input_bytes(&self, index: usize) -> Option<&[u8]> {
-        self.inner.input_bytes(index)
+        // self.inner.input_bytes(index)
     }
 }

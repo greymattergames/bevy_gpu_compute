@@ -9,15 +9,18 @@ pub struct CustomTypeIdents {
     pub name: Ident,
     pub upper: Ident,
     pub lower: Ident,
+    pub snake_case: Ident,
 }
 impl CustomTypeIdents {
     pub fn new(name: &Ident) -> Self {
         let upper = Ident::new(&name.to_string().to_uppercase(), Span::call_site());
         let lower = Ident::new(&name.to_string().to_lowercase(), Span::call_site());
+        let snake_case = Self::pascal_case_to_snake_case(&name.to_string());
         Self {
             name: name.clone(),
             upper,
             lower,
+            snake_case,
         }
     }
     pub fn eq(&self, other: &Ident) -> bool {
@@ -45,6 +48,16 @@ impl CustomTypeIdents {
     }
     pub fn index(&self) -> Ident {
         format_ident!("{}_output_array_index", self.lower)
+    }
+    fn pascal_case_to_snake_case(pascal_case: &str) -> Ident {
+        let mut snake_case = String::new();
+        for (i, c) in pascal_case.chars().enumerate() {
+            if c.is_uppercase() && i != 0 {
+                snake_case.push('_');
+            }
+            snake_case.push(c.to_lowercase().next().unwrap());
+        }
+        format_ident!("{}", snake_case)
     }
 }
 

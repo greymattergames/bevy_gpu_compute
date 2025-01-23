@@ -140,17 +140,17 @@ impl<T: TypesSpec> ConfigInputData<T> {
     }
 }
 
-impl<T: TypesSpec + Send + Sync> ConfigInputDataTrait for ConfigInputData<T> {
-    fn input_bytes(&self, index: usize) -> Option<&[u8]> {
-        log::info!("input_bytes index: {}", index);
-        match index {
-            0 => self.input0_bytes(),
-            1 => self.input1_bytes(),
-            2 => self.input2_bytes(),
-            3 => self.input3_bytes(),
-            4 => self.input4_bytes(),
-            5 => self.input5_bytes(),
-            _ => None,
-        }
-    }
-}
+// impl<T: TypesSpec + Send + Sync> ConfigInputDataTrait for ConfigInputData<T> {
+//     fn input_bytes(&self, index: usize) -> Option<&[u8]> {
+//         log::info!("input_bytes index: {}", index);
+//         match index {
+//             0 => self.input0_bytes(),
+//             1 => self.input1_bytes(),
+//             2 => self.input2_bytes(),
+//             3 => self.input3_bytes(),
+//             4 => self.input4_bytes(),
+//             5 => self.input5_bytes(),
+//             _ => None,
+//         }
+//     }
+// }

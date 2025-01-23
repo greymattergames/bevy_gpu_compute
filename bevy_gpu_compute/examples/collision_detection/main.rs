@@ -18,21 +18,12 @@ fn main() {
         .add_plugins(BevyGpuComputePlugin::default())
         .init_resource::<ColorHandles>()
         .init_resource::<State>()
-        .add_event::<GpuComputeTaskSuccessEvent>()
         .add_systems(
             Startup,
             (spawn_camera, spawn_entities, create_task, modify_task).chain(),
         )
-        .add_systems(
-            Update,
-            (modify_task_config_inputs, run_task).before(starting_gpu_tasks),
-        )
-        .add_systems(
-            Update,
-            (handle_task_results, exit_and_show_results)
-                .after(finished_gpu_tasks)
-                .chain(),
-        )
+        .add_systems(Update, (modify_task_config_inputs, run_task))
+        .add_systems(Update, (handle_task_results, exit_and_show_results).chain())
         .run();
 }
 
@@ -136,71 +127,69 @@ mod collision_detection_module {
     }
 }
 
-fn create_task(bevy_gpu_compute: BevyGpuCompute) {
-    let task_name = "collision_detection";
+fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
     let initial_iteration_space = IterationSpace::new(
         // set incorrectly here, just so that we can demonstrate changing it later
         100, 100, 1,
     );
-    let mut initial_max_output_lengths = MaxOutputLengths::empty();
-    // todo, change these to be type safe, instead of passing in strings
-    // todo, change to be like this: `collision_detection_module::MaxOutputLengths::new().set_collision_result(100).set_my_debug_info(100)`
+    //* There are two methods of creating the MaxOutputLengths config object: */
+    // Method 1:
+    let max_output_lengths: MaxOutputLengths =
+        collision_detection_module::MaxOutputLengthsBuilder::new()
+            .set_collision_result(100)
+            .set_my_debug_info(100)
+            .into();
+    // Method 2:
+    let mut alternate_max_output_lengths = MaxOutputLengths::empty();
     initial_max_output_lengths.set("CollisionResult", 100);
     initial_max_output_lengths.set("MyDebugInfo", 100);
-
-    //todo, documentation about how to pass in the results of the proc macro here
-    bevy_gpu_compute.create_task_from_rust_shader::<collision_detection_module::Types>(
-        task_name,     //todo, ensure name is unique
-        &mut commands, //todo  remove commands
-        &gpu,          //todo remove need to pass in this
+    //
+    gpu_task_creator.create_task_from_rust_shader::<collision_detection_module::Types>(
+        "collision_detection", //todo, ensure name is unique
         collision_detection_module::parsed(),
         initial_iteration_space,
-        initial_max_output_lengths,
+        max_output_lengths,
     );
 }
-fn delete_task(bevy_gpu_compute: BevyGpuCompute) {
-    bevy_gpu_compute.delete_task("collision_detection");
+fn delete_task(mut gpu_task_deleter: BevyGpuComputeTaskDeleter) {
+    let task = gpu_task_deleter.delete("collision_detection");
 }
-fn modify_task(bevy_gpu_compute: BevyGpuCompute, state: Res<State>) {
-    //todo see above for better api
-    let mut max_output_lengths = MaxOutputLengths::empty();
-    let num_entities = state.num_entities;
-    max_output_lengths.set("CollisionResult", (num_entities * num_entities) as usize);
-    max_output_lengths.set("MyDebugInfo", (num_entities * num_entities) as usize);
+fn modify_task(mut gpu_tasks: GpuTaskRunner, state: Res<State>) {
+    let max_output_lengths: MaxOutputLengths =
+        collision_detection_module::MaxOutputLengthsBuilder::new()
+            .set_collision_result((num_entities * num_entities) as usize)
+            .set_my_debug_info((num_entities * num_entities) as usize)
+            .into();
     let iteration_space =
         IterationSpace::new(state.num_entities as usize, state.num_entities as usize, 1);
-    bevy_gpu_compute.mutate_task(
-        "collision_detection",
-        &mut commands,            //todo remove need to pass in commands
-        &mut task_specifications, // todo, remove need to pass in this and query it
-        Some(iteration_space),
-        Some(max_output_lengths),
-        None, //todo remove this, as it should be set automatically at run
-    );
+    let pending_commands = gpu_tasks
+        .task("collision_detection")
+        .mutate(Some(iteration_space), Some(max_output_lengths));
+    gpu_tasks.run_commands(pending_commands);
 }
-fn modify_task_config_inputs(mut count: Local<u32>, bevy_gpu_compute: BevyGpuCompute) {
+fn modify_task_config_inputs(mut count: Local<u32>, mut gpu_tasks: GpuTaskRunner) {
     let radius_multiplier =
         (EXIT_AFTER_FRAMES as i32 - *count as i32) as f32 / EXIT_AFTER_FRAMES as f32;
     log::info!("rad_mult: {}", radius_multiplier);
     // below needs to simplify
     let mut config = ConfigInputData::<collision_detection_module::Types>::empty();
     config.set_input0(collision_detection_module::Config { radius_multiplier });
-    task.set_config_inputs(&mut commands, config);
-    //todo, better api below:
-    bevy_gpu_compute
+
+    //todo better api: let configs = collision_detection_module::ConfigsBuilder::new().set_config( collision_detection_module::Config {radius_multiplier} ).into();
+    let commands = gpu_tasks
         .task("collision_detection")
-        .set_config_input("Config", collision_detection_module::Config {
-            radius_multiplier,
-        });
+        .set_config_inputs(config);
+    gpu_tasks.run_commands(commands);
+
     *count += 1;
 }
 
 fn run_task(
-    bevy_gpu_compute: BevyGpuCompute,
+    mut gpu_tasks: GpuTaskRunner,
     mut state: ResMut<State>,
     entities: Query<&BoundingCircleComponent>,
 ) {
-    let task = bevy_gpu_compute.task("collision_detection");
+    let task = gpu_tasks.task("collision_detection");
     let mut input_data = InputData::<collision_detection_module::Types>::empty();
     input_data.set_input0(
         entities
@@ -212,69 +201,46 @@ fn run_task(
     );
     input_data.set_input1(entities.iter().map(|e| e.0.radius()).collect());
     //todo better api:
-    task.set_input(
-        "Position",
-        entities
-            .iter()
-            .map(|e| collision_detection_module::Position {
-                v: Vec2F32::new(e.0.center.x, e.0.center.y),
-            }),
-    );
-    task.set_input("Radius", entities.iter().map(|e| e.0.radius()));
-    //todo, ensure the task DOESNT run if we don't call this each frame
-    let run_id = task.run(
-        //todo remove commands
-        &mut commands,
-        //todo remove input data as it was set previously
-        input_data,
-        //todo, remove necesity to pass this in
-        task_run_ids,
-    );
-    state.run_id = run_id;
+    let input_data = collision_detection_module::InputDataBuilder::new()
+        .set_position(
+            entities
+                .iter()
+                .map(|e| collision_detection_module::Position {
+                    v: Vec2F32::new(e.0.center.x, e.0.center.y),
+                }),
+        )
+        .set_radius(entities.iter().map(|e| e.0.radius()))
+        .into();
+    // working api below
+    task.set_inputs(input_data);
+    gpu_tasks.run_commands(task);
 }
 
-fn handle_task_results(
-    gpu_compute: ResMut<BevyGpuCompute>,
-    mut event_reader: EventReader<GpuComputeTaskSuccessEvent>,
-    out_datas: Query<(&TaskRunId, &TypeErasedOutputData)>,
-    mut state: ResMut<State>,
-) {
-    let task = gpu_compute.task("collision_detection");
-    //todo, or to remove from bevy entirely...
-    //todo: task.result::<collision_detection_module::Types>(state.run_id) = Option<Outputdata<Types>>;
-    // reading events ensures that the results exist
-    for ev in event_reader.read() {
-        if ev.id == state.run_id {
-            log::info!("handling results for run id: {}", state.run_id);
-            // here we get the actual result
-            //todo, store the result data in the event itself to remove this secondary call
-            let results = task.result::<collision_detection_module::Types>(
-                state.run_id,
-                &out_datas, //todo, remove the need to pass this in
-            );
-            // log::info!("results: {:?}", results);
-            if let Some(results) = results {
-                let debug_results: Vec<collision_detection_module::MyDebugInfo> = results
-                    .get_output1()
-                    .unwrap()
-                    .into_iter()
-                    .cloned()
-                    .collect();
-                log::info!("debug results: {:?}", debug_results);
-                //fully type-safe results
-                let collision_results: Vec<collision_detection_module::CollisionResult> = results
-                    .get_output0()
-                    .unwrap()
-                    .into_iter()
-                    .cloned()
-                    .collect();
-                // your logic here
-                let count = collision_results.len();
-                log::info!("collisions this frame: {}", count);
-                log::info!("collision_results: {:?}", collision_results);
-                state.collision_count += count;
-            }
-        }
+fn handle_task_results(mut gpu_task_results: GpuTaskReader, mut state: ResMut<State>) {
+    let results =
+        gpu_task_results.latest_results::<collision_detection_module::Types>("collision_detection");
+    // log::info!("results: {:?}", results);
+    if let Ok(results) = results {
+        let debug_results: Vec<collision_detection_module::MyDebugInfo> = results
+            .get_output1()
+            .unwrap()
+            .into_iter()
+            .cloned()
+            .collect();
+        log::info!("debug results: {:?}", debug_results);
+        let t = results.get_output1().unwrap();
+        //fully type-safe results
+        let collision_results: Vec<collision_detection_module::CollisionResult> = results
+            .get_output0()
+            .unwrap()
+            .into_iter()
+            .cloned()
+            .collect();
+        // your logic here
+        let count = collision_results.len();
+        log::info!("collisions this frame: {}", count);
+        log::info!("collision_results: {:?}", collision_results);
+        state.collision_count += count;
     }
 }
 

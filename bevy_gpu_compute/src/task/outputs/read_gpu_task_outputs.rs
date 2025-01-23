@@ -1,112 +1,67 @@
-use core::panic;
-use std::{
-    cmp::min,
-    sync::{Arc, Mutex},
-};
+use std::cmp::min;
 
 use bevy::{
-    ecs::batching::BatchingStrategy,
     log,
-    prelude::{EventWriter, Query, Res},
     render::renderer::{RenderDevice, RenderQueue},
 };
+use bevy_gpu_compute_core::TypesSpec;
 
-use crate::task::{
-    buffers::components::{OutputBuffers, OutputStagingBuffers},
-    events::GpuComputeTaskSuccessEvent,
-    task_components::task_run_id::TaskRunId,
-    task_specification::task_specification::ComputeTaskSpecification,
-};
+use crate::task::{task_commands::GpuTaskCommands, task_components::task::BevyGpuComputeTask};
 
 use super::{
-    definitions::{
-        gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
-    },
+    definitions::type_erased_output_data::TypeErasedOutputData,
     helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec,
 };
 
 /**
  * We put this all into a single system because we cannot pass the buffer slice around easily.
  * */
-pub fn read_gpu_task_outputs(
-    mut task: Query<(
-        &TaskRunId,
-        &OutputBuffers,
-        &OutputStagingBuffers,
-        &GpuOutputCounts,
-        &ComputeTaskSpecification,
-        &mut TypeErasedOutputData,
-    )>,
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    mut success_event_writer: EventWriter<GpuComputeTaskSuccessEvent>,
+pub fn read_gpu_outputs(
+    output_counts: Vec<Option<usize>>,
+    task: &mut BevyGpuComputeTask,
+    render_device: &RenderDevice,
+    render_queue: &RenderQueue,
 ) {
-    log::info!("Reading GPU task outputs");
-    let run_ids_successfuls: Arc<Mutex<Vec<u128>>> = Arc::new(Mutex::new(Vec::new()));
-    task.par_iter_mut()
-        .batching_strategy(BatchingStrategy::default())
-        .for_each(
-            |(
-                run_id,
-                output_buffers,
-                output_staging_buffers,
-                output_counts,
-                task_spec,
-                mut out_data,
-            )| {
-                let mut type_erased_output = TypeErasedOutputData::empty();
+    let mut type_erased_output = TypeErasedOutputData::empty();
 
-                task_spec
-                    .output_vectors_metadata_spec()
-                    .get_all_metadata()
-                    .iter()
-                    .enumerate()
-                    .for_each(|(i, metadata)| {
-                        if let Some(m) = metadata {
-                            let out_buffer = output_buffers.0.get(i).unwrap();
-                            let staging_buffer = output_staging_buffers.0.get(i).unwrap();
-                            let total_byte_size = min(
-                                if let Some(Some(c)) = output_counts.0.get(i) {
-                                    let size = c * m.get_bytes();
-                                    log::info!("using output count to size buffer, size: {}", size);
-                                    size
-                                } else {
-                                    usize::MAX
-                                },
-                                task_spec.output_array_lengths().get_by_name(m.name())
-                                    * m.get_bytes(),
-                            );
-                            log::info!("total_byte_size: {}", total_byte_size);
-                            if total_byte_size < 1 {
-                                type_erased_output.set_output_from_bytes(i, Vec::new());
-                            } else {
-                                let raw_bytes = get_gpu_output_as_bytes_vec(
-                                    &render_device,
-                                    &render_queue,
-                                    &out_buffer,
-                                    staging_buffer,
-                                    total_byte_size as u64,
-                                );
-                                // log::info!("raw_bytes: {:?}", raw_bytes);
-                                if let Some(raw_bytes) = raw_bytes {
-                                    type_erased_output.set_output_from_bytes(i, raw_bytes);
-                                } else {
-                                    panic!("Failed to read output from GPU");
-                                }
-                            }
-                        }
-                    });
-                log::info!("Read output for task {}", run_id.0);
-                *out_data = type_erased_output;
-                run_ids_successfuls.lock().unwrap().push(run_id.0);
-            },
-        );
-    // map run ids into events
-    let events: Vec<GpuComputeTaskSuccessEvent> = run_ids_successfuls
-        .lock()
-        .unwrap()
+    task.spec
+        .output_vectors_metadata_spec()
+        .get_all_metadata()
         .iter()
-        .map(|id| GpuComputeTaskSuccessEvent { id: *id })
-        .collect();
-    success_event_writer.send_batch(events);
+        .enumerate()
+        .for_each(|(i, metadata)| {
+            if let Some(m) = metadata {
+                let out_buffer = task.buffers.output.get(i).unwrap();
+                let staging_buffer = task.buffers.output_staging.get(i).unwrap();
+                let total_byte_size = min(
+                    if let Some(Some(c)) = output_counts.get(i) {
+                        let size = c * m.get_bytes();
+                        log::info!("using output count to size buffer, size: {}", size);
+                        size
+                    } else {
+                        usize::MAX
+                    },
+                    task.spec.output_array_lengths().get_by_name(m.name()) * m.get_bytes(),
+                );
+                log::info!("total_byte_size: {}", total_byte_size);
+                if total_byte_size < 1 {
+                    type_erased_output.set_output_from_bytes(i, Vec::new());
+                } else {
+                    let raw_bytes = get_gpu_output_as_bytes_vec(
+                        &render_device,
+                        &render_queue,
+                        &out_buffer,
+                        staging_buffer,
+                        total_byte_size as u64,
+                    );
+                    // log::info!("raw_bytes: {:?}", raw_bytes);
+                    if let Some(raw_bytes) = raw_bytes {
+                        type_erased_output.set_output_from_bytes(i, raw_bytes);
+                    } else {
+                        panic!("Failed to read output from GPU");
+                    }
+                }
+            }
+        });
+    task.output_data = Some(type_erased_output)
 }

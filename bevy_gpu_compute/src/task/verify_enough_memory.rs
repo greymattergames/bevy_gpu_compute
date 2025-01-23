@@ -5,20 +5,18 @@ use bevy::{
 
 use crate::ram_limit::RamLimit;
 
-use super::task_specification::task_specification::ComputeTaskSpecification;
+use super::{
+    task_components::task::BevyGpuComputeTask,
+    task_specification::task_specification::ComputeTaskSpecification,
+};
 
-pub fn verify_have_enough_memory(
-    tasks: Query<&ComputeTaskSpecification>,
-    ram_limit: Res<RamLimit>,
-) {
+pub fn verify_have_enough_memory(tasks: Vec<&BevyGpuComputeTask>, ram_limit: &RamLimit) {
     let total_bytes = tasks.iter().fold(0, |sum, task_spec| {
-        sum + task_spec.task_max_output_bytes().get()
+        sum + task_spec.spec.task_max_output_bytes().get()
     });
     let available_memory = ram_limit.total_mem;
     if total_bytes as f32 > available_memory as f32 * 0.9 {
-        log::error!(
-            "Not enough memory to store all outputs, either reduce the number of entities or allow more potential collision misses by lowering the max_detectable_collisions_scale"
-        );
+        log::error!("Not enough memory to store all gpu compute task outputs");
         log::info!(
             "Available memory: {} GB",
             available_memory as f32 / 1024.0 / 1024.0 / 1024.0
@@ -27,6 +25,6 @@ pub fn verify_have_enough_memory(
             "Max Output size: {} GB",
             total_bytes as f32 / 1024.0 / 1024.0 / 1024.0
         );
-        panic!("Not enough memory to store all outputs");
+        panic!("Not enough memory to store all gpu compute task outputs");
     }
 }

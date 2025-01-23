@@ -35,6 +35,8 @@ pub fn generate_expanded_module(state: &ModuleTransformState) -> TokenStream {
             use bevy_gpu_compute_core::wgsl_helpers::*;
             use bevy_gpu_compute_core::wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion;
             use bevy_gpu_compute_core::*;
+            use std::collections::HashMap;
+
 
             #types
 

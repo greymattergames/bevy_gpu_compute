@@ -10,7 +10,7 @@ target
 
 ```toml
 [package]
-name = "gpu-compute-bevy"
+name = "bevy_gpu_compute"
 version = "0.1.0"
 edition = "2024"
 
@@ -34,7 +34,7 @@ opt-level = 1
 opt-level = 3
 
 [profile.release.package."*"]
-opt-level = 3
+opt-level = 3  
 
 [toolchain]
 channel = "nightly"
@@ -49,29 +49,12 @@ use bevy::{
     app::{App, AppExit, Startup, Update},
     log,
     prelude::{
-        Commands, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Resource,
+        Commands, EventReader, EventWriter, IntoSystemConfigs, Local, Query, Res, ResMut, Resource,
     },
     render::renderer::RenderDevice,
 };
-use gpu_compute_bevy::{
-    BevyGpuComputePlugin, finished_gpu_tasks,
-    resource::BevyGpuCompute,
-    run_ids::BevyGpuComputeRunIds,
-    starting_gpu_tasks,
-    task::{
-        events::GpuComputeTaskSuccessEvent,
-        inputs::input_data::InputData,
-        outputs::definitions::type_erased_output_data::TypeErasedOutputData,
-        task_components::task_run_id::TaskRunId,
-        task_specification::{
-            iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputLengths,
-            task_specification::ComputeTaskSpecification,
-        },
-    },
-};
+use bevy_gpu_compute::prelude::*;
 mod visuals;
-use bevy_gpu_compute_macro::wgsl_shader_module;
-use bevy_gpu_compute_core::wgsl_in_rust_helpers::*;
 use visuals::{BoundingCircleComponent, ColorHandles, spawn_camera, spawn_entities};
 
 fn main() {
@@ -81,57 +64,49 @@ fn main() {
         .add_plugins(BevyGpuComputePlugin::default())
         .init_resource::<ColorHandles>()
         .init_resource::<State>()
-        .add_event::<GpuComputeTaskSuccessEvent>()
         .add_systems(
             Startup,
             (spawn_camera, spawn_entities, create_task, modify_task).chain(),
         )
-        .add_systems(Update, (run_task,).before(starting_gpu_tasks))
-        .add_systems(
-            Update,
-            (handle_task_results, delete_task, exit_and_show_results)
-                .after(finished_gpu_tasks)
-                .chain(),
-        )
+        .add_systems(Update, (modify_task_config_inputs, run_task))
+        .add_systems(Update, (handle_task_results, exit_and_show_results).chain())
         .run();
 }
 
-const SPAWN_RANGE_MIN: i32 = -2;
-const SPAWN_RANGE_MAX: i32 = 2;
-const ENTITY_RADIUS: f32 = 401.;
+const SPAWN_RANGE_MIN: i32 = -1;
+const SPAWN_RANGE_MAX: i32 = 1;
+const ENTITY_RADIUS: f32 = 1.;
+const EXIT_AFTER_FRAMES: u32 = 2;
 
 #[derive(Resource)]
 struct State {
     pub run_id: u128,
     pub num_entities: u32,
-    pub collisions: Vec<collision_detection_module::CollisionResult>,
+    pub collision_count: usize,
 }
 impl Default for State {
     fn default() -> Self {
         State {
             run_id: 0,
             num_entities: 0,
-            collisions: Vec::new(),
+            collision_count: 0,
         }
     }
 }
 
 #[wgsl_shader_module]
 mod collision_detection_module {
+    use bevy_gpu_compute_core::wgsl_helpers::*;
     use bevy_gpu_compute_macro::*;
-    use bevy_gpu_compute_core::wgsl_in_rust_helpers::*;
 
-    /// unused, just for demonstration
-    const MY_CONST: bool = true;
-    /// unused, just for demonstration
+    const MY_CONST: u32 = 10;
     #[wgsl_config]
     struct Config {
-        time: f32,
-        resolution: Vec2F32,
+        pub radius_multiplier: f32,
     }
+    //todo prevent giving any module-level stuff a "pub" visibility
     #[wgsl_input_array]
     struct Position {
-        //todo, check that the 'pub' is either removed or valid in wgsl, is necessary in rust
         pub v: Vec2F32,
     }
     #[wgsl_input_array]
@@ -145,7 +120,11 @@ mod collision_detection_module {
     struct MyDebugInfo {
         entity1: u32,
         entity2: u32,
+        counter_value: u32,
+        is_collision: i32,
         dist_squared: f32,
+        rad_sum_sq: f32,
+        rad_mult: f32,
     }
     fn calculate_distance_squared(p1: Vec2F32, p2: Vec2F32) -> f32 {
         let dx = p1.x - p2[0];
@@ -169,15 +148,23 @@ mod collision_detection_module {
         let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
         let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
         let dist_squared = calculate_distance_squared(current_pos.v, other_pos.v);
-        let radius_sum = current_radius + other_radius;
+        let radius_sum = (current_radius + other_radius)
+            * WgslConfigInput::get::<Config>().radius_multiplier
+            * MY_CONST as f32;
+        let rad_sum_sq = radius_sum * radius_sum;
         // index = y * width + x
         let debug_index = other_entity * WgslVecInput::vec_len::<Radius>() + current_entity;
+        let is_collision = dist_squared < rad_sum_sq;
         WgslOutput::set::<MyDebugInfo>(debug_index, MyDebugInfo {
             entity1: current_entity,
             entity2: other_entity,
+            counter_value: WgslOutput::len::<CollisionResult>(),
+            is_collision: is_collision as i32,
             dist_squared: dist_squared,
+            rad_sum_sq: rad_sum_sq,
+            rad_mult: WgslConfigInput::get::<Config>().radius_multiplier,
         });
-        if dist_squared < radius_sum * radius_sum {
+        if is_collision {
             WgslOutput::push::<CollisionResult>(CollisionResult {
                 entity1: current_entity,
                 entity2: other_entity,
@@ -186,68 +173,67 @@ mod collision_detection_module {
     }
 }
 
-fn create_task(
-    mut commands: Commands,
-    mut bevy_gpu_compute: ResMut<BevyGpuCompute>,
-    gpu: Res<RenderDevice>,
-) {
-    let task_name = "collision_detection".to_string();
+fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
     let initial_iteration_space = IterationSpace::new(
-        // set incorrectly here, just so that we can demonstrate changing it in "alter_task"
+        // set incorrectly here, just so that we can demonstrate changing it later
         100, 100, 1,
     );
     let mut initial_max_output_lengths = MaxOutputLengths::empty();
+    // todo, change these to be type safe, instead of passing in strings
+    // todo, change to be like this: `collision_detection_module::MaxOutputLengths::new().set_collision_result(100).set_my_debug_info(100)`
     initial_max_output_lengths.set("CollisionResult", 100);
     initial_max_output_lengths.set("MyDebugInfo", 100);
 
-    bevy_gpu_compute.create_task_from_rust_shader::<collision_detection_module::Types>(
-        &task_name,
-        &mut commands,
-        &gpu,
+    //todo, documentation about how to pass in the results of the proc macro here
+    gpu_task_creator.create_task_from_rust_shader::<collision_detection_module::Types>(
+        "collision_detection", //todo, ensure name is unique
         collision_detection_module::parsed(),
         initial_iteration_space,
         initial_max_output_lengths,
     );
 }
-fn delete_task(mut commands: Commands, bevy_gpu_compute: ResMut<BevyGpuCompute>) {
-    let task = bevy_gpu_compute.task(&"collision_detection".to_string());
-    task.delete(&mut commands);
+fn delete_task(mut gpu_task_deleter: BevyGpuComputeTaskDeleter) {
+    let task = gpu_task_deleter.delete("collision_detection");
 }
-fn modify_task(
-    mut commands: Commands,
-    bevy_gpu_compute: ResMut<BevyGpuCompute>,
-    mut task_specifications: Query<&mut ComputeTaskSpecification>,
-    state: Res<State>,
-) {
-    let task = bevy_gpu_compute.task(&"collision_detection".to_string());
-    // specify the correct iter space and output maxes
-    if let Ok(mut spec) = task_specifications.get_mut(task.entity) {
-        let mut max_output_lengths = spec.output_array_lengths().clone();
-        let num_entities = state.num_entities;
-        max_output_lengths.set("CollisionResult", (num_entities * num_entities) as usize);
-        max_output_lengths.set("MyDebugInfo", (num_entities * num_entities) as usize);
-        spec.mutate(
-            &mut commands,
-            task.entity,
-            Some(IterationSpace::new(
-                state.num_entities as usize,
-                state.num_entities as usize,
-                1,
-            )),
-            Some(max_output_lengths),
-            None,
-        );
-    }
+fn modify_task(mut gpu_tasks: BevyGpuComputeTasks, state: Res<State>) {
+    //todo see above for better api
+    let mut max_output_lengths = MaxOutputLengths::empty();
+    let num_entities = state.num_entities;
+    max_output_lengths.set("CollisionResult", (num_entities * num_entities) as usize);
+    max_output_lengths.set("MyDebugInfo", (num_entities * num_entities) as usize);
+    let iteration_space =
+        IterationSpace::new(state.num_entities as usize, state.num_entities as usize, 1);
+    gpu_tasks
+        .task("collision_detection")
+        .mutate(Some(iteration_space), Some(max_output_lengths));
 }
+fn modify_task_config_inputs(mut count: Local<u32>, gpu_tasks: BevyGpuComputeTasks) {
+    let radius_multiplier =
+        (EXIT_AFTER_FRAMES as i32 - *count as i32) as f32 / EXIT_AFTER_FRAMES as f32;
+    log::info!("rad_mult: {}", radius_multiplier);
+    // below needs to simplify
+    let mut config = ConfigInputData::<collision_detection_module::Types>::empty();
+    config.set_input0(collision_detection_module::Config { radius_multiplier });
+    gpu_tasks
+        .task("collision_detection")
+        .set_config_inputs(config);
+    //todo, better api below:
+    gpu_tasks
+        .task("collision_detection")
+        .set_config_input("Config", collision_detection_module::Config {
+            radius_multiplier,
+        });
+    *count += 1;
+}
+
 fn run_task(
-    mut commands: Commands,
-    gpu_compute: ResMut<BevyGpuCompute>,
-    task_run_ids: ResMut<BevyGpuComputeRunIds>,
+    gpu_tasks: BevyGpuComputeTasks,
     mut state: ResMut<State>,
     entities: Query<&BoundingCircleComponent>,
 ) {
-    let task = gpu_compute.task(&"collision_detection".to_string());
+    let task = gpu_tasks.task("collision_detection");
     let mut input_data = InputData::<collision_detection_module::Types>::empty();
+    input_data.set_input0(vec![3]);
     input_data.set_input0(
         entities
             .iter()
@@ -257,32 +243,50 @@ fn run_task(
             .collect(),
     );
     input_data.set_input1(entities.iter().map(|e| e.0.radius()).collect());
-    let run_id = task.run(&mut commands, input_data, task_run_ids);
+    //todo better api:
+    task.set_input(
+        "Position",
+        entities
+            .iter()
+            .map(|e| collision_detection_module::Position {
+                v: Vec2F32::new(e.0.center.x, e.0.center.y),
+            }),
+    );
+    task.set_input("Radius", entities.iter().map(|e| e.0.radius()));
+    //todo, ensure the task DOESNT run if we don't call this each frame
+    let run_id = task.run();
     state.run_id = run_id;
 }
 
 fn handle_task_results(
-    gpu_compute: ResMut<BevyGpuCompute>,
+    gpu_task_results: BevyGpuComputeTaskResults,
     mut event_reader: EventReader<GpuComputeTaskSuccessEvent>,
     out_datas: Query<(&TaskRunId, &TypeErasedOutputData)>,
     mut state: ResMut<State>,
 ) {
-    let task = gpu_compute.task(&"collision_detection".to_string());
+    //todo, or to remove from bevy entirely...
+    //todo: task.result::<collision_detection_module::Types>(state.run_id) = Option<Outputdata<Types>>;
+    let results: Option<OutputData<collision_detection_module::Types>> =
+        gpu_task_results.get(state.run_id);
     // reading events ensures that the results exist
     for ev in event_reader.read() {
         if ev.id == state.run_id {
-            // here we get the actula result
-            let results =
-                task.result::<collision_detection_module::Types>(state.run_id, &out_datas);
+            log::info!("handling results for run id: {}", state.run_id);
+            // here we get the actual result
+            //todo, store the result data in the event itself to remove this secondary call
+            let results = task.result::<collision_detection_module::Types>(
+                state.run_id,
+                &out_datas, //todo, remove the need to pass this in
+            );
             // log::info!("results: {:?}", results);
             if let Some(results) = results {
-                // let debug_results: Vec<collision_detection_module::MyDebugInfo> = results
-                //     .get_output1()
-                //     .unwrap()
-                //     .into_iter()
-                //     .cloned()
-                //     .collect();
-                // log::info!("debug results: {:?}", debug_results);
+                let debug_results: Vec<collision_detection_module::MyDebugInfo> = results
+                    .get_output1()
+                    .unwrap()
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                log::info!("debug results: {:?}", debug_results);
                 //fully type-safe results
                 let collision_results: Vec<collision_detection_module::CollisionResult> = results
                     .get_output0()
@@ -291,15 +295,36 @@ fn handle_task_results(
                     .cloned()
                     .collect();
                 // your logic here
-                state.collisions = collision_results;
+                let count = collision_results.len();
+                log::info!("collisions this frame: {}", count);
+                log::info!("collision_results: {:?}", collision_results);
+                state.collision_count += count;
             }
         }
     }
 }
 
-fn exit_and_show_results(state: Res<State>, mut exit: EventWriter<AppExit>) {
-    log::info!("collisions count: {}", state.collisions.len());
-    exit.send(AppExit::Success);
+/**
+ * WHAT BEVY ACCESS DO WE ACTUALLY REQUIRE?
+ * render::render_resource::Buffer, but its just a type we can use anywhere - TYPE
+ * RENDER DEVICE (render::renderer::RenderDevice,) - RESOURCE
+ * render_resource::BindGroup, another static type - TYPE
+ * RenderQueue, (render::render_graph::RenderQueue) - RESOURCE
+ * render::render_resource::BindGroupLayout - TYPE
+ */
+
+/// The [`SystemParam`] struct can contain any types that can also be included in a
+/// system function signature.
+///
+/// In this example, it includes a query and a mutable resource.
+
+// when the local variable "count" goes above a certain number (representing frame count), exit the app
+fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: EventWriter<AppExit>) {
+    if *count > EXIT_AFTER_FRAMES {
+        log::info!("collisions count: {}", state.collision_count);
+        exit.send(AppExit::Success);
+    }
+    *count += 1;
 }
 
 ```
@@ -1166,6 +1191,7 @@ Output types map and input types map for allow for automatic buffer handling
 
 What if they want to run multiple batches in a single frame?
 They can spawn multiple identical compute tasks, and send the inputs to each.
+
 ```
 
 # src\helpers\ecs\lru_cache.rs
@@ -1238,16 +1264,14 @@ pub mod ecs;
 # src\lib.rs
 
 ```rs
-pub mod helpers;
-pub mod plugin;
-pub mod ram_limit;
-pub mod resource;
-pub mod run_ids;
-pub mod spawn_fallback_camera;
-pub mod system_sets;
-pub mod task;
-
-pub use plugin::*;
+mod helpers;
+mod plugin;
+pub mod prelude;
+mod ram_limit;
+mod run_ids;
+mod spawn_fallback_camera;
+mod system_params;
+mod task;
 
 ```
 
@@ -1261,17 +1285,8 @@ use bevy::{
 
 use crate::{
     ram_limit::RamLimit,
-    resource::BevyGpuCompute,
     run_ids::BevyGpuComputeRunIds,
     spawn_fallback_camera::{spawn_fallback_camera, spawn_fallback_camera_runif},
-    system_sets::compose_task_runner_systems,
-    task::{
-        events::{
-            GpuAcceleratedTaskCreatedEvent, GpuComputeTaskSuccessEvent, InputDataChangeEvent,
-            IterSpaceOrOutputSizesChangedEvent,
-        },
-        setup_tasks::setup_new_tasks,
-    },
 };
 
 /// state for activating or deactivating the plugin
@@ -1292,24 +1307,13 @@ pub struct BevyGpuComputePlugin {
 
 impl Plugin for BevyGpuComputePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<BevyGpuCompute>()
-            .init_resource::<BevyGpuComputeRunIds>()
-            .init_resource::<RamLimit>()
-            .init_state::<BevyGpuComputeState>()
-            .add_systems(Update, (starting_gpu_tasks, finished_gpu_tasks));
+        app.init_resource::<RamLimit>()
+            .init_state::<BevyGpuComputeState>();
         if self.with_default_schedule {
-            let run_tasks_system_set = compose_task_runner_systems();
-
             app.add_systems(Startup, spawn_fallback_camera).add_systems(
                 Update,
-                (
-                    spawn_fallback_camera.run_if(spawn_fallback_camera_runif),
-                    setup_new_tasks,
-                    run_tasks_system_set,
-                )
+                (spawn_fallback_camera.run_if(spawn_fallback_camera_runif),)
                     .chain()
-                    .before(finished_gpu_tasks)
-                    .after(starting_gpu_tasks)
                     .run_if(in_state(BevyGpuComputeState::Running)),
             );
         } else {
@@ -1317,15 +1321,9 @@ impl Plugin for BevyGpuComputePlugin {
                 Update,
                 spawn_fallback_camera
                     .run_if(spawn_fallback_camera_runif)
-                    .before(finished_gpu_tasks)
-                    .after(starting_gpu_tasks)
                     .run_if(in_state(BevyGpuComputeState::Running)),
             );
         }
-        app.add_event::<GpuComputeTaskSuccessEvent>()
-            .add_event::<InputDataChangeEvent>()
-            .add_event::<IterSpaceOrOutputSizesChangedEvent>()
-            .add_event::<GpuAcceleratedTaskCreatedEvent>();
     }
 }
 
@@ -1344,10 +1342,34 @@ impl BevyGpuComputePlugin {
     }
 }
 
-/// used to assist the user with system ordering
-pub fn starting_gpu_tasks() {}
-/// used to assist the user with system ordering
-pub fn finished_gpu_tasks() {}
+```
+
+# src\prelude.rs
+
+```rs
+// Proc macros
+pub use bevy_gpu_compute_macro::wgsl_config;
+pub use bevy_gpu_compute_macro::wgsl_input_array;
+pub use bevy_gpu_compute_macro::wgsl_output_array;
+pub use bevy_gpu_compute_macro::wgsl_output_vec;
+pub use bevy_gpu_compute_macro::wgsl_shader_module;
+
+//helpers when writing the shader module:
+pub use bevy_gpu_compute_core::wgsl_helpers::*;
+
+pub use crate::plugin::BevyGpuComputePlugin;
+pub use crate::run_ids::BevyGpuComputeRunIds;
+pub use crate::task::inputs::array_type::input_data::InputData;
+pub use crate::task::inputs::config_type::config_data::ConfigInputData;
+
+pub use crate::system_params::task_creator::BevyGpuComputeTaskCreator;
+pub use crate::system_params::task_deleter::BevyGpuComputeTaskDeleter;
+pub use crate::system_params::task_runner::BevyGpuComputeTasks;
+pub use crate::task::outputs::definitions::type_erased_output_data::TypeErasedOutputData;
+pub use crate::task::task_components::task_run_id::TaskRunId;
+pub use crate::task::task_specification::iteration_space::IterationSpace;
+pub use crate::task::task_specification::max_output_vector_lengths::MaxOutputLengths;
+pub use crate::task::task_specification::task_specification::ComputeTaskSpecification;
 
 ```
 
@@ -1375,100 +1397,12 @@ impl Default for RamLimit {
 
 ```
 
-# src\resource.rs
-
-```rs
-use std::collections::HashMap;
-
-use bevy::{
-    prelude::{Commands, Resource},
-    render::renderer::RenderDevice,
-};
-use bevy_gpu_compute_core::{misc_types::TypesSpec, wgsl_components::WgslShaderModuleUserPortion};
-
-use crate::task::task_specification::{
-    max_output_vector_lengths::MaxOutputLengths, task_specification::ComputeTaskSpecification,
-};
-
-use super::task::{
-    events::GpuAcceleratedTaskCreatedEvent,
-    task_commands::TaskCommands,
-    task_components::{task::BevyGpuComputeTask, task_name::TaskName},
-    task_specification::iteration_space::IterationSpace,
-};
-
-#[derive(Resource)]
-pub struct BevyGpuCompute {
-    tasks: HashMap<String, TaskCommands>,
-}
-impl Default for BevyGpuCompute {
-    fn default() -> Self {
-        BevyGpuCompute {
-            tasks: HashMap::new(),
-        }
-    }
-}
-
-impl BevyGpuCompute {
-    pub fn new() -> Self {
-        BevyGpuCompute {
-            tasks: HashMap::new(),
-        }
-    }
-
-    /// spawns all components needed for the task to run, and returns a TaskCommands object that can be used for altering or running the task
-    pub fn create_task_from_rust_shader<ShaderModuleTypes: TypesSpec>(
-        &mut self,
-        name: &str,
-        mut commands: &mut Commands,
-        gpu: &RenderDevice,
-        wgsl_shader_module: WgslShaderModuleUserPortion,
-        iteration_space: IterationSpace,
-        max_output_vector_lengths: MaxOutputLengths,
-    ) -> TaskCommands {
-        let task = BevyGpuComputeTask::new();
-        let entity = {
-            let entity = commands.spawn((task, TaskName::new(name))).id();
-            entity
-        };
-        let task_spec = ComputeTaskSpecification::from_shader::<ShaderModuleTypes>(
-            name,
-            &mut commands,
-            entity,
-            &gpu,
-            wgsl_shader_module,
-            iteration_space,
-            max_output_vector_lengths,
-        );
-        commands.entity(entity).insert(task_spec);
-        let task_commands = TaskCommands::new(entity);
-        self.tasks.insert(name.to_string(), task_commands.clone());
-        commands.send_event(GpuAcceleratedTaskCreatedEvent {
-            entity,
-            task_name: name.to_string(),
-        });
-        task_commands
-    }
-    pub fn task_exists(&self, name: &String) -> bool {
-        self.tasks.contains_key(name)
-    }
-    pub fn task(&self, name: &String) -> &TaskCommands {
-        if let Some(tc) = self.tasks.get(name) {
-            &tc
-        } else {
-            panic!("task not found")
-        }
-    }
-}
-
-```
-
 # src\run_ids.rs
 
 ```rs
-use bevy::prelude::Resource;
+use bevy::prelude::{Component, Resource};
 
-#[derive(Resource)]
+#[derive(Component)]
 
 pub struct BevyGpuComputeRunIds {
     last_id: u128,
@@ -1479,8 +1413,10 @@ impl Default for BevyGpuComputeRunIds {
     }
 }
 impl BevyGpuComputeRunIds {
-    pub fn get_next(&mut self) -> u128 {
+    pub fn increment(&mut self) {
         self.last_id += 1;
+    }
+    pub fn get(&self) -> u128 {
         self.last_id
     }
 }
@@ -1557,69 +1493,169 @@ pub fn spawn_fallback_camera_runif(time: Res<Time>) -> bool {
 
 ```
 
-# src\system_sets.rs
+# src\system_params\mod.rs
 
 ```rs
+pub mod task_creator;
+pub mod task_deleter;
+pub mod task_runner;
+
+```
+
+# src\system_params\task_creator.rs
+
+```rs
+use std::collections::HashMap;
+
 use bevy::{
-    ecs::schedule::NodeConfigs,
-    prelude::{IntoSystemConfigs, SystemSet},
+    ecs::system::SystemParam,
+    prelude::{Commands, Entity, Query, Res, Resource},
+    render::renderer::{RenderDevice, RenderQueue},
+};
+use bevy_gpu_compute_core::{
+    TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
 };
 
-use crate::task::{
-    compute_pipeline::update_on_pipeline_const_change::update_pipelines_on_pipeline_const_change,
-    inputs::handle_input_data_change::handle_input_data_change,
-};
-
-use super::task::{
-    buffers::{
-        create_input_buffers::create_input_buffers, create_output_buffers::create_output_buffers,
+use crate::{
+    prelude::IterationSpace,
+    task::{
+        task_components::{task::BevyGpuComputeTask, task_name::TaskName},
+        task_specification::{
+            max_output_vector_lengths::MaxOutputLengths,
+            task_specification::ComputeTaskSpecification,
+        },
     },
-    dispatch::{create_bind_group::create_bind_groups, dispatch_to_gpu::dispatch_to_gpu},
-    outputs::{
-        read_gpu_output_counts::read_gpu_output_counts,
-        read_gpu_task_outputs::read_gpu_task_outputs,
-    },
-    verify_enough_memory::verify_have_enough_memory,
 };
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct BevyGpuComputeRunTaskSet;
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct BevyGpuComputeRespondToTaskMutSet;
+#[derive(SystemParam)]
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct BevyGpuComputeRespondToInputsMutSet;
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BevyGpuComputeTaskCreator<'w, 's> {
+    commands: Commands<'w, 's>,
+    render_device: Res<'w, RenderDevice>,
+    render_queue: Res<'w, RenderQueue>,
+}
 
-struct BevyGpuComputeDispatchSet;
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct BevyGpuComputeReadSet;
+impl<'w, 's> BevyGpuComputeTaskCreator<'w, 's> {
+    /// spawns all components needed for the task to run
+    pub fn create_task_from_rust_shader<ShaderModuleTypes: TypesSpec>(
+        &mut self,
+        name: &str,
+        wgsl_shader_module: WgslShaderModuleUserPortion,
+        iteration_space: IterationSpace,
+        max_output_vector_lengths: MaxOutputLengths,
+    ) -> Entity {
+        let task_spec = ComputeTaskSpecification::from_shader::<ShaderModuleTypes>(
+            name,
+            &self.render_device,
+            wgsl_shader_module,
+            iteration_space,
+            max_output_vector_lengths,
+        );
+        let task = BevyGpuComputeTask::new(&self.render_device, name, task_spec);
+        self.commands.spawn(task).id()
+    }
+}
 
-pub fn compose_task_runner_systems()
--> NodeConfigs<Box<dyn bevy::prelude::System<In = (), Out = ()>>> {
-    let respond_to_new_inputs = (handle_input_data_change, create_input_buffers)
-        .in_set(BevyGpuComputeRespondToInputsMutSet);
-    let respond_to_task_alteration = (
-        update_pipelines_on_pipeline_const_change,
-        create_output_buffers,
-        verify_have_enough_memory,
-    )
-        .in_set(BevyGpuComputeRespondToTaskMutSet);
-    let dispatch = (create_bind_groups, dispatch_to_gpu)
-        .chain()
-        .in_set(BevyGpuComputeDispatchSet);
-    let read = (read_gpu_output_counts, read_gpu_task_outputs)
-        .chain()
-        .in_set(BevyGpuComputeReadSet);
-    let run_task_set = (
-        respond_to_new_inputs,
-        respond_to_task_alteration,
-        dispatch,
-        read,
-    )
-        .chain()
-        .in_set(BevyGpuComputeRunTaskSet);
-    return run_task_set;
+```
+
+# src\system_params\task_deleter.rs
+
+```rs
+use std::collections::HashMap;
+
+use bevy::{
+    ecs::system::SystemParam,
+    prelude::{Commands, DespawnRecursiveExt, Entity, Query, Res, Resource},
+    render::renderer::{RenderDevice, RenderQueue},
+};
+use bevy_gpu_compute_core::{
+    TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
+};
+
+use crate::{
+    prelude::IterationSpace,
+    task::{
+        task_components::{task::BevyGpuComputeTask, task_name::TaskName},
+        task_specification::{
+            max_output_vector_lengths::MaxOutputLengths,
+            task_specification::ComputeTaskSpecification,
+        },
+    },
+};
+
+#[derive(SystemParam)]
+
+pub struct BevyGpuComputeTaskDeleter<'w, 's> {
+    commands: Commands<'w, 's>,
+    tasks: Query<'w, 's, (Entity, &'static mut BevyGpuComputeTask)>,
+}
+
+impl<'w, 's> BevyGpuComputeTaskDeleter<'w, 's> {
+    /// spawns all components needed for the task to run
+    pub fn delete(&mut self, name: &str) {
+        let (entity, _) = self
+            .tasks
+            .iter_mut()
+            .find(|(_, task)| task.name() == name)
+            .expect("Task not found");
+        self.commands.entity(entity).despawn_recursive();
+    }
+}
+
+```
+
+# src\system_params\task_runner.rs
+
+```rs
+use std::collections::HashMap;
+
+use bevy::{
+    ecs::system::SystemParam,
+    prelude::{Commands, Entity, Query, Res, Resource},
+    render::renderer::{RenderDevice, RenderQueue},
+};
+use bevy_gpu_compute_core::{
+    TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
+};
+
+use crate::{
+    prelude::ComputeTaskSpecification,
+    ram_limit::RamLimit,
+    task::{
+        task_commands::GpuTaskCommands, task_components::task::BevyGpuComputeTask,
+        verify_enough_memory::verify_have_enough_memory,
+    },
+};
+
+#[derive(SystemParam)]
+
+pub struct BevyGpuComputeTasks<'w, 's> {
+    tasks: Query<'w, 's, (Entity, &'static mut BevyGpuComputeTask)>,
+    render_device: Res<'w, RenderDevice>,
+    render_queue: Res<'w, RenderQueue>,
+    ram_limit: Res<'w, RamLimit>,
+}
+
+impl<'w, 's> BevyGpuComputeTasks<'w, 's>
+where
+    'w: 's,
+{
+    pub fn task(&'w mut self, name: &str) -> GpuTaskCommands<'w, 's> {
+        verify_have_enough_memory(
+            self.tasks.iter().map(|(_, spec)| spec).collect(),
+            &self.ram_limit,
+        );
+        let (entity, task) = self
+            .tasks
+            .iter_mut()
+            .find(|(_, task)| task.name() == name)
+            .expect("Task not found");
+        GpuTaskCommands::new(entity, &self.render_device, &self.render_queue, task)
+    }
+
+    pub fn task_exists(&self, name: &str) -> bool {
+        self.tasks.iter().any(|(_, task)| task.name() == name)
+    }
 }
 
 ```
@@ -1631,6 +1667,8 @@ use bevy::{prelude::Component, render::render_resource::Buffer};
 
 #[derive(Default, Component)]
 pub struct InputBuffers(pub Vec<Buffer>);
+#[derive(Default, Component)]
+pub struct ConfigInputBuffers(pub Vec<Buffer>);
 #[derive(Default, Component)]
 pub struct OutputBuffers(pub Vec<Buffer>);
 
@@ -1645,7 +1683,7 @@ pub struct OutputCountStagingBuffers(pub Vec<Buffer>);
 
 ```
 
-# src\task\buffers\create_input_buffers.rs
+# src\task\buffers\create_config_input_buffers.rs
 
 ```rs
 use bevy::{
@@ -1654,71 +1692,108 @@ use bevy::{
     prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
+use bevy_gpu_compute_core::TypesSpec;
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
-    events::InputDataChangeEvent,
-    inputs::{
-        input_vector_metadata_spec::InputVectorsMetadataSpec,
-        type_erased_input_data::TypeErasedInputData,
+    inputs::config_type::{
+        config_input_metadata_spec::ConfigInputsMetadataSpec,
+        type_erased_config_input_data::TypeErasedConfigInputData,
     },
+    task_commands::GpuTaskCommands,
     task_components::task_name::TaskName,
     task_specification::task_specification::ComputeTaskSpecification,
 };
 
-use super::components::InputBuffers;
+use super::components::{ConfigInputBuffers, InputBuffers};
 
-pub fn create_input_buffers(
-    mut tasks: Query<(
-        &TaskName,
-        &TypeErasedInputData,
-        &ComputeTaskSpecification,
-        &mut InputBuffers,
-    )>,
-    mut input_data_change_event_listener: EventReader<InputDataChangeEvent>,
-    render_device: Res<RenderDevice>,
-) {
-    for (ev, _) in input_data_change_event_listener
-        .par_read()
-        .batching_strategy(BatchingStrategy::default())
-    {
-        let task = tasks.get_mut(ev.entity().clone());
-        if let Ok((task_name, input_data, task_spec, mut buffers)) = task {
-            buffers.0.clear();
-            create_input_buffers_single_task(
-                &task_name.get(),
-                &render_device,
-                &input_data,
-                &task_spec.input_vectors_metadata_spec(),
-                &mut buffers,
-            );
+impl<'w, 's> GpuTaskCommands<'w, 's> {
+    pub fn update_config_input_buffers(&mut self) {
+        self.task.buffers.config_input.clear();
+        let mut new_buffers = Vec::new();
+        for (i, spec) in self
+            .task
+            .spec
+            .config_input_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .enumerate()
+        {
+            if let Some(s) = spec {
+                let label = format!("{}-input-{}", self.task.name(), s.name().name());
+                let buffer = self
+                    .render_device
+                    .create_buffer_with_data(&BufferInitDescriptor {
+                        label: Some(&label),
+                        contents: self
+                            .task
+                            .config_input_data
+                            .as_ref()
+                            .unwrap()
+                            .input_bytes(i)
+                            .unwrap(),
+                        usage: BufferUsages::UNIFORM,
+                    });
+                info!(
+                    "Created input buffer for task {} with label {}",
+                    self.task.name(),
+                    label
+                );
+                new_buffers.push(buffer);
+                continue;
+            }
         }
+        self.task.buffers.config_input = new_buffers;
     }
 }
 
-fn create_input_buffers_single_task(
-    task_name: &str,
-    render_device: &RenderDevice,
-    input_data: &TypeErasedInputData,
-    input_spec: &InputVectorsMetadataSpec,
-    buffers: &mut InputBuffers,
-) {
-    buffers.0.clear();
-    for (i, spec) in input_spec.get_all_metadata().iter().enumerate() {
-        if let Some(s) = spec {
-            let label = format!("{}-input-{}", task_name, s.name().name());
-            let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-                label: Some(&label),
-                contents: input_data.input_bytes(i).unwrap(),
-                usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-            });
-            info!(
-                "Created input buffer for task {} with label {}",
-                task_name, label
-            );
-            buffers.0.push(buffer);
-            continue;
+```
+
+# src\task\buffers\create_input_buffers.rs
+
+```rs
+use bevy::log::info;
+use bevy_gpu_compute_core::TypesSpec;
+use wgpu::{BufferUsages, util::BufferInitDescriptor};
+
+use crate::task::task_commands::GpuTaskCommands;
+
+impl<'w, 's> GpuTaskCommands<'w,'s>{
+    pub fn update_input_buffers(&mut self) {
+        self.task.buffers.input.clear();
+        let mut new_buffers = Vec::new();
+        for (i, spec) in self
+            .task
+            .spec
+            .input_vectors_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .enumerate()
+        {
+            if let Some(s) = spec {
+                let label = format!("{}-input-{}", self.task.name(), s.name().name());
+                let buffer = self
+                    .render_device
+                    .create_buffer_with_data(&BufferInitDescriptor {
+                        label: Some(&label),
+                        contents: self
+                            .task
+                            .input_data
+                            .as_ref()
+                            .unwrap()
+                            .input_bytes(i)
+                            .unwrap(),
+                        usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+                    });
+                info!(
+                    "Created input buffer for task {} with label {}",
+                    self.task.name(),
+                    label
+                );
+                continue;
+            }
         }
+        self.task.buffers.input = new_buffers;
     }
 }
 
@@ -1727,157 +1802,85 @@ fn create_input_buffers_single_task(
 # src\task\buffers\create_output_buffers.rs
 
 ```rs
-use bevy::{
-    ecs::batching::BatchingStrategy,
-    prelude::{EventReader, Query, Ref, Res},
-    render::renderer::RenderDevice,
-};
+use bevy_gpu_compute_core::TypesSpec;
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
-    events::{GpuComputeTaskChangeEvent, IterSpaceOrOutputSizesChangedEvent},
-    outputs::definitions::{
-        output_vector_metadata_spec::{OutputVectorMetadata, OutputVectorsMetadataSpec},
-        wgsl_counter::WgslCounter,
-    },
-    task_components::task_name::TaskName,
-    task_specification::{
-        max_output_vector_lengths::MaxOutputLengths, task_specification::ComputeTaskSpecification,
-    },
+    outputs::definitions::wgsl_counter::WgslCounter, task_commands::GpuTaskCommands,
 };
 
-use super::components::{
-    OutputBuffers, OutputCountBuffers, OutputCountStagingBuffers, OutputStagingBuffers,
-};
-
-pub fn create_output_buffers(
-    mut tasks: Query<(
-        &TaskName,
-        Ref<ComputeTaskSpecification>,
-        &mut OutputBuffers,
-        &mut OutputStagingBuffers,
-        &mut OutputCountBuffers,
-        &mut OutputCountStagingBuffers,
-    )>,
-    mut output_limits_change_event_listener: EventReader<IterSpaceOrOutputSizesChangedEvent>,
-    render_device: Res<RenderDevice>,
-) {
-    for (ev, _) in output_limits_change_event_listener
-        .par_read()
-        .batching_strategy(BatchingStrategy::default())
-    {
-        let task = tasks.get_mut(ev.entity().clone());
-        if let Ok((
-            task_name,
-            task_spec,
-            mut buffers,
-            mut staging_buffers,
-            mut count_buffers,
-            mut count_staging_buffers,
-        )) = task
-        {
-            buffers.0.clear();
-            staging_buffers.0.clear();
-            count_buffers.0.clear();
-            count_staging_buffers.0.clear();
-            create_output_buffers_single_task(
-                task_name,
-                &render_device,
-                task_spec.output_vectors_metadata_spec(),
-                task_spec.output_array_lengths(),
-                &mut buffers,
-                &mut staging_buffers,
-                &mut count_buffers,
-                &mut count_staging_buffers,
-            );
+impl<'w, 's> GpuTaskCommands<'w,'s>{
+    pub fn update_output_buffers(&mut self) {
+        let mut output_buffers = Vec::new();
+        let mut output_staging_buffers = Vec::new();
+        let mut output_count_buffers = Vec::new();
+        let mut output_count_staging_buffers = Vec::new();
+        // Collect all metadata first to release the immutable borrow
+        let metadata: Vec<_> = self
+            .task
+            .spec
+            .output_vectors_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .cloned()
+            .collect();
+        for (i, output_spec) in metadata.iter().enumerate() {
+            if let Some(spec) = output_spec {
+                let length = self
+                    .task
+                    .spec
+                    .output_array_lengths()
+                    .get_by_name(spec.name());
+                let output_size = spec.get_bytes() as u64 * length as u64;
+                let output_buffer = self.render_device.create_buffer(&BufferDescriptor {
+                    label: Some(&format!("{:}-output-{:}", self.task.name(), i)),
+                    size: output_size,
+                    usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+                    mapped_at_creation: false,
+                });
+                output_buffers.push(output_buffer);
+                let output_staging_buffer =
+                    self.render_device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some(&format!("{:}-output-staging-{:}", self.task.name(), i)),
+                        size: output_size,
+                        usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    });
+                output_staging_buffers.push(output_staging_buffer);
+                if spec.get_include_count() {
+                    let counter_buffer =
+                        self.render_device
+                            .create_buffer_with_data(&BufferInitDescriptor {
+                                label: Some(&format!(
+                                    "{:}-output-counter-{:}",
+                                    self.task.name(),
+                                    i
+                                )),
+                                contents: bytemuck::cast_slice(&[WgslCounter { count: 0 }]),
+                                usage: BufferUsages::STORAGE
+                                    | BufferUsages::COPY_DST
+                                    | BufferUsages::COPY_SRC,
+                            });
+                    output_count_buffers.push(counter_buffer);
+                    let counter_staging_buffer =
+                        self.render_device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some(&format!(
+                                "{:}-output-counter-staging-{:}",
+                                self.task.name(),
+                                i
+                            )),
+                            size: std::mem::size_of::<WgslCounter>() as u64,
+                            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+                            mapped_at_creation: false,
+                        });
+                    output_count_staging_buffers.push(counter_staging_buffer);
+                }
+            }
         }
-    }
-}
-
-fn create_output_buffers_single_task(
-    task_name: &TaskName,
-    render_device: &RenderDevice,
-    output_spec: &OutputVectorsMetadataSpec,
-    max_output_vector_lengths: &MaxOutputLengths,
-    mut buffers: &mut OutputBuffers,
-    mut staging_buffers: &mut OutputStagingBuffers,
-    mut count_buffers: &mut OutputCountBuffers,
-    mut count_staging_buffers: &mut OutputCountStagingBuffers,
-) {
-    for (i, output_spec) in output_spec.get_all_metadata().iter().enumerate() {
-        if let Some(spec) = output_spec {
-            create_output_buffer_single_output(
-                render_device,
-                task_name,
-                i,
-                spec,
-                max_output_vector_lengths.get_by_name(spec.name()),
-                &mut buffers,
-                &mut staging_buffers,
-                &mut count_buffers,
-                &mut count_staging_buffers,
-            );
-        }
-    }
-}
-
-fn create_output_buffer_single_output(
-    render_device: &RenderDevice,
-    task_name: &TaskName,
-    output_index: usize,
-    output_spec: &OutputVectorMetadata,
-    max_output_vector_lengths: usize,
-    buffers: &mut OutputBuffers,
-    staging_buffers: &mut OutputStagingBuffers,
-    count_buffers: &mut OutputCountBuffers,
-    count_staging_buffers: &mut OutputCountStagingBuffers,
-) {
-    let output_size = output_spec.get_bytes() as u64 * max_output_vector_lengths as u64;
-    let output_buffer = render_device.create_buffer(&BufferDescriptor {
-        label: Some(&format!("{:}-output-{:}", task_name.get(), output_index)),
-        size: output_size,
-        usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-        mapped_at_creation: false,
-    });
-    buffers.0.insert(output_index.clone(), output_buffer);
-    let output_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some(&format!(
-            "{:}-output-staging-{:}",
-            task_name.get(),
-            output_index
-        )),
-        size: output_size,
-        usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-    staging_buffers
-        .0
-        .insert(output_index.clone(), output_staging_buffer);
-    if output_spec.get_include_count() {
-        let counter = WgslCounter { count: 0 };
-        let counter_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some(&format!(
-                "{:}-output-counter-{:}",
-                task_name.get(),
-                output_index
-            )),
-            contents: bytemuck::cast_slice(&[counter]),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
-        });
-        count_buffers.0.insert(output_index.clone(), counter_buffer);
-        let counter_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(&format!(
-                "{:}-output-counter-staging-{:}",
-                task_name.get(),
-                output_index
-            )),
-            size: std::mem::size_of::<WgslCounter>() as u64,
-            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        count_staging_buffers
-            .0
-            .insert(output_index.clone(), counter_staging_buffer);
+        self.task.buffers.output = output_buffers;
+        self.task.buffers.output_staging = output_staging_buffers;
+        self.task.buffers.output_count = output_count_buffers;
+        self.task.buffers.output_count_staging = output_count_staging_buffers;
     }
 }
 
@@ -1887,6 +1890,7 @@ fn create_output_buffer_single_output(
 
 ```rs
 pub mod components;
+pub mod create_config_input_buffers;
 pub mod create_input_buffers;
 pub mod create_output_buffers;
 
@@ -1916,140 +1920,60 @@ impl Default for PipelineLruCache {
     }
 }
 
-impl PipelineLruCache {
-    pub fn new(capacity: usize) -> Self {
-        Self {
-            cache: LruCache::new(capacity),
-        }
-    }
-}
-
 ```
 
 # src\task\compute_pipeline\mod.rs
 
 ```rs
 pub mod cache;
-pub mod pipeline_layout;
-pub mod shader_module;
 pub mod update_on_pipeline_const_change;
-
-```
-
-# src\task\compute_pipeline\pipeline_layout.rs
-
-```rs
-use bevy::prelude::Component;
-
-#[derive(Component)]
-pub struct PipelineLayoutComponent(pub wgpu::PipelineLayout);
-
-```
-
-# src\task\compute_pipeline\shader_module.rs
-
-```rs
-use bevy::render::renderer::RenderDevice;
-use wgpu::ShaderModule;
-
-/**
- * The user must ensure the wgsl code contains the correct data input and output types and sizes.
- */
-
-pub fn shader_module_from_wgsl_string(
-    task_label: &str,
-    wgsl_str: &str,
-    render_device: &RenderDevice,
-) -> ShaderModule {
-    render_device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some(task_label),
-        source: wgpu::ShaderSource::Wgsl(wgsl_str.into()),
-    })
-}
 
 ```
 
 # src\task\compute_pipeline\update_on_pipeline_const_change.rs
 
 ```rs
-
 use bevy::{
     ecs::batching::BatchingStrategy,
     log,
-    prelude::{ EventReader, Query, Res},
+    prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
 
+use bevy_gpu_compute_core::TypesSpec;
 use wgpu::{ComputePipelineDescriptor, PipelineCompilationOptions};
 
-use crate::task::{
-    events::{GpuComputeTaskChangeEvent, IterSpaceOrOutputSizesChangedEvent},
-    task_components::task_name::TaskName,
-    task_specification::task_specification::ComputeTaskSpecification,
-};
+use crate::task::task_commands::GpuTaskCommands;
 
-use super::{
-    cache::{PipelineKey, PipelineLruCache},
-    pipeline_layout::PipelineLayoutComponent,
-};
+use super::cache::{PipelineKey, PipelineLruCache};
 
-pub fn update_pipelines_on_pipeline_const_change(
-    mut tasks: Query<(
-        &TaskName,
-        &ComputeTaskSpecification,
-        &PipelineLayoutComponent,
-        &mut PipelineLruCache,
-    )>,
-    mut wgsl_code_changed_event_reader: EventReader<IterSpaceOrOutputSizesChangedEvent>,
-    render_device: Res<RenderDevice>,
-) {
-    log::info!("update_pipelines_on_pipeline_const_change");
-    for (ev, _) in wgsl_code_changed_event_reader
-        .par_read()
-        .batching_strategy(BatchingStrategy::default())
-    {
-        let task = tasks.get_mut(ev.entity().clone());
-        if let Ok((task_name, task_spec, pipeline_layout, mut pipeline_cache)) = task {
-            update_single_pipeline(
-                task_spec,
-                task_name,
-                &render_device,
-                &pipeline_layout,
-                &mut pipeline_cache,
-            );
+impl<'w, 's> GpuTaskCommands<'w,'s>{
+    pub fn update_compute_pipeline(&mut self) {
+        log::info!("Updating pipeline for task {}", self.task.name());
+        let key = PipelineKey {
+            pipeline_consts_version: self.task.spec.iter_space_and_out_lengths_version(),
+        };
+        if self.task.pipeline_cache.cache.contains_key(&key) {
+            return;
+        } else {
+            log::info!("Creating new pipeline for task {}", self.task.name());
+            log::info!(" layout {:?}", self.task.pipeline_layout);
+            let compute_pipeline =
+                self.render_device
+                    .create_compute_pipeline(&ComputePipelineDescriptor {
+                        label: Some(&self.task.name()),
+                        layout: self.task.pipeline_layout.as_ref(),
+                        module: self.task.spec.wgsl_code().shader_module(),
+                        entry_point: Some(self.task.spec.wgsl_code().entry_point_function_name()),
+                        // this is where we specify new values for pipeline constants...
+                        compilation_options: PipelineCompilationOptions {
+                            constants: &&self.task.spec.get_pipeline_consts(),
+                            zero_initialize_workgroup_memory: Default::default(),
+                        },
+                        cache: None,
+                    });
+            self.task.pipeline_cache.cache.insert(key, compute_pipeline);
         }
-    }
-}
-
-fn update_single_pipeline(
-    spec: &ComputeTaskSpecification,
-    task_name: &TaskName,
-    render_device: &RenderDevice,
-    pipeline_layout: &PipelineLayoutComponent,
-    pipeline_cache: &mut PipelineLruCache,
-) {
-    log::info!("Updating pipeline for task {}", task_name.get());
-    let key = PipelineKey {
-        pipeline_consts_version: spec.iter_space_and_out_lengths_version(),
-    };
-    if pipeline_cache.cache.contains_key(&key) {
-        return;
-    } else {
-        log::info!("Creating new pipeline for task {}", task_name.get());
-        log::info!(" layout {:?}", pipeline_layout.0);
-        let compute_pipeline = render_device.create_compute_pipeline(&ComputePipelineDescriptor {
-            label: Some(&task_name.get()),
-            layout: Some(&pipeline_layout.0),
-            module: spec.wgsl_code().shader_module(),
-            entry_point: Some(spec.wgsl_code().entry_point_function_name()),
-            // this is where we specify new values for pipeline constants...
-            compilation_options: PipelineCompilationOptions {
-                constants: &&spec.get_pipeline_consts(),
-                zero_initialize_workgroup_memory: Default::default(),
-            },
-            cache: None,
-        });
-        pipeline_cache.cache.insert(key, compute_pipeline);
     }
 }
 
@@ -2060,14 +1984,21 @@ fn update_single_pipeline(
 ```rs
 use bevy::{
     ecs::batching::BatchingStrategy,
+    log,
     prelude::{Component, Query, Res},
     render::{render_resource::BindGroup, renderer::RenderDevice},
 };
+use bevy_gpu_compute_core::TypesSpec;
+use futures::task;
 
 use crate::task::{
-    buffers::components::{InputBuffers, OutputBuffers, OutputCountBuffers},
-    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
+    buffers::components::{ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers},
+    inputs::{
+        array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
+        config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
+    },
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
+    task_commands::GpuTaskCommands,
     task_components::{bind_group_layouts::BindGroupLayouts, task_name::TaskName},
     task_specification::task_specification::ComputeTaskSpecification,
 };
@@ -2086,89 +2017,71 @@ For example, this might be the wgsl code:
 The numbers in the `@binding` are the bind group entry numbers. The `@group` is the bind group number. We are only using a single bind group in the current library version.
  */
 
-#[derive(Default, Component)]
-pub struct BindGroupComponent(pub Option<BindGroup>);
-
-pub fn create_bind_groups(
-    mut tasks: Query<(
-        &TaskName,
-        &ComputeTaskSpecification,
-        &BindGroupLayouts,
-        &InputBuffers,
-        &OutputCountBuffers,
-        &OutputBuffers,
-        &mut BindGroupComponent,
-    )>,
-    render_device: Res<RenderDevice>,
-) {
-    // must run for every run of each task
-    tasks
-        .par_iter_mut()
-        .batching_strategy(BatchingStrategy::default())
-        .for_each(
-            |(
-                task_name,
-                task_spec,
-                bind_group_layouts,
-                input_buffers,
-                output_count_buffers,
-                output_buffers,
-                mut bind_group_res,
-            )| {
-                create_bind_group_single_task(
-                    task_name,
-                    &render_device,
-                    bind_group_layouts,
-                    task_spec.input_vectors_metadata_spec(),
-                    task_spec.output_vectors_metadata_spec(),
-                    input_buffers,
-                    output_count_buffers,
-                    output_buffers,
-                    &mut bind_group_res,
-                );
-            },
-        )
-}
-
-fn create_bind_group_single_task(
-    task_name: &TaskName, //when this changes
-    render_device: &RenderDevice,
-    bind_group_layouts: &BindGroupLayouts,  // when this changes
-    input_specs: &InputVectorsMetadataSpec, // when binding number changes
-    output_specs: &OutputVectorsMetadataSpec, // when binding number changes, or include count or count binding number
-    input_buffers: &InputBuffers,
-    output_count_buffers: &OutputCountBuffers,
-    output_buffers: &OutputBuffers,
-    bind_group_component: &mut BindGroupComponent,
-) {
-    let mut bindings = Vec::new();
-    for (i, spec) in input_specs.get_all_metadata().iter().enumerate() {
-        if let Some(s) = spec {
-            let buffer = input_buffers.0.get(i).unwrap();
-            bindings.push(wgpu::BindGroupEntry {
-                binding: s.get_binding_number(),
-                resource: buffer.as_entire_binding(),
-            });
-        }
-    }
-    for (i, spec) in output_specs.get_all_metadata().iter().enumerate() {
-        if let Some(s) = spec {
-            let output_buffer = output_buffers.0.get(i).unwrap();
-            bindings.push(wgpu::BindGroupEntry {
-                binding: s.get_binding_number(),
-                resource: output_buffer.as_entire_binding(),
-            });
-            if s.get_include_count() {
-                let count_buffer = output_count_buffers.0.get(i).unwrap();
+impl<'w, 's> GpuTaskCommands<'w,'s>{
+    pub fn create_bind_group(&mut self) {
+        log::info!("Creating bind group for task {}", self.task.name());
+        let mut bindings = Vec::new();
+        for (i, spec) in self
+            .task
+            .spec
+            .config_input_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .enumerate()
+        {
+            if let Some(s) = spec {
+                let buffer = self.task.buffers.config_input.get(i).unwrap();
                 bindings.push(wgpu::BindGroupEntry {
-                    binding: s.get_count_binding_number().unwrap(),
-                    resource: count_buffer.as_entire_binding(),
+                    binding: s.get_binding_number(),
+                    resource: buffer.as_entire_binding(),
                 });
             }
         }
+        for (i, spec) in self
+            .task
+            .spec
+            .input_vectors_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .enumerate()
+        {
+            if let Some(s) = spec {
+                let buffer = self.task.buffers.input.get(i).unwrap();
+                bindings.push(wgpu::BindGroupEntry {
+                    binding: s.get_binding_number(),
+                    resource: buffer.as_entire_binding(),
+                });
+            }
+        }
+        for (i, spec) in self
+            .task
+            .spec
+            .output_vectors_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .enumerate()
+        {
+            if let Some(s) = spec {
+                let output_buffer = self.task.buffers.output.get(i).unwrap();
+                bindings.push(wgpu::BindGroupEntry {
+                    binding: s.get_binding_number(),
+                    resource: output_buffer.as_entire_binding(),
+                });
+                if s.get_include_count() {
+                    let count_buffer = self.task.buffers.output_count.get(i).unwrap();
+                    bindings.push(wgpu::BindGroupEntry {
+                        binding: s.get_count_binding_number().unwrap(),
+                        resource: count_buffer.as_entire_binding(),
+                    });
+                }
+            }
+        }
+        self.task.bind_group = Some(self.render_device.create_bind_group(
+            self.task.name(),
+            &self.task.bind_group_layout.as_ref().unwrap(),
+            &bindings,
+        ));
     }
-    bind_group_component.0 =
-        Some(render_device.create_bind_group(task_name.get(), &bind_group_layouts.0, &bindings));
 }
 
 ```
@@ -2181,63 +2094,35 @@ use bevy::{
     prelude::{Query, Res},
     render::renderer::{RenderDevice, RenderQueue},
 };
+use bevy_gpu_compute_core::TypesSpec;
 
 use crate::task::{
     compute_pipeline::cache::{PipelineKey, PipelineLruCache},
+    task_commands::GpuTaskCommands,
     task_specification::{
         gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
     },
 };
-
-use super::create_bind_group::BindGroupComponent;
-
-pub fn dispatch_to_gpu(
-    mut tasks: Query<(
-        &ComputeTaskSpecification,
-        &BindGroupComponent,
-        &mut PipelineLruCache,
-    )>,
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-) {
-    tasks
-        .par_iter_mut()
-        .batching_strategy(BatchingStrategy::default())
-        .for_each(|(task_spec, bind_group, mut pipeline_cache)| {
-            dispatch_to_gpu_single_task(
-                &render_device,
-                &render_queue,
-                bind_group,
-                task_spec.iter_space_and_out_lengths_version(),
-                task_spec.gpu_workgroup_space(),
-                &mut pipeline_cache,
+impl<'w, 's> GpuTaskCommands<'w, 's> {
+    pub fn dispatch_to_gpu(&mut self) {
+        let mut encoder = self
+            .render_device
+            .create_command_encoder(&Default::default());
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&Default::default());
+            let key = PipelineKey {
+                pipeline_consts_version: self.task.spec.iter_space_and_out_lengths_version(),
+            };
+            compute_pass.set_pipeline(&self.task.pipeline_cache.cache.get(&key).unwrap());
+            compute_pass.set_bind_group(0, self.task.bind_group.as_ref().unwrap(), &[]);
+            compute_pass.dispatch_workgroups(
+                self.task.num_gpu_workgroups_required.x(),
+                self.task.num_gpu_workgroups_required.y(),
+                self.task.num_gpu_workgroups_required.z(),
             );
-        });
-}
-
-fn dispatch_to_gpu_single_task(
-    render_device: &RenderDevice,
-    render_queue: &RenderQueue,
-    bind_group: &BindGroupComponent,
-    pipeline_consts_version: u64,
-    num_gpu_workgroups_required: &GpuWorkgroupSpace,
-    compute_pipeline_cache: &mut PipelineLruCache,
-) {
-    let mut encoder = render_device.create_command_encoder(&Default::default());
-    {
-        let mut compute_pass = encoder.begin_compute_pass(&Default::default());
-        let key = PipelineKey {
-            pipeline_consts_version: pipeline_consts_version,
-        };
-        compute_pass.set_pipeline(&compute_pipeline_cache.cache.get(&key).unwrap());
-        compute_pass.set_bind_group(0, bind_group.0.as_ref().unwrap(), &[]);
-        compute_pass.dispatch_workgroups(
-            num_gpu_workgroups_required.x(),
-            num_gpu_workgroups_required.y(),
-            num_gpu_workgroups_required.z(),
-        );
+        }
+        self.render_queue.submit(std::iter::once(encoder.finish()));
     }
-    render_queue.submit(std::iter::once(encoder.finish()));
 }
 
 ```
@@ -2250,123 +2135,11 @@ pub mod dispatch_to_gpu;
 
 ```
 
-# src\task\events.rs
-
-```rs
-use bevy::prelude::{Entity, Event};
-
-#[derive(Event)]
-pub struct GpuAcceleratedTaskCreatedEvent {
-    pub entity: Entity,
-    pub task_name: String,
-}
-
-pub trait GpuComputeTaskChangeEvent {
-    fn new(entity: Entity) -> Self;
-    fn entity(&self) -> Entity;
-}
-#[derive(Event)]
-pub struct InputDataChangeEvent {
-    entity: Entity,
-    pub lengths: [Option<usize>; 6],
-}
-impl InputDataChangeEvent {
-    pub fn new(entity: Entity, lengths: [Option<usize>; 6]) -> Self {
-        InputDataChangeEvent { entity, lengths }
-    }
-    pub fn entity(&self) -> Entity {
-        self.entity
-    }
-}
-
-#[derive(Event)]
-pub struct IterSpaceOrOutputSizesChangedEvent {
-    entity: Entity,
-}
-impl GpuComputeTaskChangeEvent for IterSpaceOrOutputSizesChangedEvent {
-    fn new(entity: Entity) -> Self {
-        IterSpaceOrOutputSizesChangedEvent { entity }
-    }
-    fn entity(&self) -> Entity {
-        self.entity
-    }
-}
-
-#[derive(Event)]
-pub struct GpuComputeTaskSuccessEvent {
-    pub id: u128,
-}
-
-```
-
-# src\task\inputs\handle_input_data_change.rs
-
-```rs
-use bevy::{
-    ecs::batching::BatchingStrategy,
-    log,
-    prelude::{Commands, EventReader, Query},
-};
-
-use crate::task::{
-    events::InputDataChangeEvent,
-    task_specification::{
-        input_array_lengths::ComputeTaskInputArrayLengths,
-        task_specification::ComputeTaskSpecification,
-    },
-};
-
-pub fn handle_input_data_change(
-    mut commands: Commands,
-    mut tasks: Query<&mut ComputeTaskSpecification>,
-    mut event_reader: EventReader<InputDataChangeEvent>,
-) {
-    for (ev, _) in event_reader
-        .par_read()
-        .batching_strategy(BatchingStrategy::default())
-    {
-        log::info!("handle_input_data_change");
-        let entity = ev.entity();
-        let lengths_unnamed = ev.lengths;
-        let mut task = tasks.get_mut(entity);
-        if let Ok(t) = task.as_mut() {
-            t.mutate(
-                &mut commands,
-                entity,
-                None,
-                None,
-                Some(ComputeTaskInputArrayLengths {
-                    by_index: lengths_unnamed,
-                }),
-            );
-        }
-    }
-}
-
-```
-
-# src\task\inputs\input_config_types_spec.rs
-
-```rs
-use bevy_gpu_compute_core::misc_types::InputConfigTypesSpec;
-
-pub struct BlankInputConfigTypesSpec {}
-impl InputConfigTypesSpec for BlankInputConfigTypesSpec {
-    type Input0 = ();
-    type Input1 = ();
-    type Input2 = ();
-    type Input3 = ();
-    type Input4 = ();
-    type Input5 = ();
-}
-
-```
-
-# src\task\inputs\input_data.rs
+# src\task\inputs\array_type\input_data.rs
 
 ```rs
 use bevy::{log, prelude::Component};
-use bevy_gpu_compute_core::misc_types::{BlankTypesSpec, InputVectorTypesSpec, TypesSpec};
+use bevy_gpu_compute_core::{BlankTypesSpec, InputVectorTypesSpec, TypesSpec};
 
 pub trait InputDataTrait: Send + Sync {
     fn input_bytes(&self, index: usize) -> Option<&[u8]>;
@@ -2535,25 +2308,27 @@ impl<T: TypesSpec + Send + Sync> InputDataTrait for InputData<T> {
 
 ```
 
-# src\task\inputs\input_vector_metadata_spec.rs
+# src\task\inputs\array_type\input_vector_metadata_spec.rs
 
 ```rs
-use bevy_gpu_compute_core::{custom_type_name::CustomTypeName, misc_types::InputVectorTypesSpec};
+use bevy_gpu_compute_core::{
+    InputVectorTypesSpec, wgsl::shader_custom_type_name::ShaderCustomTypeName,
+};
 
 #[derive(Copy, Clone)]
 pub struct InputVectorMetadataDefinition<'a> {
     pub binding_number: u32,
-    pub name: &'a CustomTypeName,
+    pub name: &'a ShaderCustomTypeName,
 }
 #[derive(Clone, Debug)]
 pub struct InputVectorMetadata {
     bytes: usize,
     binding_number: u32,
-    name: CustomTypeName,
+    name: ShaderCustomTypeName,
 }
 
 impl InputVectorMetadata {
-    pub fn new(bytes: usize, binding_number: u32, name: CustomTypeName) -> Self {
+    pub fn new(bytes: usize, binding_number: u32, name: ShaderCustomTypeName) -> Self {
         InputVectorMetadata {
             bytes,
             binding_number,
@@ -2566,7 +2341,7 @@ impl InputVectorMetadata {
     pub fn get_binding_number(&self) -> u32 {
         self.binding_number
     }
-    pub fn name(&self) -> &CustomTypeName {
+    pub fn name(&self) -> &ShaderCustomTypeName {
         &self.name
     }
 }
@@ -2674,22 +2449,20 @@ impl InputVectorsMetadataSpec {
 
 ```
 
-# src\task\inputs\mod.rs
+# src\task\inputs\array_type\mod.rs
 
 ```rs
-pub mod handle_input_data_change;
-pub mod input_config_types_spec;
 pub mod input_data;
 pub mod input_vector_metadata_spec;
 pub mod type_erased_input_data;
 
 ```
 
-# src\task\inputs\type_erased_input_data.rs
+# src\task\inputs\array_type\type_erased_input_data.rs
 
 ```rs
 use bevy::prelude::Component;
-use bevy_gpu_compute_core::misc_types::TypesSpec;
+use bevy_gpu_compute_core::TypesSpec;
 
 use super::input_data::{InputData, InputDataTrait};
 
@@ -2710,19 +2483,381 @@ impl TypeErasedInputData {
 
 ```
 
+# src\task\inputs\config_type\config_data.rs
+
+```rs
+use bevy::{log, prelude::Component};
+use bevy_gpu_compute_core::{BlankTypesSpec, ConfigInputTypesSpec, TypesSpec};
+
+pub trait ConfigInputDataTrait: Send + Sync {
+    fn input_bytes(&self, index: usize) -> Option<&[u8]>;
+}
+
+#[derive(Component)]
+pub struct ConfigInputData<T: TypesSpec> {
+    input0: Option<<<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input0>,
+    input1: Option<<<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input1>,
+    input2: Option<<<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input2>,
+    input3: Option<<<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input3>,
+    input4: Option<<<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input4>,
+    input5: Option<<<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input5>,
+    _phantom: std::marker::PhantomData<T>,
+}
+impl<T: TypesSpec> std::fmt::Debug for ConfigInputData<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConfigInputData")
+            .field("input0", &self.input0)
+            .field("input1", &self.input1)
+            .field("input2", &self.input2)
+            .field("input3", &self.input3)
+            .field("input4", &self.input4)
+            .field("input5", &self.input5)
+            .finish()
+    }
+}
+impl Default for ConfigInputData<BlankTypesSpec> {
+    fn default() -> Self {
+        ConfigInputData {
+            input0: None,
+            input1: None,
+            input2: None,
+            input3: None,
+            input4: None,
+            input5: None,
+
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: TypesSpec> ConfigInputData<T> {
+    pub fn empty() -> Self {
+        ConfigInputData {
+            input0: None,
+            input1: None,
+            input2: None,
+            input3: None,
+            input4: None,
+            input5: None,
+
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    // Type-safe setters that take vectors of Pod types
+    pub fn set_input0(
+        &mut self,
+        input: <<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input0,
+    ) {
+        self.input0 = Some(input);
+    }
+
+    pub fn set_input1(
+        &mut self,
+        input: <<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input1,
+    ) {
+        self.input1 = Some(input);
+    }
+    pub fn set_input2(
+        &mut self,
+        input: <<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input2,
+    ) {
+        self.input2 = Some(input);
+    }
+    pub fn set_input3(
+        &mut self,
+        input: <<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input3,
+    ) {
+        self.input3 = Some(input);
+    }
+    pub fn set_input4(
+        &mut self,
+        input: <<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input4,
+    ) {
+        self.input4 = Some(input);
+    }
+    pub fn set_input5(
+        &mut self,
+        input: <<T as TypesSpec>::ConfigInputTypes as ConfigInputTypesSpec>::Input5,
+    ) {
+        self.input5 = Some(input);
+    }
+
+    pub fn input0_bytes(&self) -> Option<&[u8]> {
+        if let Some(data) = &self.input0 {
+            Some(bytemuck::bytes_of(data))
+        } else {
+            None
+        }
+    }
+
+    pub fn input1_bytes(&self) -> Option<&[u8]> {
+        if let Some(data) = &self.input1 {
+            Some(bytemuck::bytes_of(data))
+        } else {
+            None
+        }
+    }
+    pub fn input2_bytes(&self) -> Option<&[u8]> {
+        if let Some(data) = &self.input2 {
+            Some(bytemuck::bytes_of(data))
+        } else {
+            None
+        }
+    }
+    pub fn input3_bytes(&self) -> Option<&[u8]> {
+        if let Some(data) = &self.input3 {
+            Some(bytemuck::bytes_of(data))
+        } else {
+            None
+        }
+    }
+    pub fn input4_bytes(&self) -> Option<&[u8]> {
+        if let Some(data) = &self.input4 {
+            Some(bytemuck::bytes_of(data))
+        } else {
+            None
+        }
+    }
+    pub fn input5_bytes(&self) -> Option<&[u8]> {
+        if let Some(data) = &self.input5 {
+            Some(bytemuck::bytes_of(data))
+        } else {
+            None
+        }
+    }
+}
+
+impl<T: TypesSpec + Send + Sync> ConfigInputDataTrait for ConfigInputData<T> {
+    fn input_bytes(&self, index: usize) -> Option<&[u8]> {
+        log::info!("input_bytes index: {}", index);
+        match index {
+            0 => self.input0_bytes(),
+            1 => self.input1_bytes(),
+            2 => self.input2_bytes(),
+            3 => self.input3_bytes(),
+            4 => self.input4_bytes(),
+            5 => self.input5_bytes(),
+            _ => None,
+        }
+    }
+}
+
+```
+
+# src\task\inputs\config_type\config_input_metadata_spec.rs
+
+```rs
+use bevy_gpu_compute_core::{
+    ConfigInputTypesSpec, wgsl::shader_custom_type_name::ShaderCustomTypeName,
+};
+
+#[derive(Copy, Clone)]
+pub struct ConfigInputMetadataDefinition<'a> {
+    pub binding_number: u32,
+    pub name: &'a ShaderCustomTypeName,
+}
+#[derive(Clone, Debug)]
+pub struct ConfigInputMetadata {
+    bytes: usize,
+    binding_number: u32,
+    name: ShaderCustomTypeName,
+}
+
+impl ConfigInputMetadata {
+    pub fn new(bytes: usize, binding_number: u32, name: ShaderCustomTypeName) -> Self {
+        ConfigInputMetadata {
+            bytes,
+            binding_number,
+            name,
+        }
+    }
+    pub fn get_bytes(&self) -> usize {
+        self.bytes
+    }
+    pub fn get_binding_number(&self) -> u32 {
+        self.binding_number
+    }
+    pub fn name(&self) -> &ShaderCustomTypeName {
+        &self.name
+    }
+}
+
+#[derive(Clone)]
+pub struct ConfigInputsMetadataSpec {
+    input0: Option<ConfigInputMetadata>,
+    input1: Option<ConfigInputMetadata>,
+    input2: Option<ConfigInputMetadata>,
+    input3: Option<ConfigInputMetadata>,
+    input4: Option<ConfigInputMetadata>,
+    input5: Option<ConfigInputMetadata>,
+}
+
+impl Default for ConfigInputsMetadataSpec {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+impl ConfigInputsMetadataSpec {
+    pub fn empty() -> Self {
+        ConfigInputsMetadataSpec {
+            input0: None,
+            input1: None,
+            input2: None,
+            input3: None,
+            input4: None,
+            input5: None,
+        }
+    }
+    fn get_input<ST>(
+        i: usize,
+        definitions: [Option<ConfigInputMetadataDefinition>; 6],
+    ) -> Option<ConfigInputMetadata> {
+        if let Some(def) = definitions[i] {
+            Some(ConfigInputMetadata::new(
+                std::mem::size_of::<ST>(),
+                def.binding_number,
+                def.name.clone(),
+            ))
+        } else {
+            None
+        }
+    }
+    pub fn from_config_input_types_spec<T: ConfigInputTypesSpec>(
+        definitions: [Option<ConfigInputMetadataDefinition>; 6],
+    ) -> Self {
+        Self {
+            input0: Self::get_input::<T::Input0>(0, definitions),
+            input1: Self::get_input::<T::Input1>(1, definitions),
+            input2: Self::get_input::<T::Input2>(2, definitions),
+            input3: Self::get_input::<T::Input3>(3, definitions),
+            input4: Self::get_input::<T::Input4>(4, definitions),
+            input5: Self::get_input::<T::Input5>(5, definitions),
+        }
+    }
+    pub fn get_all_metadata(&self) -> [Option<&ConfigInputMetadata>; 6] {
+        [
+            self.input0.as_ref(),
+            self.input1.as_ref(),
+            self.input2.as_ref(),
+            self.input3.as_ref(),
+            self.input4.as_ref(),
+            self.input5.as_ref(),
+        ]
+    }
+    pub fn get_input0_metadata(&self) -> Option<&ConfigInputMetadata> {
+        self.input0.as_ref()
+    }
+    pub fn get_input1_metadata(&self) -> Option<&ConfigInputMetadata> {
+        self.input1.as_ref()
+    }
+    pub fn get_input2_metadata(&self) -> Option<&ConfigInputMetadata> {
+        self.input2.as_ref()
+    }
+    pub fn get_input3_metadata(&self) -> Option<&ConfigInputMetadata> {
+        self.input3.as_ref()
+    }
+    pub fn get_input4_metadata(&self) -> Option<&ConfigInputMetadata> {
+        self.input4.as_ref()
+    }
+    pub fn get_input5_metadata(&self) -> Option<&ConfigInputMetadata> {
+        self.input5.as_ref()
+    }
+    pub fn set_input0_metadata(&mut self, metadata: ConfigInputMetadata) {
+        self.input0 = Some(metadata);
+    }
+    pub fn set_input1_metadata(&mut self, metadata: ConfigInputMetadata) {
+        self.input1 = Some(metadata);
+    }
+    pub fn set_input2_metadata(&mut self, metadata: ConfigInputMetadata) {
+        self.input2 = Some(metadata);
+    }
+    pub fn set_input3_metadata(&mut self, metadata: ConfigInputMetadata) {
+        self.input3 = Some(metadata);
+    }
+    pub fn set_input4_metadata(&mut self, metadata: ConfigInputMetadata) {
+        self.input4 = Some(metadata);
+    }
+    pub fn set_input5_metadata(&mut self, metadata: ConfigInputMetadata) {
+        self.input5 = Some(metadata);
+    }
+}
+
+```
+
+# src\task\inputs\config_type\input_config_types_spec.rs
+
+```rs
+use bevy_gpu_compute_core::ConfigInputTypesSpec;
+
+//todo implement configs
+pub struct BlankInputConfigTypesSpec {}
+impl ConfigInputTypesSpec for BlankInputConfigTypesSpec {
+    type Input0 = ();
+    type Input1 = ();
+    type Input2 = ();
+    type Input3 = ();
+    type Input4 = ();
+    type Input5 = ();
+}
+
+```
+
+# src\task\inputs\config_type\mod.rs
+
+```rs
+pub mod config_data;
+pub mod config_input_metadata_spec;
+pub mod input_config_types_spec;
+pub mod type_erased_config_input_data;
+
+```
+
+# src\task\inputs\config_type\type_erased_config_input_data.rs
+
+```rs
+use bevy::prelude::Component;
+use bevy_gpu_compute_core::TypesSpec;
+
+use super::config_data::{ConfigInputData, ConfigInputDataTrait};
+
+#[derive(Component)]
+pub struct TypeErasedConfigInputData {
+    inner: Box<dyn ConfigInputDataTrait>,
+}
+impl TypeErasedConfigInputData {
+    pub fn new<T: TypesSpec + 'static + Send + Sync>(input_data: ConfigInputData<T>) -> Self {
+        Self {
+            inner: Box::new(input_data),
+        }
+    }
+    pub fn input_bytes(&self, index: usize) -> Option<&[u8]> {
+        self.inner.input_bytes(index)
+    }
+}
+
+```
+
+# src\task\inputs\mod.rs
+
+```rs
+pub mod array_type;
+pub mod config_type;
+
+```
+
 # src\task\mod.rs
 
 ```rs
 pub mod buffers;
 pub mod compute_pipeline;
 pub mod dispatch;
-pub mod events;
 pub mod inputs;
-pub mod task_specification;
 pub mod outputs;
-pub mod setup_tasks;
 pub mod task_commands;
 pub mod task_components;
+pub mod task_specification;
 pub mod verify_enough_memory;
 pub mod wgsl_code;
 
@@ -2752,7 +2887,7 @@ pub mod wgsl_counter;
 # src\task\outputs\definitions\output_data.rs
 
 ```rs
-use bevy_gpu_compute_core::misc_types::{BlankTypesSpec, OutputVectorTypesSpec, TypesSpec};
+use bevy_gpu_compute_core::{BlankTypesSpec, OutputVectorTypesSpec, TypesSpec};
 
 pub struct OutputData<T: TypesSpec> {
     output0: Option<Vec<<<T as TypesSpec>::OutputArrayTypes as OutputVectorTypesSpec>::Output0>>,
@@ -2816,8 +2951,11 @@ impl<T: TypesSpec> OutputData<T> {
         {
             return Err("Byte length not aligned with output type size".to_string());
         }
-
-        self.output0 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output0 = Some(Vec::new());
+        } else {
+            self.output0 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
 
@@ -2831,7 +2969,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output1 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output1 = Some(Vec::new());
+        } else {
+            self.output1 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output2_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -2844,7 +2986,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output2 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output2 = Some(Vec::new());
+        } else {
+            self.output2 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output3_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -2857,7 +3003,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output3 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output3 = Some(Vec::new());
+        } else {
+            self.output3 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output4_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -2870,7 +3020,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output4 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output4 = Some(Vec::new());
+        } else {
+            self.output4 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
     pub fn set_output5_from_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
@@ -2883,7 +3037,11 @@ impl<T: TypesSpec> OutputData<T> {
             return Err("Byte length not aligned with output type size".to_string());
         }
 
-        self.output5 = Some(bytemuck::cast_slice(bytes).to_vec());
+        if bytes.len() == 0 {
+            self.output5 = Some(Vec::new());
+        } else {
+            self.output5 = Some(bytemuck::cast_slice(bytes).to_vec());
+        }
         Ok(())
     }
 
@@ -2926,13 +3084,15 @@ impl<T: TypesSpec> OutputData<T> {
 # src\task\outputs\definitions\output_vector_metadata_spec.rs
 
 ```rs
-use bevy_gpu_compute_core::{custom_type_name::CustomTypeName, misc_types::OutputVectorTypesSpec};
+use bevy_gpu_compute_core::{
+    OutputVectorTypesSpec, wgsl::shader_custom_type_name::ShaderCustomTypeName,
+};
 
 pub struct OutputVectorMetadataDefinition<'a> {
     pub binding_number: u32,
     pub include_count: bool,
     pub count_binding_number: Option<u32>,
-    pub name: &'a CustomTypeName,
+    pub name: &'a ShaderCustomTypeName,
 }
 #[derive(Clone, Debug)]
 pub struct OutputVectorMetadata {
@@ -2940,7 +3100,7 @@ pub struct OutputVectorMetadata {
     binding_number: u32,
     include_count: bool,
     count_binding_number: Option<u32>,
-    name: CustomTypeName,
+    name: ShaderCustomTypeName,
 }
 
 impl OutputVectorMetadata {
@@ -2949,7 +3109,7 @@ impl OutputVectorMetadata {
         binding_number: u32,
         include_count: bool,
         count_binding_number: Option<u32>,
-        name: CustomTypeName,
+        name: ShaderCustomTypeName,
     ) -> Self {
         OutputVectorMetadata {
             bytes,
@@ -2971,7 +3131,7 @@ impl OutputVectorMetadata {
     pub fn get_count_binding_number(&self) -> Option<u32> {
         self.count_binding_number
     }
-    pub fn name(&self) -> &CustomTypeName {
+    pub fn name(&self) -> &ShaderCustomTypeName {
         &self.name
     }
 }
@@ -3088,7 +3248,7 @@ impl OutputVectorsMetadataSpec {
 
 ```rs
 use bevy::prelude::Component;
-use bevy_gpu_compute_core::misc_types::TypesSpec;
+use bevy_gpu_compute_core::TypesSpec;
 
 use super::output_data::OutputData;
 
@@ -3251,18 +3411,24 @@ pub fn get_gpu_output_counter_value(
     let result = if receiver.block_on().unwrap().is_ok() {
         let data = slice.get_mapped_range();
         let transformed_data = &*data;
+        log::info!("Raw counter value: {:?}", transformed_data);
         if transformed_data.len() != std::mem::size_of::<WgslCounter>() {
             return None;
         }
         let result = Some(bytemuck::pod_read_unaligned(transformed_data));
         drop(data);
+        log::info!("Reading GPU output counter value - map completed");
+        staging_buffer.unmap();
+        log::info!("Reading GPU output counter value - unmap staging completed");
         result
     } else {
         None
     };
-    log::info!("Reading GPU output counter value - map completed");
-    staging_buffer.unmap();
-    log::info!("Reading GPU output counter value - unmap staging completed");
+    // reset the counter
+    let mut encoder2 = render_device.create_command_encoder(&Default::default());
+    encoder2.clear_buffer(&output_buffer, 0, None);
+    render_queue.submit(std::iter::once(encoder2.finish()));
+
     log::info!("Gpu counter result: {:?}", result);
     result
 }
@@ -3298,10 +3464,12 @@ use bevy::{
     prelude::{Query, Res},
     render::renderer::{RenderDevice, RenderQueue},
 };
+use bevy_gpu_compute_core::TypesSpec;
 use wgpu::Buffer;
 
 use crate::task::{
     buffers::components::{OutputCountBuffers, OutputCountStagingBuffers},
+    task_commands::GpuTaskCommands,
     task_specification::task_specification::ComputeTaskSpecification,
 };
 
@@ -3313,84 +3481,50 @@ use super::{
     helpers::get_gpu_output_counter_value::get_gpu_output_counter_value,
 };
 
-pub fn read_gpu_output_counts(
-    mut tasks: Query<(
-        &ComputeTaskSpecification,
-        &OutputCountBuffers,
-        &OutputCountStagingBuffers,
-        &mut GpuOutputCounts,
-    )>,
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-) {
-    log::info!("Reading GPU output counts");
-    tasks
-        .par_iter_mut()
-        .batching_strategy(BatchingStrategy::default())
-        .for_each(
-            |(task_spec, count_buffers, count_staging_buffers, mut results_count_from_gpu)| {
-                read_gpu_output_counts_single_task(
-                    task_spec.output_vectors_metadata_spec(),
-                    &render_device,
-                    &render_queue,
-                    &count_buffers,
-                    &count_staging_buffers,
-                    &mut results_count_from_gpu,
-                );
-            },
-        );
-}
-
-fn read_gpu_output_counts_single_task(
-    output_specs: &OutputVectorsMetadataSpec,
-    render_device: &RenderDevice,
-    render_queue: &RenderQueue,
-    count_buffers: &OutputCountBuffers,
-    count_staging_buffers: &OutputCountStagingBuffers,
-    results_count_from_gpu: &mut GpuOutputCounts,
-) {
-    let local_res_counts: Arc<Mutex<Vec<Option<usize>>>> = Arc::new(Mutex::new(Vec::new()));
-    output_specs
-        .get_all_metadata()
-        .iter()
-        .enumerate()
-        .for_each(|(i, spec)| {
-            if let Some(s) = spec {
-                if s.get_include_count() {
-                    log::info!("Reading count for output {}", i);
-                    let count = read_gpu_output_counts_single_output_type(
-                        &render_device,
-                        &render_queue,
-                        &count_buffers.0[i],
-                        &count_staging_buffers.0[i],
-                    );
-                    local_res_counts.lock().unwrap().push(Some(count as usize));
+impl<'w, 's> GpuTaskCommands<'w,'s>{
+    pub fn read_gpu_output_counts(&mut self) -> Vec<Option<usize>> {
+        let local_res_counts: Arc<Mutex<Vec<Option<usize>>>> = Arc::new(Mutex::new(Vec::new()));
+        self.task
+            .spec
+            .output_vectors_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .enumerate()
+            .for_each(|(i, spec)| {
+                if let Some(s) = spec {
+                    if s.get_include_count() {
+                        log::info!("Reading count for output {}", i);
+                        let count = self.read_gpu_output_counts_single_output_type(
+                            &self.task.buffers.output_count[i],
+                            &self.task.buffers.output_count_staging[i],
+                        );
+                        local_res_counts.lock().unwrap().push(Some(count as usize));
+                    } else {
+                        local_res_counts.lock().unwrap().push(None);
+                    }
                 } else {
                     local_res_counts.lock().unwrap().push(None);
                 }
-            } else {
-                local_res_counts.lock().unwrap().push(None);
-            }
-        });
-    results_count_from_gpu.0 = local_res_counts.lock().unwrap().clone();
-}
+            });
+        local_res_counts.lock().unwrap().to_vec()
+    }
 
-fn read_gpu_output_counts_single_output_type(
-    render_device: &RenderDevice,
-    render_queue: &RenderQueue,
-    count_buffer: &Buffer,
-    count_staging_buffer: &Buffer,
-) -> u32 {
-    let count = get_gpu_output_counter_value(
-        &render_device,
-        &render_queue,
-        &count_buffer,
-        &count_staging_buffer,
-        std::mem::size_of::<WgslCounter>() as u64,
-    );
-    let r = count.unwrap().count;
-    log::info!("Read count: {}", r);
-    r
+    fn read_gpu_output_counts_single_output_type(
+        &self,
+        count_buffer: &Buffer,
+        count_staging_buffer: &Buffer,
+    ) -> u32 {
+        let count = get_gpu_output_counter_value(
+            &self.render_device,
+            &self.render_queue,
+            &count_buffer,
+            &count_staging_buffer,
+            std::mem::size_of::<WgslCounter>() as u64,
+        );
+        let r = count.unwrap().count;
+        log::info!("Read count: {}", r);
+        r
+    }
 }
 
 ```
@@ -3398,222 +3532,66 @@ fn read_gpu_output_counts_single_output_type(
 # src\task\outputs\read_gpu_task_outputs.rs
 
 ```rs
-use core::panic;
-use std::{
-    cmp::min,
-    sync::{Arc, Mutex},
-};
+use std::cmp::min;
 
-use bevy::{
-    ecs::batching::BatchingStrategy,
-    log,
-    prelude::{EventWriter, Query, Res},
-    render::renderer::{RenderDevice, RenderQueue},
-};
+use bevy::log;
+use bevy_gpu_compute_core::TypesSpec;
 
-use crate::task::{
-    buffers::components::{OutputBuffers, OutputStagingBuffers},
-    events::GpuComputeTaskSuccessEvent,
-    task_components::task_run_id::TaskRunId,
-    task_specification::task_specification::ComputeTaskSpecification,
-};
+use crate::task::task_commands::GpuTaskCommands;
 
 use super::{
-    definitions::{
-        gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
-    },
+    definitions::type_erased_output_data::TypeErasedOutputData,
     helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec,
 };
 
-/**
- * We put this all into a single system because we cannot pass the buffer slice around easily.
- * */
-pub fn read_gpu_task_outputs(
-    mut task: Query<(
-        &TaskRunId,
-        &OutputBuffers,
-        &OutputStagingBuffers,
-        &GpuOutputCounts,
-        &ComputeTaskSpecification,
-        &mut TypeErasedOutputData,
-    )>,
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    mut success_event_writer: EventWriter<GpuComputeTaskSuccessEvent>,
-) {
-    log::info!("Reading GPU task outputs");
-    let run_ids_successfuls: Arc<Mutex<Vec<u128>>> = Arc::new(Mutex::new(Vec::new()));
-    task.par_iter_mut()
-        .batching_strategy(BatchingStrategy::default())
-        .for_each(
-            |(
-                run_id,
-                output_buffers,
-                output_staging_buffers,
-                output_counts,
-                task_spec,
-                mut out_data,
-            )| {
-                let mut type_erased_output = TypeErasedOutputData::empty();
+impl<'w, 's> GpuTaskCommands<'w,'s>{
+    /**
+     * We put this all into a single system because we cannot pass the buffer slice around easily.
+     * */
+    pub fn read_gpu_outputs(&mut self, output_counts: Vec<Option<usize>>) -> TypeErasedOutputData {
+        let mut type_erased_output = TypeErasedOutputData::empty();
 
-                task_spec
-                    .output_vectors_metadata_spec()
-                    .get_all_metadata()
-                    .iter()
-                    .enumerate()
-                    .for_each(|(i, metadata)| {
-                        if let Some(m) = metadata {
-                            let out_buffer = output_buffers.0.get(i).unwrap();
-                            let staging_buffer = output_staging_buffers.0.get(i).unwrap();
-                            let total_byte_size = min(
-                                if let Some(Some(c)) = output_counts.0.get(i) {
-                                    let size = c * m.get_bytes();
-                                    log::info!("using output count to size buffer, size: {}", size);
-                                    size
-                                } else {
-                                    usize::MAX
-                                },
-                                task_spec.output_array_lengths().get_by_name(m.name())
-                                    * m.get_bytes(),
-                            );
-                            log::info!("total_byte_size: {}", total_byte_size);
-
-                            let raw_bytes = get_gpu_output_as_bytes_vec(
-                                &render_device,
-                                &render_queue,
-                                &out_buffer,
-                                staging_buffer,
-                                total_byte_size as u64,
-                            );
-                            // log::info!("raw_bytes: {:?}", raw_bytes);
-                            if let Some(raw_bytes) = raw_bytes {
-                                type_erased_output.set_output_from_bytes(i, raw_bytes);
-                            } else {
-                                panic!("Failed to read output from GPU");
-                            }
+        self.task
+            .spec
+            .output_vectors_metadata_spec()
+            .get_all_metadata()
+            .iter()
+            .enumerate()
+            .for_each(|(i, metadata)| {
+                if let Some(m) = metadata {
+                    let out_buffer = self.task.buffers.output.get(i).unwrap();
+                    let staging_buffer = self.task.buffers.output_staging.get(i).unwrap();
+                    let total_byte_size = min(
+                        if let Some(Some(c)) = output_counts.get(i) {
+                            let size = c * m.get_bytes();
+                            log::info!("using output count to size buffer, size: {}", size);
+                            size
+                        } else {
+                            usize::MAX
+                        },
+                        self.task.spec.output_array_lengths().get_by_name(m.name()) * m.get_bytes(),
+                    );
+                    log::info!("total_byte_size: {}", total_byte_size);
+                    if total_byte_size < 1 {
+                        type_erased_output.set_output_from_bytes(i, Vec::new());
+                    } else {
+                        let raw_bytes = get_gpu_output_as_bytes_vec(
+                            &self.render_device,
+                            &self.render_queue,
+                            &out_buffer,
+                            staging_buffer,
+                            total_byte_size as u64,
+                        );
+                        // log::info!("raw_bytes: {:?}", raw_bytes);
+                        if let Some(raw_bytes) = raw_bytes {
+                            type_erased_output.set_output_from_bytes(i, raw_bytes);
+                        } else {
+                            panic!("Failed to read output from GPU");
                         }
-                    });
-                log::info!("Read output for task {}", run_id.0);
-                *out_data = type_erased_output;
-                run_ids_successfuls.lock().unwrap().push(run_id.0);
-            },
-        );
-    // map run ids into events
-    let events: Vec<GpuComputeTaskSuccessEvent> = run_ids_successfuls
-        .lock()
-        .unwrap()
-        .iter()
-        .map(|id| GpuComputeTaskSuccessEvent { id: *id })
-        .collect();
-    success_event_writer.send_batch(events);
-}
-
-```
-
-# src\task\setup_tasks.rs
-
-```rs
-use bevy::{
-    log,
-    prelude::{Commands, EventReader, Query, Res},
-    render::{render_resource::BindGroupLayout, renderer::RenderDevice},
-};
-use wgpu::PipelineLayout;
-
-use super::{
-    compute_pipeline::pipeline_layout::PipelineLayoutComponent,
-    events::GpuAcceleratedTaskCreatedEvent,
-    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
-    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
-    task_components::bind_group_layouts::BindGroupLayouts,
-    task_specification::task_specification::ComputeTaskSpecification,
-};
-
-pub fn setup_new_tasks(
-    mut commands: Commands,
-    mut event_reader: EventReader<GpuAcceleratedTaskCreatedEvent>,
-    specs: Query<&ComputeTaskSpecification>,
-    render_device: Res<RenderDevice>,
-) {
-    log::info!("Setting up new tasks");
-    event_reader.read().for_each(|ev| {
-        let mut e_c = commands.entity(ev.entity);
-        let spec = specs.get(ev.entity).unwrap();
-        let bind_group_layouts = get_bind_group_layouts(
-            &ev.task_name,
-            &render_device,
-            &spec.input_vectors_metadata_spec(),
-            &spec.output_vectors_metadata_spec(),
-        );
-        let pipeline_layout =
-            get_pipeline_layout(&ev.task_name, &render_device, &bind_group_layouts);
-        log::info!("Task {} setup", ev.task_name);
-        log::info!("Bind group layouts: {:?}", bind_group_layouts);
-        log::info!("Pipeline layout: {:?}", pipeline_layout);
-        e_c.insert(BindGroupLayouts(bind_group_layouts));
-        e_c.insert(PipelineLayoutComponent(pipeline_layout));
-    });
-}
-
-fn get_pipeline_layout(
-    task_name: &str,
-    render_device: &RenderDevice,
-    bind_group_layouts: &BindGroupLayout,
-) -> PipelineLayout {
-    let pipeline_layout = render_device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some(task_name),
-        bind_group_layouts: &[&bind_group_layouts],
-        push_constant_ranges: &[],
-    });
-    pipeline_layout
-}
-fn get_bind_group_layouts(
-    task_name: &str,
-    render_device: &RenderDevice,
-    input_spec: &InputVectorsMetadataSpec,
-    output_spec: &OutputVectorsMetadataSpec,
-) -> BindGroupLayout {
-    let mut layouts = Vec::new();
-    input_spec.get_all_metadata().iter().for_each(|spec| {
-        if let Some(s) = spec {
-            layouts.push(create_bind_group_layout_entry(s.get_binding_number(), true));
-        }
-    });
-    output_spec.get_all_metadata().iter().for_each(|spec| {
-        if let Some(s) = spec {
-            layouts.push(create_bind_group_layout_entry(
-                s.get_binding_number(),
-                false,
-            ));
-            if s.get_include_count() {
-                layouts.push(create_bind_group_layout_entry(
-                    s.get_count_binding_number().unwrap(),
-                    false,
-                ));
-            }
-        }
-    });
-    log::info!("Layouts: {:?}", layouts);
-    // Create bind group layout once
-    let bind_group_layouts = render_device.create_bind_group_layout(Some(task_name), &layouts);
-    bind_group_layouts
-}
-
-fn create_bind_group_layout_entry(
-    binding_number: u32,
-    is_input: bool,
-) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: binding_number,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage {
-                read_only: is_input,
-            },
-            has_dynamic_offset: false,
-            min_binding_size: None, //todo, this should be pre-calculated for performance reasons
-        },
-        count: None, //only for textures
+                    }
+                }
+            });
+        type_erased_output
     }
 }
 
@@ -3623,64 +3601,112 @@ fn create_bind_group_layout_entry(
 
 ```rs
 use bevy::{
+    gizmos::config,
     log,
-    prelude::{Commands, DespawnRecursiveExt, Entity, Query, ResMut},
+    prelude::{Commands, DespawnRecursiveExt, Entity, Mut, Query, ResMut},
+    render::renderer::{RenderDevice, RenderQueue},
 };
-use bevy_gpu_compute_core::misc_types::TypesSpec;
+use bevy_gpu_compute_core::TypesSpec;
 
-use crate::{run_ids::BevyGpuComputeRunIds, task::inputs::input_data::InputDataTrait};
+use crate::{
+    prelude::{
+        ComputeTaskSpecification, ConfigInputData, InputData, IterationSpace, MaxOutputLengths,
+    },
+    run_ids::BevyGpuComputeRunIds,
+    task::{
+        buffers::components::{
+            ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
+            OutputCountStagingBuffers, OutputStagingBuffers,
+        },
+        inputs::{
+            array_type::{
+                input_data::InputDataTrait, input_vector_metadata_spec::InputVectorsMetadataSpec,
+            },
+            config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
+        },
+        outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
+        task_components::{task::BevyGpuComputeTask, task_name::TaskName},
+    },
+};
 
 use super::{
-    events::InputDataChangeEvent,
-    inputs::{input_data::InputData, type_erased_input_data::TypeErasedInputData},
-    outputs::definitions::{
-        output_data::OutputData, type_erased_output_data::TypeErasedOutputData,
+    inputs::{
+        array_type::type_erased_input_data::TypeErasedInputData,
+        config_type::type_erased_config_input_data::TypeErasedConfigInputData,
     },
-    task_components::task_run_id::TaskRunId,
+    outputs::definitions::output_data::OutputData,
+    task_specification::input_array_lengths::ComputeTaskInputArrayLengths,
 };
-#[derive(Clone, Debug)]
-pub struct TaskCommands {
+
+pub struct GpuTaskCommands<'w, 's> {
     pub entity: Entity,
+    pub render_device: &'w RenderDevice,
+    pub render_queue: &'w RenderQueue,
+    pub task: Mut<'s, BevyGpuComputeTask>,
+    phantom: std::marker::PhantomData<&'s ()>,
 }
-impl TaskCommands {
-    pub fn new(entity: Entity) -> Self {
-        TaskCommands { entity }
+
+impl<'w, 's> GpuTaskCommands<'w, 's>
+where
+    'w: 's,
+{
+    pub fn new(
+        entity: Entity,
+        render_device: &'w RenderDevice,
+        render_queue: &'w RenderQueue,
+        task: Mut<'s, BevyGpuComputeTask>,
+    ) -> Self {
+        GpuTaskCommands {
+            entity,
+            render_device,
+            render_queue,
+            task: task,
+            phantom: std::marker::PhantomData,
+        }
     }
-    pub fn delete(&self, commands: &mut Commands) {
-        commands.entity(self.entity).despawn_recursive();
+
+    pub fn mutate(
+        &mut self,
+        new_iteration_space: Option<IterationSpace>,
+        new_max_output_array_lengths: Option<MaxOutputLengths>,
+    ) {
+        self.task
+            .spec
+            .mutate(new_iteration_space, new_max_output_array_lengths);
+        self.update_compute_pipeline();
+        self.update_output_buffers();
+    }
+    pub fn set_config_inputs<I: TypesSpec + 'static + Send + Sync>(
+        &mut self,
+        inputs: ConfigInputData<I>,
+    ) {
+        self.task.config_input_data = Some(TypeErasedConfigInputData::new::<I>(inputs));
+        //let event = ConfigInputDataChangeEvent::new(self.entity);
+        //todo handle the same stuff as this event did commands.send_event(event);
+        self.update_config_input_buffers();
+    }
+    // gpu_task_runner.set_input("Radius", entities.iter().map(|e| e.0.radius()));
+    pub fn set_inputs<ShaderModuleTypes: TypesSpec + Send + Sync + 'static>(
+        &mut self,
+        data: InputData<ShaderModuleTypes>,
+    ) {
+        let lengths = data.lengths();
+        self.task.input_data = Some(TypeErasedInputData::new::<ShaderModuleTypes>(data));
+        self.task
+            .spec
+            .set_input_array_lengths(ComputeTaskInputArrayLengths { by_index: lengths });
+        self.update_input_buffers();
+        self.create_bind_group();
     }
 
     /// registers the input data to run in the next round, returns a unique id to identify the run
-    pub fn run<I: TypesSpec + 'static + Send + Sync>(
-        &self,
-        commands: &mut Commands,
-        inputs: InputData<I>,
-        mut task_run_ids: ResMut<BevyGpuComputeRunIds>,
-    ) -> u128 {
-        let mut entity_commands = commands.entity(self.entity);
-        let id = task_run_ids.get_next();
-        let event = InputDataChangeEvent::new(self.entity, inputs.lengths());
-        log::info!("run id: {}", id);
-        // log::info!("inputs: {:?}", inputs);
-        entity_commands.insert(TypeErasedInputData::new::<I>(inputs));
-        entity_commands.insert(TaskRunId(id));
-        commands.send_event(event);
-        id
-    }
-
-    pub fn result<O: TypesSpec>(
-        &self,
-        run_id: u128,
-        out_datas: &Query<(&TaskRunId, &TypeErasedOutputData)>,
-    ) -> Option<OutputData<O>> {
-        log::info!("looking for output data for run id: {}", run_id);
-        for (task_run_id, type_erased_data) in out_datas.iter() {
-            if task_run_id.0 == run_id {
-                log::info!("found output data for run id: {}", run_id);
-                return type_erased_data.clone().into_typed::<O>().ok();
-            }
-        }
-        None
+    pub async fn run<ShaderModuleTypes: TypesSpec + 'static + Send + Sync>(
+        &mut self,
+    ) -> Result<OutputData<ShaderModuleTypes>, String> {
+        self.dispatch_to_gpu();
+        let output_counts = self.read_gpu_output_counts();
+        let outputs_no_types = self.read_gpu_outputs(output_counts);
+        outputs_no_types.into_typed::<ShaderModuleTypes>()
     }
 }
 
@@ -3792,21 +3818,44 @@ impl Default for TaskRunId {
 # src\task\task_components\task.rs
 
 ```rs
-use bevy::prelude::{Component, Entity};
-use bevy_gpu_compute_core::misc_types::BlankTypesSpec;
+use bevy::{
+    log,
+    prelude::{Component, Entity},
+    render::{
+        render_resource::{BindGroup, BindGroupLayout, Buffer},
+        renderer::RenderDevice,
+    },
+};
+use bevy_gpu_compute_core::{BlankTypesSpec, TypesSpec};
+use wgpu::PipelineLayout;
 
-use crate::task::{
-    buffers::components::{
-        InputBuffers, OutputBuffers, OutputCountBuffers, OutputCountStagingBuffers,
-        OutputStagingBuffers,
+use crate::{
+    prelude::ConfigInputData,
+    task::{
+        buffers::components::{
+            ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
+            OutputCountStagingBuffers, OutputStagingBuffers,
+        },
+        compute_pipeline::cache::PipelineLruCache,
+        inputs::{
+            array_type::{
+                input_data::InputData, input_vector_metadata_spec::InputVectorsMetadataSpec,
+                type_erased_input_data::TypeErasedInputData,
+            },
+            config_type::{
+                config_input_metadata_spec::ConfigInputsMetadataSpec,
+                type_erased_config_input_data::TypeErasedConfigInputData,
+            },
+        },
+        outputs::definitions::{
+            gpu_output_counts::GpuOutputCounts,
+            output_vector_metadata_spec::OutputVectorsMetadataSpec,
+            type_erased_output_data::TypeErasedOutputData,
+        },
+        task_specification::{
+            gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
+        },
     },
-    compute_pipeline::cache::PipelineLruCache,
-    dispatch::create_bind_group::BindGroupComponent,
-    inputs::input_data::InputData,
-    outputs::definitions::{
-        gpu_output_counts::GpuOutputCounts, type_erased_output_data::TypeErasedOutputData,
-    },
-    task_specification::task_specification::ComputeTaskSpecification,
 };
 
 use super::{task_name::TaskName, task_run_id::TaskRunId};
@@ -3816,43 +3865,154 @@ A task can only run once per run of the BevyGpuComputeRunTaskSet system set
 By default this means once per frame
 */
 
-#[derive(Component)]
-#[require(
-    TaskName,
-    TaskRunId,
-    ComputeTaskSpecification,
-    PipelineLruCache,
-    // buffers
-    OutputBuffers,
-    OutputCountBuffers,
-    OutputStagingBuffers,
-    OutputCountStagingBuffers,
-    InputBuffers,
-
-    BindGroupComponent,
-    InputData<BlankTypesSpec>,
-    TypeErasedOutputData,
-    GpuOutputCounts,
-)]
-
-pub struct BevyGpuComputeTask
-// <I: InputVectorTypesSpec, O: OutputVectorTypesSpec>
-{
-    entity: Option<Entity>,
-    // phantom: std::marker::PhantomData<(I, O)>,
+pub struct BuvyGpuComputeTaskBuffers {
+    pub output: Vec<Buffer>,
+    pub output_count: Vec<Buffer>,
+    pub output_staging: Vec<Buffer>,
+    pub output_count_staging: Vec<Buffer>,
+    pub input: Vec<Buffer>,
+    pub config_input: Vec<Buffer>,
 }
-
-impl BevyGpuComputeTask
-// <I, O>
-{
-    pub fn new() -> Self {
-        Self {
-            entity: None,
-            // phantom: std::marker::PhantomData,
+impl Default for BuvyGpuComputeTaskBuffers {
+    fn default() -> Self {
+        BuvyGpuComputeTaskBuffers {
+            output: Vec::new(),
+            output_count: Vec::new(),
+            output_staging: Vec::new(),
+            output_count_staging: Vec::new(),
+            input: Vec::new(),
+            config_input: Vec::new(),
         }
     }
-    pub fn set_entity(&mut self, entity: Entity) {
-        self.entity = Some(entity);
+}
+#[derive(Component)]
+pub struct BevyGpuComputeTask {
+    name: String,
+    pub spec: ComputeTaskSpecification,
+    pub pipeline_cache: PipelineLruCache,
+    pub pipeline_layout: Option<wgpu::PipelineLayout>,
+    pub bind_group_layout: Option<BindGroupLayout>,
+    pub buffers: BuvyGpuComputeTaskBuffers,
+    pub num_gpu_workgroups_required: GpuWorkgroupSpace,
+
+    // other stuff
+    pub bind_group: Option<BindGroup>,
+    pub config_input_data: Option<TypeErasedConfigInputData>,
+    pub input_data: Option<TypeErasedInputData>,
+}
+
+impl BevyGpuComputeTask {
+    pub fn new(render_device: &RenderDevice, name: &str, spec: ComputeTaskSpecification) -> Self {
+        let mut n = BevyGpuComputeTask {
+            name: name.to_string(),
+            spec,
+            pipeline_cache: PipelineLruCache::default(),
+            pipeline_layout: None,
+            bind_group_layout: None,
+            buffers: BuvyGpuComputeTaskBuffers::default(),
+            num_gpu_workgroups_required: GpuWorkgroupSpace::default(),
+            bind_group: None,
+            config_input_data: None,
+            input_data: None,
+        };
+        n.setup_static_fields(render_device);
+        n
+    }
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+    pub fn setup_static_fields(&mut self, render_device: &RenderDevice) {
+        log::info!("Setting up new tasks");
+        let bind_group_layouts = self.get_bind_group_layouts(&render_device);
+        let pipeline_layout = self.get_pipeline_layout(&render_device, &bind_group_layouts);
+        self.bind_group_layout = Some(bind_group_layouts);
+        self.pipeline_layout = Some(pipeline_layout);
+    }
+
+    fn get_pipeline_layout(
+        &self,
+        render_device: &RenderDevice,
+        bind_group_layouts: &BindGroupLayout,
+    ) -> PipelineLayout {
+        let pipeline_layout =
+            render_device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some(&self.name),
+                bind_group_layouts: &[&bind_group_layouts],
+                push_constant_ranges: &[],
+            });
+        pipeline_layout
+    }
+    fn get_bind_group_layouts(&self, render_device: &RenderDevice) -> BindGroupLayout {
+        let config_input_spec = self.spec.config_input_metadata_spec();
+        let input_spec = self.spec.input_vectors_metadata_spec();
+        let output_spec = self.spec.output_vectors_metadata_spec();
+        let mut layouts = Vec::new();
+        config_input_spec
+            .get_all_metadata()
+            .iter()
+            .for_each(|spec| {
+                if let Some(s) = spec {
+                    layouts.push(self.create_bind_group_layout_entry(
+                        s.get_binding_number(),
+                        true,
+                        true,
+                    ));
+                }
+            });
+        input_spec.get_all_metadata().iter().for_each(|spec| {
+            if let Some(s) = spec {
+                layouts.push(self.create_bind_group_layout_entry(
+                    s.get_binding_number(),
+                    true,
+                    false,
+                ));
+            }
+        });
+        output_spec.get_all_metadata().iter().for_each(|spec| {
+            if let Some(s) = spec {
+                layouts.push(self.create_bind_group_layout_entry(
+                    s.get_binding_number(),
+                    false,
+                    false,
+                ));
+                if s.get_include_count() {
+                    layouts.push(self.create_bind_group_layout_entry(
+                        s.get_count_binding_number().unwrap(),
+                        false,
+                        false,
+                    ));
+                }
+            }
+        });
+        log::info!("Layouts: {:?}", layouts);
+        // Create bind group layout once
+        let bind_group_layouts =
+            render_device.create_bind_group_layout(Some(self.name.as_str()), &layouts);
+        bind_group_layouts
+    }
+
+    fn create_bind_group_layout_entry(
+        &self,
+        binding_number: u32,
+        is_input: bool,
+        is_uniform: bool,
+    ) -> wgpu::BindGroupLayoutEntry {
+        wgpu::BindGroupLayoutEntry {
+            binding: binding_number,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                ty: if is_uniform {
+                    wgpu::BufferBindingType::Uniform {}
+                } else {
+                    wgpu::BufferBindingType::Storage {
+                        read_only: is_input,
+                    }
+                },
+                has_dynamic_offset: false,
+                min_binding_size: None, //todo, this should be pre-calculated for performance reasons
+            },
+            count: None, //only for textures
+        }
     }
 }
 
@@ -3915,8 +4075,7 @@ impl ComputeTaskDerivedSpec {
 # src\task\task_specification\gpu_workgroup_sizes.rs
 
 ```rs
-
-use bevy_gpu_compute_core::wgsl_shader_module::IterSpaceDimmension;
+use bevy_gpu_compute_core::IterSpaceDimmension;
 
 use super::iteration_space::IterationSpace;
 
@@ -4065,7 +4224,10 @@ impl GpuWorkgroupSpace {
 
 ```rs
 use crate::task::{
-    inputs::input_vector_metadata_spec::InputVectorsMetadataSpec,
+    inputs::{
+        array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
+        config_type::config_input_metadata_spec::{ConfigInputMetadata, ConfigInputsMetadataSpec},
+    },
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     wgsl_code::WgslCode,
 };
@@ -4073,6 +4235,7 @@ use crate::task::{
 pub struct ComputeTaskImmutableSpec {
     output_vectors_metadata_spec: OutputVectorsMetadataSpec,
     input_vectors_metadata_spec: InputVectorsMetadataSpec,
+    config_input_metadata_spec: ConfigInputsMetadataSpec,
     wgsl_code: WgslCode,
 }
 
@@ -4081,6 +4244,7 @@ impl Default for ComputeTaskImmutableSpec {
         ComputeTaskImmutableSpec {
             output_vectors_metadata_spec: OutputVectorsMetadataSpec::default(),
             input_vectors_metadata_spec: InputVectorsMetadataSpec::default(),
+            config_input_metadata_spec: ConfigInputsMetadataSpec::default(),
             wgsl_code: WgslCode::default(),
         }
     }
@@ -4090,11 +4254,13 @@ impl ComputeTaskImmutableSpec {
     pub fn new(
         output_vectors_metadata_spec: OutputVectorsMetadataSpec,
         input_vectors_metadata_spec: InputVectorsMetadataSpec,
+        config_input_metadata_spec: ConfigInputsMetadataSpec,
         wgsl_code: WgslCode,
     ) -> Self {
         ComputeTaskImmutableSpec {
             output_vectors_metadata_spec,
             input_vectors_metadata_spec,
+            config_input_metadata_spec,
             wgsl_code,
         }
     }
@@ -4103,6 +4269,9 @@ impl ComputeTaskImmutableSpec {
     }
     pub fn input_vectors_metadata_spec(&self) -> &InputVectorsMetadataSpec {
         &self.input_vectors_metadata_spec
+    }
+    pub fn config_input_metadata_spec(&self) -> &ConfigInputsMetadataSpec {
+        &self.config_input_metadata_spec
     }
     pub fn wgsl_code(&self) -> &WgslCode {
         &self.wgsl_code
@@ -4127,7 +4296,7 @@ pub struct ComputeTaskInputArrayLengths {
 ```rs
 use std::hash::{Hash, Hasher};
 
-use bevy_gpu_compute_core::wgsl_shader_module::IterSpaceDimmension;
+use bevy_gpu_compute_core::IterSpaceDimmension;
 
 #[derive(Hash, Copy, Debug, Clone)]
 /**
@@ -4217,7 +4386,7 @@ impl IterationSpace {
 ```rs
 use std::collections::HashMap;
 
-use bevy_gpu_compute_core::custom_type_name::CustomTypeName;
+use bevy_gpu_compute_core::wgsl::shader_custom_type_name::ShaderCustomTypeName;
 
 #[derive(Debug, Clone, PartialEq)]
 /**
@@ -4248,7 +4417,7 @@ impl MaxOutputLengths {
         }
     }
 
-    pub fn get_by_name(&self, output_item_name: &CustomTypeName) -> usize {
+    pub fn get_by_name(&self, output_item_name: &ShaderCustomTypeName) -> usize {
         assert!(
             self.length_per_wgsl_output_type_name
                 .contains_key(output_item_name.name()),
@@ -4287,13 +4456,9 @@ pub mod task_specification;
 # src\task\task_specification\mutable_spec.rs
 
 ```rs
-
 use bevy::prelude::{Commands, Entity};
 
-use crate::task::{
-    events::{GpuComputeTaskChangeEvent,  IterSpaceOrOutputSizesChangedEvent},
-    task_components::task_max_output_bytes::TaskMaxOutputBytes,
-};
+use crate::task::task_components::task_max_output_bytes::TaskMaxOutputBytes;
 
 use super::{
     derived_spec::ComputeTaskDerivedSpec, gpu_workgroup_sizes::GpuWorkgroupSizes,
@@ -4317,8 +4482,6 @@ impl ComputeTaskMutableSpec {
         output_array_lengths: MaxOutputLengths,
         derived: &mut ComputeTaskDerivedSpec,
         immutable: &ComputeTaskImmutableSpec,
-        mut commands: &mut Commands,
-        entity: Entity,
     ) -> Self {
         let mut mutable = ComputeTaskMutableSpec {
             iteration_space,
@@ -4326,12 +4489,7 @@ impl ComputeTaskMutableSpec {
             output_array_lengths,
             iter_space_and_out_lengths_version: 0,
         };
-        mutable.update_on_iter_space_or_max_output_lengths_change(
-            derived,
-            immutable,
-            &mut commands,
-            entity,
-        );
+        mutable.update_on_iter_space_or_max_output_lengths_change(derived, immutable);
         mutable
     }
 
@@ -4347,18 +4505,17 @@ impl ComputeTaskMutableSpec {
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.iter_space_and_out_lengths_version
     }
+    pub fn set_input_array_lengths(&mut self, input_array_lengths: ComputeTaskInputArrayLengths) {
+        self.input_array_lengths = input_array_lengths;
+    }
 
-    /// one of each event type maximum is sent per call, so this is more efficient than updating each field individually
     /// If a parameter is None then the existing value is retained
     pub fn multiple(
         &mut self,
         iteration_space: Option<IterationSpace>,
-        input_array_lengths: Option<ComputeTaskInputArrayLengths>,
         output_array_lengths: Option<MaxOutputLengths>,
         immutable: &ComputeTaskImmutableSpec,
         mut derived: &mut ComputeTaskDerivedSpec,
-        mut commands: &mut Commands,
-        entity: Entity,
     ) {
         let iter_or_outputs_changed = iteration_space.is_some() || output_array_lengths.is_some();
         if let Some(iter_space) = iteration_space {
@@ -4371,27 +4528,17 @@ impl ComputeTaskMutableSpec {
             );
             self.iteration_space = iter_space;
         }
-        if let Some(input_lengths) = input_array_lengths {
-            self.input_array_lengths = input_lengths;
-        }
         if let Some(output_lengths) = output_array_lengths {
             self.output_array_lengths = output_lengths;
         }
         if iter_or_outputs_changed {
-            self.update_on_iter_space_or_max_output_lengths_change(
-                &mut derived,
-                &immutable,
-                &mut commands,
-                entity,
-            );
+            self.update_on_iter_space_or_max_output_lengths_change(&mut derived, &immutable);
         }
     }
     fn update_on_iter_space_or_max_output_lengths_change(
         &mut self,
         derived: &mut ComputeTaskDerivedSpec,
         immutable: &ComputeTaskImmutableSpec,
-        commands: &mut Commands,
-        entity: Entity,
     ) {
         self.iter_space_and_out_lengths_version += 1;
         // update task max output bytes
@@ -4408,7 +4555,6 @@ impl ComputeTaskMutableSpec {
         derived._lib_only_set_gpu_workgroup_space(
             GpuWorkgroupSpace::from_iter_space_and_wrkgrp_sizes(&self.iteration_space, &wg_sizes),
         );
-        commands.send_event(IterSpaceOrOutputSizesChangedEvent::new(entity));
     }
 }
 
@@ -4420,12 +4566,12 @@ impl ComputeTaskMutableSpec {
 use std::collections::HashMap;
 
 use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice};
-use bevy_gpu_compute_core::{ misc_types::TypesSpec, wgsl_components::{WgslShaderModuleUserPortion, WORKGROUP_SIZE_X_VAR_NAME, WORKGROUP_SIZE_Y_VAR_NAME, WORKGROUP_SIZE_Z_VAR_NAME}, wgsl_shader_module::WgslShaderModule};
+use bevy_gpu_compute_core::{TypesSpec, wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}};
 
 use crate::task::{
-    inputs::input_vector_metadata_spec::{
+    inputs::{array_type::input_vector_metadata_spec::{
         InputVectorMetadataDefinition, InputVectorsMetadataSpec,
-    }, outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec}, task_components::task_max_output_bytes::TaskMaxOutputBytes, task_specification::{
+    }, config_type::config_input_metadata_spec::{ConfigInputMetadataDefinition, ConfigInputsMetadataSpec}}, outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec}, task_components::task_max_output_bytes::TaskMaxOutputBytes, task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
         iteration_space::IterationSpace,
     }, wgsl_code::WgslCode
@@ -4450,21 +4596,19 @@ pub struct ComputeTaskSpecification {
 impl ComputeTaskSpecification {
     pub fn from_shader<ShaderModuleTypes: TypesSpec>(
         name: &str,
-        mut commands: &mut Commands,
-        entity: Entity,
-        render_device: &RenderDevice,
+        render_device: &RenderDevice, 
         wgsl_shader_module: WgslShaderModuleUserPortion,
         iteration_space: IterationSpace,
         max_output_vector_lengths: MaxOutputLengths,
     )->Self {
         let full_module = WgslShaderModule::new(wgsl_shader_module);
-        log::info!("wgsl: {}",full_module.wgsl_code(iteration_space.num_dimmensions()));
+        log:: info!("wgsl: {}",full_module.wgsl_code(iteration_space.num_dimmensions()));
         let mut input_definitions = [None; 6];
         full_module.user_portion
         .input_arrays.iter().enumerate().for_each(|(i,a)|{
             // get correct binding
             if let Some(binding) = full_module.library_portion.bindings.iter().find(|b| b.name == a.item_type.name.input_array()){
-
+                
                 if i < input_definitions.len() {
                     input_definitions[i] = Some(InputVectorMetadataDefinition { binding_number: binding.entry_num, name: &a.item_type.name });
                     //todo support variety of binding groups
@@ -4474,10 +4618,31 @@ impl ComputeTaskSpecification {
             }else {
                 panic!("Could not find binding for input array {}, something has gone wrong with the library", a.item_type.name.name());
             }
-
+            
         });
-
-        let input_metadata = InputVectorsMetadataSpec::from_input_vector_types_spec::<ShaderModuleTypes::InputArrayTypes>(
+        
+        let mut config_input_definitions = [None; 6];
+        full_module.user_portion
+        .uniforms.iter().enumerate().for_each(|(i,a)|{
+            // get correct binding
+            if let Some(binding) = full_module.library_portion.bindings.iter().find(|b| b.name == *a.name.lower()){
+                
+                if i < config_input_definitions.len() {
+                    config_input_definitions[i] = Some(ConfigInputMetadataDefinition { binding_number: binding.entry_num, name: &a.name });
+                    //todo support variety of binding groups
+                }else {
+                    panic!("Too many input configs in wgsl_shader_module, max is {}", config_input_definitions.len());
+                }
+            }else {
+                panic!("Could not find binding for input config {}, something has gone wrong with the library", a.name.name());
+            }
+            
+        });
+        
+        let config_inputs_metadata = ConfigInputsMetadataSpec::from_config_input_types_spec::<ShaderModuleTypes::ConfigInputTypes>( 
+            config_input_definitions,
+        );
+        let input_metadata = InputVectorsMetadataSpec::from_input_vector_types_spec::<ShaderModuleTypes::InputArrayTypes>( 
             input_definitions,
         );
         let mut output_definitions = [const { None }; 6];
@@ -4487,8 +4652,8 @@ impl ComputeTaskSpecification {
             if let Some(binding) = full_module.library_portion.bindings.iter().find(|b| {
                 b.name == a.item_type.name.output_array()
             }){
-
-                if i < output_definitions.len() {
+                
+                if i < output_definitions.len() { 
                     output_definitions[i] = Some(OutputVectorMetadataDefinition { binding_number: binding.entry_num,
                         include_count: a.atomic_counter_name.is_some(),
                         count_binding_number: if a.atomic_counter_name.is_some() {Some(binding.entry_num + 1)}else {None},
@@ -4500,16 +4665,15 @@ impl ComputeTaskSpecification {
             }else {
                 panic!("Could not find binding for output array {}, something has gone wrong with the library", a.item_type.name.name());
             }
-
+            
         });
         let output_metadata = OutputVectorsMetadataSpec::from_output_vector_types_spec::<ShaderModuleTypes::OutputArrayTypes>(
             output_definitions,
         );
         ComputeTaskSpecification::create_manually(
-            &mut commands,
-            entity,
             input_metadata,
             output_metadata,
+            config_inputs_metadata,
             iteration_space,
             max_output_vector_lengths,
             WgslCode::from_string(
@@ -4521,22 +4685,23 @@ impl ComputeTaskSpecification {
 
     /// ensure that you send relevant update events after calling this function
     pub fn create_manually(
-        mut commands: &mut Commands,
-        entity: Entity,
         input_vectors_metadata_spec: InputVectorsMetadataSpec,
         output_vectors_metadata_spec: OutputVectorsMetadataSpec,
+        config_inputs_metadata_spec: ConfigInputsMetadataSpec,
         iteration_space: IterationSpace,
         max_output_array_lengths: MaxOutputLengths,
         wgsl_code: WgslCode,
     ) -> Self {
-
-        let immutable = ComputeTaskImmutableSpec::new( output_vectors_metadata_spec, input_vectors_metadata_spec, wgsl_code );
+      
+        let immutable = ComputeTaskImmutableSpec::new( output_vectors_metadata_spec, input_vectors_metadata_spec, 
+            config_inputs_metadata_spec,
+            wgsl_code );
         let mut derived = ComputeTaskDerivedSpec::new(
             GpuWorkgroupSpace::default(),
             TaskMaxOutputBytes::default(),
             GpuWorkgroupSizes::default(),
         );
-        let mutable= ComputeTaskMutableSpec::new(iteration_space, ComputeTaskInputArrayLengths::default(), max_output_array_lengths,&mut derived, &immutable, &mut commands, entity);
+        let mutable= ComputeTaskMutableSpec::new(iteration_space, ComputeTaskInputArrayLengths::default(), max_output_array_lengths,&mut derived, &immutable);
         ComputeTaskSpecification {
             immutable,
             mutate: mutable,
@@ -4565,44 +4730,36 @@ impl ComputeTaskSpecification {
     pub fn input_vectors_metadata_spec(&self) -> &InputVectorsMetadataSpec {
         &self.immutable.input_vectors_metadata_spec()
     }
+    pub fn config_input_metadata_spec(&self) -> &ConfigInputsMetadataSpec {
+        &self.immutable.config_input_metadata_spec()
+    }
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.mutate.iter_space_and_out_lengths_version()
+    }
+    pub fn set_input_array_lengths(&mut self, input_array_lengths: ComputeTaskInputArrayLengths) {
+        self.mutate.set_input_array_lengths(input_array_lengths);
     }
     // setters
      /// one of each event type maximum is sent per call, so this is more efficient than updating each field individually
     /// If a parameter is None then the existing value is retained
     pub fn mutate(
         &mut self,
-       mut commands: &mut Commands,
-        entity: Entity,
         new_iteration_space: Option<IterationSpace>,
         new_max_output_array_lengths: Option<MaxOutputLengths>,
-        new_input_array_lengths: Option<ComputeTaskInputArrayLengths>,
     ) {
-        self.mutate.multiple(new_iteration_space, new_input_array_lengths, new_max_output_array_lengths, &self.immutable, &mut self.derived, &mut commands, entity);
+        self.mutate.multiple(new_iteration_space, new_max_output_array_lengths, &self.immutable, &mut self.derived);
     }
-
+  
     pub fn get_pipeline_consts(&self) -> HashMap<String, f64>{
             let mut n: HashMap<String, f64> = HashMap::new();
-            n.insert(
-                WORKGROUP_SIZE_X_VAR_NAME.to_string(),
-                self.derived.workgroup_sizes().x() as f64,
-            );
-            n.insert(
-                WORKGROUP_SIZE_Y_VAR_NAME.to_string(),
-                self.derived.workgroup_sizes().y() as f64,
-            );
-            n.insert(
-                WORKGROUP_SIZE_Z_VAR_NAME.to_string(),
-                self.derived.workgroup_sizes().z() as f64,
-            );
+            
             // input and output array lengths
             for (i, spec) in self.immutable.input_vectors_metadata_spec().get_all_metadata().iter().enumerate(){
                 if let Some(s) = spec{
                     let length = self.mutate.input_array_lengths().by_index[i];
                     let name = s.name().input_array_length();
                     log::info!("input_array_lengths = {:?}, for {}", length, name);
-
+                    
                     assert!(length.is_some(), "input_array_lengths not set for input array {}, {}", i, name.clone());
                     n.insert(name.clone(), length.unwrap() as f64);
 
@@ -4617,7 +4774,7 @@ impl ComputeTaskSpecification {
             n
 
     }
-
+    
 }
 
 ```
@@ -4632,20 +4789,18 @@ use bevy::{
 
 use crate::ram_limit::RamLimit;
 
-use super::task_specification::task_specification::ComputeTaskSpecification;
+use super::{
+    task_components::task::BevyGpuComputeTask,
+    task_specification::task_specification::ComputeTaskSpecification,
+};
 
-pub fn verify_have_enough_memory(
-    tasks: Query<&ComputeTaskSpecification>,
-    ram_limit: Res<RamLimit>,
-) {
+pub fn verify_have_enough_memory(tasks: Vec<&BevyGpuComputeTask>, ram_limit: &RamLimit) {
     let total_bytes = tasks.iter().fold(0, |sum, task_spec| {
-        sum + task_spec.task_max_output_bytes().get()
+        sum + task_spec.spec.task_max_output_bytes().get()
     });
     let available_memory = ram_limit.total_mem;
     if total_bytes as f32 > available_memory as f32 * 0.9 {
-        log::error!(
-            "Not enough memory to store all outputs, either reduce the number of entities or allow more potential collision misses by lowering the max_detectable_collisions_scale"
-        );
+        log::error!("Not enough memory to store all gpu compute task outputs");
         log::info!(
             "Available memory: {} GB",
             available_memory as f32 / 1024.0 / 1024.0 / 1024.0
@@ -4654,7 +4809,7 @@ pub fn verify_have_enough_memory(
             "Max Output size: {} GB",
             total_bytes as f32 / 1024.0 / 1024.0 / 1024.0
         );
-        panic!("Not enough memory to store all outputs");
+        panic!("Not enough memory to store all gpu compute task outputs");
     }
 }
 
@@ -4722,3 +4877,4 @@ impl WgslCode {
 }
 
 ```
+

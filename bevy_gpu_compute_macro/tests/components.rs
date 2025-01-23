@@ -1,11 +1,13 @@
 #![feature(f16)]
 use bevy_gpu_compute_core::{
-    TypesSpec,
-    wgsl::shader_custom_type_name::ShaderCustomTypeName,
-    wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
-    wgsl::shader_sections::{
-        WgslConstAssignment, WgslFunction, WgslInputArray, WgslOutputArray,
-        WgslShaderModuleSectionCode, WgslType,
+    MaxOutputLengths, TypesSpec,
+    wgsl::{
+        shader_custom_type_name::ShaderCustomTypeName,
+        shader_module::user_defined_portion::WgslShaderModuleUserPortion,
+        shader_sections::{
+            WgslConstAssignment, WgslFunction, WgslInputArray, WgslOutputArray,
+            WgslShaderModuleSectionCode, WgslType,
+        },
     },
 };
 use bevy_gpu_compute_macro::wgsl_shader_module;
@@ -379,6 +381,68 @@ fn test_input_arrays() {
         t2.input_arrays.first().unwrap().item_type.code.wgsl_code,
         "alias Position  = array < f32, 2 > ;"
     )
+}
+#[test]
+
+fn test_max_output_lengths_helper() {
+    #[wgsl_shader_module]
+    pub mod test_module {
+        use bevy_gpu_compute_core::wgsl_helpers::*;
+        use bevy_gpu_compute_macro::*;
+        #[wgsl_output_vec]
+        type MyPosition = [f32; 2];
+        #[wgsl_output_vec]
+        struct Debug {
+            v1: f32,
+            v2: f32,
+        }
+        fn main(iter_pos: WgslIterationPosition) {}
+    }
+
+    let max_outputs: MaxOutputLengths = test_module::MaxOutputLengthsBuilder::new()
+        .set_my_position(10)
+        .set_debug(20)
+        .into();
+    assert_eq!(
+        max_outputs.get_by_name(&ShaderCustomTypeName::new("MyPosition")),
+        10
+    );
+    assert_eq!(
+        max_outputs.get_by_name(&ShaderCustomTypeName::new("Debug")),
+        20
+    );
+}
+
+#[test]
+
+fn test_configs_builder() {
+    #[wgsl_shader_module]
+    pub mod test_module {
+        use bevy_gpu_compute_core::wgsl_helpers::*;
+        use bevy_gpu_compute_macro::*;
+        #[wgsl_config]
+        type MyPosition = [f32; 2];
+        #[wgsl_config]
+        struct MyConfig {
+            v1: f32,
+            v2: f32,
+        }
+        fn main(iter_pos: WgslIterationPosition) {}
+    }
+
+    let max_outputs: ConfigInputData<test_module::Types> =
+        test_module::MaxOutputLengthsBuilder::new()
+            .set_my_position(10)
+            .set_debug(20)
+            .into();
+    assert_eq!(
+        max_outputs.get_by_name(&ShaderCustomTypeName::new("MyPosition")),
+        10
+    );
+    assert_eq!(
+        max_outputs.get_by_name(&ShaderCustomTypeName::new("Debug")),
+        20
+    );
 }
 
 #[test]

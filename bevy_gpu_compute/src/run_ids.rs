@@ -1,6 +1,6 @@
-use bevy::prelude::Resource;
+use bevy::prelude::{Component, Resource};
 
-#[derive(Resource)]
+#[derive(Component)]
 
 pub struct BevyGpuComputeRunIds {
     last_id: u128,
@@ -11,8 +11,10 @@ impl Default for BevyGpuComputeRunIds {
     }
 }
 impl BevyGpuComputeRunIds {
-    pub fn get_next(&mut self) -> u128 {
+    pub fn increment(&mut self) {
         self.last_id += 1;
+    }
+    pub fn get(&self) -> u128 {
         self.last_id
     }
 }
