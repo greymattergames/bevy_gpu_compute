@@ -144,6 +144,8 @@ fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
         max_output_lengths,
     );
 }
+/// This is here for reference, but is not used in this example
+#[allow(dead_code)]
 fn delete_task(mut gpu_task_deleter: BevyGpuComputeTaskDeleter) {
     let task = gpu_task_deleter.delete("collision_detection");
 }
@@ -179,11 +181,7 @@ fn modify_task_config_inputs(mut count: Local<u32>, mut gpu_tasks: GpuTaskRunner
     *count += 1;
 }
 
-fn run_task(
-    mut gpu_tasks: GpuTaskRunner,
-    mut state: ResMut<State>,
-    entities: Query<&BoundingCircleComponent>,
-) {
+fn run_task(mut gpu_tasks: GpuTaskRunner, entities: Query<&BoundingCircleComponent>) {
     let input_data = collision_detection_module::InputDataBuilder::new()
         .set_position(
             entities

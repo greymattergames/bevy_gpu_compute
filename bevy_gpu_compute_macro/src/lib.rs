@@ -64,7 +64,7 @@ let x = my_vec3.x();
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    println!("Entered shader_module proc macro");
+    // println!("Entered shader_module proc macro");
     set_dummy(item.clone().into());
     let content = item.to_string();
     let module = parse_macro_input!(item as syn::ItemMod);

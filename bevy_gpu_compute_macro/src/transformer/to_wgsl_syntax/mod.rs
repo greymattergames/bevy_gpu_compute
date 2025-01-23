@@ -111,7 +111,7 @@ pub fn convert_file_to_wgsl(
     type_def_transformer.replacements.iter().for_each(|(k, v)| {
         string_version = string_version.replace(k, v);
     });
-    println!("Final string version: {}", string_version);
+    // println!("Final string version: {}", string_version);
     // transform vec and matrix constructors
     string_version = convert_wgsl_builtin_constructors(string_version);
     string_version = replace_let_mut_with_var(&string_version);
