@@ -1,31 +1,20 @@
 use bevy::{
-    ecs::batching::BatchingStrategy,
     log::{self, info},
-    prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
-use bevy_gpu_compute_core::TypesSpec;
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
-use crate::task::{
-    inputs::config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
-    task_commands::GpuTaskCommands,
-    task_components::{task::BevyGpuComputeTask, task_name::TaskName},
-    task_specification::task_specification::ComputeTaskSpecification,
-};
-
-use super::components::{ConfigInputBuffers, InputBuffers};
+use crate::task::task_components::task::BevyGpuComputeTask;
 
 pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     log::info!("Creating config input buffers for task {}", task.name());
     task.buffers.config_input.clear();
     let mut new_buffers = Vec::new();
-    for (i, spec) in task
+    for spec in task
         .spec
         .config_input_metadata_spec()
         .get_all_metadata()
         .iter()
-        .enumerate()
     {
         if let Some(s) = spec {
             let label = format!("{}-input-{}", task.name(), s.name().name());

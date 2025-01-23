@@ -1,21 +1,10 @@
-use std::collections::HashMap;
 
 use bevy::{
     ecs::system::SystemParam,
-    prelude::{Commands, DespawnRecursiveExt, Entity, Query, Res, Resource},
-    render::renderer::{RenderDevice, RenderQueue},
-};
-use bevy_gpu_compute_core::{
-    TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
+    prelude::{Commands, DespawnRecursiveExt, Entity, Query},
 };
 
-use crate::{
-    prelude::IterationSpace,
-    task::{
-        task_components::{task::BevyGpuComputeTask, task_name::TaskName},
-        task_specification::task_specification::ComputeTaskSpecification,
-    },
-};
+use crate::task::task_components::task::BevyGpuComputeTask;
 
 #[derive(SystemParam)]
 

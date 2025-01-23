@@ -1,16 +1,13 @@
 use bevy::{
-    ecs::batching::BatchingStrategy,
     log,
-    prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
 
-use bevy_gpu_compute_core::TypesSpec;
 use wgpu::{ComputePipelineDescriptor, PipelineCompilationOptions};
 
-use crate::task::{task_commands::GpuTaskCommands, task_components::task::BevyGpuComputeTask};
+use crate::task::task_components::task::BevyGpuComputeTask;
 
-use super::cache::{PipelineKey, PipelineLruCache};
+use super::cache::PipelineKey;
 
 pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     if task.input_array_lengths.is_none() {

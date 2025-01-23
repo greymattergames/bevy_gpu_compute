@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice};
-use bevy_gpu_compute_core::{wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}, MaxOutputLengths, TypeErasedArrayInputData, TypesSpec};
+use bevy::{log, prelude::Component, render::renderer::RenderDevice};
+use bevy_gpu_compute_core::{wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}, MaxOutputLengths, TypesSpec};
 
 use crate::task::{
     inputs::{array_type::{input_vector_metadata_spec::{

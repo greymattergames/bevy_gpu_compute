@@ -1,25 +1,6 @@
-use bevy::{
-    ecs::batching::BatchingStrategy,
-    log,
-    prelude::{Component, Query, Res},
-    render::{render_resource::BindGroup, renderer::RenderDevice},
-};
-use bevy_gpu_compute_core::TypesSpec;
-use futures::task;
+use bevy::{log, render::renderer::RenderDevice};
 
-use crate::task::{
-    buffers::components::{ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers},
-    inputs::{
-        array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
-        config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
-    },
-    outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
-    task_commands::GpuTaskCommands,
-    task_components::{
-        bind_group_layouts::BindGroupLayouts, task::BevyGpuComputeTask, task_name::TaskName,
-    },
-    task_specification::task_specification::ComputeTaskSpecification,
-};
+use crate::task::task_components::task::BevyGpuComputeTask;
 
 /**
 Binding the buffers to the corresponding wgsl code.
@@ -64,11 +45,19 @@ pub fn create_bind_group(task: &mut BevyGpuComputeTask, render_device: &RenderDe
         .enumerate()
     {
         if let Some(s) = spec {
-            let buffer = task.buffers.input.get(i).unwrap();
-            bindings.push(wgpu::BindGroupEntry {
-                binding: s.get_binding_number(),
-                resource: buffer.as_entire_binding(),
-            });
+            if let Some(buffer) = task.buffers.input.get(i) {
+                bindings.push(wgpu::BindGroupEntry {
+                    binding: s.get_binding_number(),
+                    resource: buffer.as_entire_binding(),
+                });
+            } else {
+                panic!(
+                    "Input has not been set for task {}, with index: {}. Input buffers: {:?}",
+                    task.name(),
+                    i,
+                    task.buffers.input
+                );
+            }
         }
     }
     for (i, spec) in task

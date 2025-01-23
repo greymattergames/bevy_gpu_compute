@@ -1,28 +1,9 @@
-use bevy::{
-    gizmos::config,
-    log,
-    prelude::{Commands, DespawnRecursiveExt, Entity, Mut, Query, ResMut},
-    render::renderer::{RenderDevice, RenderQueue},
-};
+use bevy::prelude::Entity;
 use bevy_gpu_compute_core::{
-    MaxOutputLengths, TypeErasedArrayInputData, TypeErasedConfigInputData, TypesSpec,
+    MaxOutputLengths, TypeErasedArrayInputData, TypeErasedConfigInputData,
 };
 
-use crate::{
-    prelude::IterationSpace,
-    task::{
-        buffers::components::{
-            ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
-            OutputCountStagingBuffers, OutputStagingBuffers,
-        },
-        inputs::{
-            array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
-            config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
-        },
-        outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
-        task_components::{task::BevyGpuComputeTask, task_name::TaskName},
-    },
-};
+use crate::prelude::IterationSpace;
 
 pub struct GpuTaskCommands {
     entity: Entity,
@@ -37,6 +18,23 @@ pub enum GpuTaskCommand {
         max_output_lengths: Option<MaxOutputLengths>,
     },
     Run,
+}
+impl std::fmt::Display for GpuTaskCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GpuTaskCommand::SetConfigInputs(_) => write!(f, "SetConfigInputs"),
+            GpuTaskCommand::SetInputs(_) => write!(f, "SetInputs"),
+            GpuTaskCommand::Mutate {
+                iteration_space,
+                max_output_lengths,
+            } => write!(
+                f,
+                "Mutate {{ iteration_space: {:?}, max_output_lengths: {:?} }}",
+                iteration_space, max_output_lengths
+            ),
+            GpuTaskCommand::Run => write!(f, "Run"),
+        }
+    }
 }
 
 impl GpuTaskCommands {

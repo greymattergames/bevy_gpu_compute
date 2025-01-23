@@ -1,8 +1,7 @@
 use bevy::{log::info, render::renderer::RenderDevice};
-use bevy_gpu_compute_core::TypesSpec;
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
-use crate::task::{task_commands::GpuTaskCommands, task_components::task::BevyGpuComputeTask};
+use crate::task::task_components::task::BevyGpuComputeTask;
 
 pub fn update_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     task.buffers.input.clear();
@@ -25,12 +24,12 @@ pub fn update_input_buffers(task: &mut BevyGpuComputeTask, render_device: &Rende
                     .unwrap(),
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
             });
+            new_buffers.push(buffer);
             info!(
                 "Created input buffer for task {} with label {}",
                 task.name(),
                 label
             );
-            continue;
         }
     }
     task.buffers.input = new_buffers;

@@ -1,9 +1,8 @@
 use bevy::render::renderer::RenderDevice;
-use bevy_gpu_compute_core::TypesSpec;
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
-    outputs::definitions::wgsl_counter::WgslCounter, task_commands::GpuTaskCommands,
+    outputs::definitions::wgsl_counter::WgslCounter,
     task_components::task::BevyGpuComputeTask,
 };
 

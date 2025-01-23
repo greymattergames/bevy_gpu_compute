@@ -4,9 +4,9 @@ use bevy::{
     log,
     render::renderer::{RenderDevice, RenderQueue},
 };
-use bevy_gpu_compute_core::{TypeErasedArrayOutputData, TypesSpec};
+use bevy_gpu_compute_core::TypeErasedArrayOutputData;
 
-use crate::task::{task_commands::GpuTaskCommands, task_components::task::BevyGpuComputeTask};
+use crate::task::task_components::task::BevyGpuComputeTask;
 
 use super::helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec;
 use std::collections::HashMap;

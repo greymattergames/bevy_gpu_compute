@@ -1,13 +1,6 @@
-use bevy::{
-    core_pipeline::core_3d::graph::input,
-    prelude::{Commands, Entity},
-};
 use bevy_gpu_compute_core::MaxOutputLengths;
 
-use crate::task::{
-    inputs::array_type::lengths::InputArrayDataLengths,
-    task_components::task_max_output_bytes::TaskMaxOutputBytes,
-};
+use crate::task::task_components::task_max_output_bytes::TaskMaxOutputBytes;
 
 use super::{
     derived_spec::ComputeTaskDerivedSpec, gpu_workgroup_sizes::GpuWorkgroupSizes,

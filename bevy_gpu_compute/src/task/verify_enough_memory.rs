@@ -1,16 +1,10 @@
-use bevy::{
-    log,
-    prelude::{Query, Res},
-};
+use bevy::log;
 
 use crate::ram_limit::RamLimit;
 
-use super::{
-    task_components::task::BevyGpuComputeTask,
-    task_specification::task_specification::ComputeTaskSpecification,
-};
+use super::task_components::task::BevyGpuComputeTask;
 
-pub fn verify_have_enough_memory(tasks: Vec<&BevyGpuComputeTask>, ram_limit: &RamLimit) {
+pub fn verify_have_enough_memory(tasks: &Vec<&BevyGpuComputeTask>, ram_limit: &RamLimit) {
     let total_bytes = tasks.iter().fold(0, |sum, task_spec| {
         sum + task_spec.spec.task_max_output_bytes().get()
     });

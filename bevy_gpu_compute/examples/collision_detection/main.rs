@@ -25,14 +25,14 @@ fn main() {
             Startup,
             (spawn_camera, spawn_entities, create_task, modify_task).chain(),
         )
-        .add_systems(Update, (modify_task_config_inputs, run_task))
+        .add_systems(Update, (modify_task_config_inputs, run_task).chain())
         .add_systems(Update, (handle_task_results, exit_and_show_results).chain())
         .run();
 }
 
-const SPAWN_RANGE_MIN: i32 = -1;
-const SPAWN_RANGE_MAX: i32 = 1;
-const ENTITY_RADIUS: f32 = 1.;
+const SPAWN_RANGE_MIN: i32 = -2;
+const SPAWN_RANGE_MAX: i32 = 2;
+const ENTITY_RADIUS: f32 = 1.1;
 const EXIT_AFTER_FRAMES: u32 = 2;
 
 #[derive(Resource)]
@@ -56,7 +56,7 @@ mod collision_detection_module {
     use bevy_gpu_compute_core::wgsl_helpers::*;
     use bevy_gpu_compute_macro::*;
 
-    const MY_CONST: u32 = 10;
+    const MY_CONST: u32 = 1;
     #[wgsl_config]
     struct Config {
         pub radius_multiplier: f32,
@@ -204,7 +204,10 @@ fn run_task(
         )
         .set_radius(entities.iter().map(|e| e.0.radius()).collect())
         .into();
-    let task = gpu_tasks.task("collision_detection").set_inputs(input_data);
+    let task = gpu_tasks
+        .task("collision_detection")
+        .set_inputs(input_data)
+        .run();
     gpu_tasks.run_commands(task);
 }
 
@@ -215,7 +218,7 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
     // log::info!("results: {:?}", results);c
     if let Ok(results) = results {
         let debug_results = results.my_debug_info.unwrap();
-        log::info!("debug results: {:?}", debug_results);
+        // log::info!("debug results: {:?}", debug_results);
         //fully type-safe results
         let collision_results = results.collision_result.unwrap();
         // your logic here

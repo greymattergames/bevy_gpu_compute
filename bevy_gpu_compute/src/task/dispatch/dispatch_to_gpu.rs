@@ -1,17 +1,8 @@
-use bevy::{
-    ecs::batching::BatchingStrategy,
-    prelude::{Query, Res},
-    render::renderer::{RenderDevice, RenderQueue},
-};
-use bevy_gpu_compute_core::TypesSpec;
+use bevy::render::renderer::{RenderDevice, RenderQueue};
 
 use crate::task::{
-    compute_pipeline::cache::{PipelineKey, PipelineLruCache},
-    task_commands::GpuTaskCommands,
+    compute_pipeline::cache::PipelineKey,
     task_components::task::BevyGpuComputeTask,
-    task_specification::{
-        gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
-    },
 };
 pub fn dispatch_to_gpu(
     task: &mut BevyGpuComputeTask,

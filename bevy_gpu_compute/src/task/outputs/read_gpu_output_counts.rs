@@ -1,26 +1,15 @@
 use std::sync::{Arc, Mutex};
 
 use bevy::{
-    ecs::batching::BatchingStrategy,
     log,
-    prelude::{Query, Res},
     render::renderer::{RenderDevice, RenderQueue},
 };
-use bevy_gpu_compute_core::TypesSpec;
 use wgpu::Buffer;
 
-use crate::task::{
-    buffers::components::{OutputCountBuffers, OutputCountStagingBuffers},
-    task_commands::GpuTaskCommands,
-    task_components::task::BevyGpuComputeTask,
-    task_specification::task_specification::ComputeTaskSpecification,
-};
+use crate::task::task_components::task::BevyGpuComputeTask;
 
 use super::{
-    definitions::{
-        gpu_output_counts::GpuOutputCounts, output_vector_metadata_spec::OutputVectorsMetadataSpec,
-        wgsl_counter::WgslCounter,
-    },
+    definitions::wgsl_counter::WgslCounter,
     helpers::get_gpu_output_counter_value::get_gpu_output_counter_value,
 };
 

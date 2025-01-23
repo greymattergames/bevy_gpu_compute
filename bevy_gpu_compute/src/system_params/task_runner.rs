@@ -1,16 +1,11 @@
-use std::collections::HashMap;
-
 use bevy::{
     ecs::system::SystemParam,
-    prelude::{Commands, Entity, Query, Res, Resource},
+    log,
+    prelude::{Entity, Query, Res},
     render::renderer::{RenderDevice, RenderQueue},
-};
-use bevy_gpu_compute_core::{
-    TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
 };
 
 use crate::{
-    prelude::ComputeTaskSpecification,
     ram_limit::RamLimit,
     task::{
         buffers::{
@@ -58,8 +53,9 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
             .tasks
             .get_mut(commands.entity())
             .expect("Task entity not found");
-
+        let mut should_recompute_memory = false;
         for cmd in commands.commands {
+            log::info!("Running command: {}", cmd);
             match cmd {
                 GpuTaskCommand::SetConfigInputs(inputs) => {
                     task.config_input_data = Some(*inputs);
@@ -92,6 +88,7 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
                     task.spec.mutate(iteration_space, max_output_lengths);
                     update_compute_pipeline(&mut task, &self.render_device);
                     update_output_buffers(&mut task, &self.render_device);
+                    should_recompute_memory = true;
                 }
                 GpuTaskCommand::Run => {
                     dispatch_to_gpu(&mut task, &self.render_device, &self.render_queue);
@@ -105,6 +102,10 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
                     );
                 }
             }
+        }
+        if should_recompute_memory {
+            let all_tasks: Vec<_> = self.tasks.iter().map(|(_, t)| t).collect();
+            verify_have_enough_memory(&all_tasks, &self.ram_limit);
         }
     }
 }

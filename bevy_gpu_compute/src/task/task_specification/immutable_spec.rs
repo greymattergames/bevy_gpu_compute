@@ -1,7 +1,7 @@
 use crate::task::{
     inputs::{
         array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
-        config_type::config_input_metadata_spec::{ConfigInputMetadata, ConfigInputsMetadataSpec},
+        config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
     },
     outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
     wgsl_code::WgslCode,

@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use bevy::{
     ecs::system::SystemParam,
-    prelude::{Commands, Entity, Query, Res, Resource},
+    prelude::{Commands, Entity, Res},
     render::renderer::{RenderDevice, RenderQueue},
 };
 use bevy_gpu_compute_core::{
@@ -13,7 +11,7 @@ use bevy_gpu_compute_core::{
 use crate::{
     prelude::IterationSpace,
     task::{
-        task_components::{task::BevyGpuComputeTask, task_name::TaskName},
+        task_components::task::BevyGpuComputeTask,
         task_specification::task_specification::ComputeTaskSpecification,
     },
 };
@@ -23,7 +21,6 @@ use crate::{
 pub struct BevyGpuComputeTaskCreator<'w, 's> {
     commands: Commands<'w, 's>,
     render_device: Res<'w, RenderDevice>,
-    render_queue: Res<'w, RenderQueue>,
 }
 
 impl<'w, 's> BevyGpuComputeTaskCreator<'w, 's> {
