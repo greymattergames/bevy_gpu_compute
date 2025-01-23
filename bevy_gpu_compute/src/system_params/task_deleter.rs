@@ -13,10 +13,7 @@ use crate::{
     prelude::IterationSpace,
     task::{
         task_components::{task::BevyGpuComputeTask, task_name::TaskName},
-        task_specification::{
-            max_output_vector_lengths::MaxOutputLengths,
-            task_specification::ComputeTaskSpecification,
-        },
+        task_specification::task_specification::ComputeTaskSpecification,
     },
 };
 

@@ -4,10 +4,12 @@ use bevy::{
     prelude::{Commands, DespawnRecursiveExt, Entity, Mut, Query, ResMut},
     render::renderer::{RenderDevice, RenderQueue},
 };
-use bevy_gpu_compute_core::{TypeErasedArrayInputData, TypeErasedConfigInputData, TypesSpec};
+use bevy_gpu_compute_core::{
+    MaxOutputLengths, TypeErasedArrayInputData, TypeErasedConfigInputData, TypesSpec,
+};
 
 use crate::{
-    prelude::{ComputeTaskSpecification, IterationSpace, MaxOutputLengths},
+    prelude::IterationSpace,
     task::{
         buffers::components::{
             ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,

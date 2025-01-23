@@ -17,5 +17,4 @@ pub use crate::system_params::task_reader::GpuTaskReader;
 pub use crate::system_params::task_runner::GpuTaskRunner;
 pub use crate::task::task_components::task_run_id::TaskRunId;
 pub use crate::task::task_specification::iteration_space::IterationSpace;
-pub use crate::task::task_specification::max_output_vector_lengths::MaxOutputLengths;
 pub use crate::task::task_specification::task_specification::ComputeTaskSpecification;

@@ -24,7 +24,7 @@ pub fn create_output_data_builder(state: &ModuleTransformState) -> TokenStream {
                 builder
             }
         }
-        impl From<&TypeErasedArrayOutputData> for OutputDataBuilder {
+        impl OutputDataBuilderTrait for OutputDataBuilder {
             fn from(out_data: &TypeErasedArrayOutputData) ->  Self {
                 let mut builder = Self {
                     #init_fields

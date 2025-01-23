@@ -1,3 +1,5 @@
+use core::num;
+
 use bevy::{
     DefaultPlugins,
     app::{App, AppExit, Startup, Update},
@@ -9,6 +11,7 @@ use bevy::{
 };
 use bevy_gpu_compute::prelude::*;
 mod visuals;
+use bevy_gpu_compute_core::MaxOutputLengths;
 use visuals::{BoundingCircleComponent, ColorHandles, spawn_camera, spawn_entities};
 
 fn main() {
@@ -140,8 +143,8 @@ fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
         .finish();
     // Method 2:
     let mut alternate_max_output_lengths = MaxOutputLengths::empty();
-    initial_max_output_lengths.set("CollisionResult", 100);
-    initial_max_output_lengths.set("MyDebugInfo", 100);
+    alternate_max_output_lengths.set("CollisionResult", 100);
+    alternate_max_output_lengths.set("MyDebugInfo", 100);
     //
     gpu_task_creator.create_task_from_rust_shader::<collision_detection_module::Types>(
         "collision_detection", //todo, ensure name is unique
@@ -154,6 +157,7 @@ fn delete_task(mut gpu_task_deleter: BevyGpuComputeTaskDeleter) {
     let task = gpu_task_deleter.delete("collision_detection");
 }
 fn modify_task(mut gpu_tasks: GpuTaskRunner, state: Res<State>) {
+    let num_entities = state.num_entities;
     let max_output_lengths = collision_detection_module::MaxOutputLengthsBuilder::new()
         .set_collision_result((num_entities * num_entities) as usize)
         .set_my_debug_info((num_entities * num_entities) as usize)
@@ -170,13 +174,15 @@ fn modify_task_config_inputs(mut count: Local<u32>, mut gpu_tasks: GpuTaskRunner
         (EXIT_AFTER_FRAMES as i32 - *count as i32) as f32 / EXIT_AFTER_FRAMES as f32;
     log::info!("rad_mult: {}", radius_multiplier);
     // below needs to simplify
-    let mut config = ConfigInputData::<collision_detection_module::Types>::empty();
-    config.set_input0(collision_detection_module::Config { radius_multiplier });
+    // let mut config = ConfigInputData::<collision_detection_module::Types>::empty();
+    // config.set_input0(collision_detection_module::Config { radius_multiplier });
 
-    //todo better api: let configs = collision_detection_module::ConfigsBuilder::new().set_config( collision_detection_module::Config {radius_multiplier} ).into();
+    let configs = collision_detection_module::ConfigInputDataBuilder::new()
+        .set_config(collision_detection_module::Config { radius_multiplier })
+        .finish();
     let commands = gpu_tasks
         .task("collision_detection")
-        .set_config_inputs(config);
+        .set_config_inputs(configs);
     gpu_tasks.run_commands(commands);
 
     *count += 1;
@@ -187,55 +193,31 @@ fn run_task(
     mut state: ResMut<State>,
     entities: Query<&BoundingCircleComponent>,
 ) {
-    let task = gpu_tasks.task("collision_detection");
-    let mut input_data = InputData::<collision_detection_module::Types>::empty();
-    input_data.set_input0(
-        entities
-            .iter()
-            .map(|e| collision_detection_module::Position {
-                v: Vec2F32::new(e.0.center.x, e.0.center.y),
-            })
-            .collect(),
-    );
-    input_data.set_input1(entities.iter().map(|e| e.0.radius()).collect());
-    //todo better api:
     let input_data = collision_detection_module::InputDataBuilder::new()
         .set_position(
             entities
                 .iter()
                 .map(|e| collision_detection_module::Position {
                     v: Vec2F32::new(e.0.center.x, e.0.center.y),
-                }),
+                })
+                .collect(),
         )
-        .set_radius(entities.iter().map(|e| e.0.radius()))
+        .set_radius(entities.iter().map(|e| e.0.radius()).collect())
         .into();
-    // working api below
-    task.set_inputs(input_data);
+    let task = gpu_tasks.task("collision_detection").set_inputs(input_data);
     gpu_tasks.run_commands(task);
 }
 
 fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<State>) {
-    // let results =
-    let result = gpu_task_results
+    let results = gpu_task_reader
         .latest_results::<collision_detection_module::OutputDataBuilder>("collision_detection");
 
     // log::info!("results: {:?}", results);c
     if let Ok(results) = results {
-        let debug_results: Vec<collision_detection_module::MyDebugInfo> = results
-            .get_output1()
-            .unwrap()
-            .into_iter()
-            .cloned()
-            .collect();
+        let debug_results = results.my_debug_info.unwrap();
         log::info!("debug results: {:?}", debug_results);
-        let t = results.get_output1().unwrap();
         //fully type-safe results
-        let collision_results: Vec<collision_detection_module::CollisionResult> = results
-            .get_output0()
-            .unwrap()
-            .into_iter()
-            .cloned()
-            .collect();
+        let collision_results = results.collision_result.unwrap();
         // your logic here
         let count = collision_results.len();
         log::info!("collisions this frame: {}", count);
@@ -243,20 +225,6 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
         state.collision_count += count;
     }
 }
-
-/**
- * WHAT BEVY ACCESS DO WE ACTUALLY REQUIRE?
- * render::render_resource::Buffer, but its just a type we can use anywhere - TYPE
- * RENDER DEVICE (render::renderer::RenderDevice,) - RESOURCE
- * render_resource::BindGroup, another static type - TYPE
- * RenderQueue, (render::render_graph::RenderQueue) - RESOURCE
- * render::render_resource::BindGroupLayout - TYPE
- */
-
-/// The [`SystemParam`] struct can contain any types that can also be included in a
-/// system function signature.
-///
-/// In this example, it includes a query and a mutable resource.
 
 // when the local variable "count" goes above a certain number (representing frame count), exit the app
 fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: EventWriter<AppExit>) {

@@ -1,4 +1,5 @@
 use bevy::{
+    log,
     prelude::Component,
     render::{
         render_resource::{BindGroup, BindGroupLayout, Buffer},
@@ -12,7 +13,6 @@ use wgpu::PipelineLayout;
 
 use crate::task::{
     compute_pipeline::cache::PipelineLruCache,
-    outputs::definitions::type_erased_output_data::TypeErasedOutputData,
     task_specification::{
         gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
     },
@@ -55,9 +55,9 @@ pub struct BevyGpuComputeTask {
 
     // other stuff
     pub bind_group: Option<BindGroup>,
-    pub config_input_data: Option<&TypeErasedConfigInputData>,
-    pub input_data: Option<&TypeErasedArrayInputData>,
-    pub output_data: Option<&TypeErasedArrayOutputData>,
+    pub config_input_data: Option<TypeErasedConfigInputData>,
+    pub input_data: Option<TypeErasedArrayInputData>,
+    pub output_data: Option<TypeErasedArrayOutputData>,
 }
 
 impl BevyGpuComputeTask {

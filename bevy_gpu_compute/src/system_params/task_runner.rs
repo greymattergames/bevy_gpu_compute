@@ -52,7 +52,7 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
     }
 
     /// Runs all previously queued commands for the task
-    pub async fn run_commands(&mut self, commands: GpuTaskCommands) {
+    pub fn run_commands(&mut self, commands: GpuTaskCommands) {
         let (_, mut task) = self
             .tasks
             .get_mut(commands.entity())

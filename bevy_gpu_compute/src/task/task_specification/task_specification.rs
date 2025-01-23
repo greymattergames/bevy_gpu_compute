@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice};
-use bevy_gpu_compute_core::{wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}, TypeErasedArrayInputData, TypesSpec};
+use bevy_gpu_compute_core::{wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}, MaxOutputLengths, TypeErasedArrayInputData, TypesSpec};
 
 use crate::task::{
     inputs::{array_type::input_vector_metadata_spec::{
@@ -12,7 +12,7 @@ use crate::task::{
     }, wgsl_code::WgslCode
 };
 
-use super::{derived_spec::ComputeTaskDerivedSpec, immutable_spec::ComputeTaskImmutableSpec, max_output_vector_lengths::MaxOutputLengths, mutable_spec::ComputeTaskMutableSpec};
+use super::{derived_spec::ComputeTaskDerivedSpec, immutable_spec::ComputeTaskImmutableSpec,  mutable_spec::ComputeTaskMutableSpec};
 
 /**
 These all used to be separate components, but this limited the user api, for example the user could not update the iteration space and then retrieve the resulting correct GpuWorkgroupSpace/Sizes in the same frame, since these updates were handled in separate systems.

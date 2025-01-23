@@ -19,7 +19,7 @@ pub fn read_gpu_outputs(
     render_device: &RenderDevice,
     render_queue: &RenderQueue,
 ) {
-    let mut bytes_per_wgsl_output_type_name: HashMap<String, Vec<u8>>;
+    let mut bytes_per_wgsl_output_type_name: HashMap<String, Vec<u8>> = HashMap::new();
 
     task.spec
         .output_vectors_metadata_spec()
@@ -61,7 +61,7 @@ pub fn read_gpu_outputs(
                 }
             }
         });
-    task.output_data = Some(&TypeErasedArrayOutputData::new(
+    task.output_data = Some(TypeErasedArrayOutputData::new(
         bytes_per_wgsl_output_type_name,
     ));
 }

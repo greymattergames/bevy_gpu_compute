@@ -32,6 +32,7 @@ pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device:
                 label: Some(&label),
                 contents: task
                     .config_input_data
+                    .as_ref()
                     .unwrap()
                     .get_bytes(s.name().name())
                     .unwrap(),

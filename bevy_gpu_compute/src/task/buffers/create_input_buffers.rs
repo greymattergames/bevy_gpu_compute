@@ -7,12 +7,11 @@ use crate::task::{task_commands::GpuTaskCommands, task_components::task::BevyGpu
 pub fn update_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     task.buffers.input.clear();
     let mut new_buffers = Vec::new();
-    for (i, spec) in task
+    for spec in task
         .spec
         .input_vectors_metadata_spec()
         .get_all_metadata()
         .iter()
-        .enumerate()
     {
         if let Some(s) = spec {
             let label = format!("{}-input-{}", task.name(), s.name().name());
@@ -22,7 +21,7 @@ pub fn update_input_buffers(task: &mut BevyGpuComputeTask, render_device: &Rende
                     .input_data
                     .as_ref()
                     .unwrap()
-                    .input_bytes(s.name().name())
+                    .get_bytes(s.name().name())
                     .unwrap(),
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
             });
