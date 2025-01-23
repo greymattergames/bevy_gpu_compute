@@ -4,7 +4,7 @@ use bevy::{
     prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
-use bevy_gpu_compute_core::TypesSpec;
+use bevy_gpu_compute_core::{ConfigInputDataTrait, TypesSpec};
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::{
@@ -19,7 +19,10 @@ use crate::task::{
 
 use super::components::{ConfigInputBuffers, InputBuffers};
 
-pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
+pub fn update_config_input_buffers<InputConfigsType: ConfigInputDataTrait>(
+    task: &mut BevyGpuComputeTask,
+    render_device: &RenderDevice,
+) {
     task.buffers.config_input.clear();
     let mut new_buffers = Vec::new();
     for (i, spec) in task
@@ -29,16 +32,12 @@ pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device:
         .iter()
         .enumerate()
     {
+        let fake_data: InputConfigsType = TypeErasedConfigInputData::new();
         if let Some(s) = spec {
             let label = format!("{}-input-{}", task.name(), s.name().name());
             let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
                 label: Some(&label),
-                contents: task
-                    .config_input_data
-                    .as_ref()
-                    .unwrap()
-                    .input_bytes(i)
-                    .unwrap(),
+                contents: fake_data.get_bytes(s.name().name()).unwrap(),
                 usage: BufferUsages::UNIFORM,
             });
             info!(
