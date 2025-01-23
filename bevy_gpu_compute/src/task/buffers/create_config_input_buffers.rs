@@ -1,6 +1,6 @@
 use bevy::{
     ecs::batching::BatchingStrategy,
-    log::info,
+    log::{self, info},
     prelude::{EventReader, Query, Res},
     render::renderer::RenderDevice,
 };
@@ -17,6 +17,7 @@ use crate::task::{
 use super::components::{ConfigInputBuffers, InputBuffers};
 
 pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
+    log::info!("Creating config input buffers for task {}", task.name());
     task.buffers.config_input.clear();
     let mut new_buffers = Vec::new();
     for (i, spec) in task
@@ -39,7 +40,7 @@ pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device:
                 usage: BufferUsages::UNIFORM,
             });
             info!(
-                "Created input buffer for task {} with label {}",
+                "Created config input buffer for task {} with label {}",
                 task.name(),
                 label
             );

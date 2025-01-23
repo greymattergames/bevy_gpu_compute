@@ -20,6 +20,7 @@ use crate::{
         },
         compute_pipeline::update_on_pipeline_const_change::update_compute_pipeline,
         dispatch::{create_bind_group::create_bind_group, dispatch_to_gpu::dispatch_to_gpu},
+        inputs::array_type::lengths::InputArrayDataLengths,
         outputs::{
             read_gpu_output_counts::read_gpu_output_counts, read_gpu_task_outputs::read_gpu_outputs,
         },
@@ -65,7 +66,22 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
                     update_config_input_buffers(&mut task, &self.render_device);
                 }
                 GpuTaskCommand::SetInputs(data) => {
+                    let lengths = data.get_lengths().clone();
                     task.input_data = Some(*data);
+                    if task.input_array_lengths.is_none() {
+                        task.input_array_lengths = Some(InputArrayDataLengths::new(lengths));
+                        update_compute_pipeline(&mut task, &self.render_device);
+                    } else {
+                        let new_hash = task
+                            .input_array_lengths
+                            .as_mut()
+                            .unwrap()
+                            .update_and_return_new_hash_if_changed(lengths);
+                        if new_hash.is_some() {
+                            // need to update pipeline consts
+                            update_compute_pipeline(&mut task, &self.render_device);
+                        }
+                    }
                     update_input_buffers(&mut task, &self.render_device);
                     create_bind_group(&mut task, &self.render_device);
                 }

@@ -13,6 +13,7 @@ use wgpu::PipelineLayout;
 
 use crate::task::{
     compute_pipeline::cache::PipelineLruCache,
+    inputs::array_type::lengths::InputArrayDataLengths,
     task_specification::{
         gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
     },
@@ -58,6 +59,7 @@ pub struct BevyGpuComputeTask {
     pub config_input_data: Option<TypeErasedConfigInputData>,
     pub input_data: Option<TypeErasedArrayInputData>,
     pub output_data: Option<TypeErasedArrayOutputData>,
+    pub input_array_lengths: Option<InputArrayDataLengths>,
 }
 
 impl BevyGpuComputeTask {
@@ -74,6 +76,7 @@ impl BevyGpuComputeTask {
             config_input_data: None,
             input_data: None,
             output_data: None,
+            input_array_lengths: None,
         };
         n.setup_static_fields(render_device);
         n

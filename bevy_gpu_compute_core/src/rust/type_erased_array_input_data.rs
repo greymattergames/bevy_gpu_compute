@@ -31,6 +31,9 @@ impl TypeErasedArrayInputData {
             .get(input_name)
             .copied()
     }
+    pub fn get_lengths(&self) -> &HashMap<String, usize> {
+        &self.lengths_per_wgsl_input_type_name
+    }
     pub fn get_map(&self) -> &HashMap<String, Vec<u8>> {
         &self.bytes_per_wgsl_input_type_name
     }

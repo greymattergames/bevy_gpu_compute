@@ -13,6 +13,9 @@ use crate::task::{task_commands::GpuTaskCommands, task_components::task::BevyGpu
 use super::cache::{PipelineKey, PipelineLruCache};
 
 pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
+    if task.input_array_lengths.is_none() {
+        return;
+    }
     log::info!("Updating pipeline for task {}", task.name());
     let key = PipelineKey {
         pipeline_consts_version: task.spec.iter_space_and_out_lengths_version(),
@@ -31,7 +34,7 @@ pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &Re
             compilation_options: PipelineCompilationOptions {
                 constants: &&task
                     .spec
-                    .get_pipeline_consts(task.input_data.as_ref().unwrap()),
+                    .get_pipeline_consts(task.input_array_lengths.as_ref().unwrap()),
                 zero_initialize_workgroup_memory: Default::default(),
             },
             cache: None,

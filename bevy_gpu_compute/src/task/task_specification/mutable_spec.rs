@@ -19,7 +19,6 @@ use super::{
 pub struct ComputeTaskMutableSpec {
     iteration_space: IterationSpace,
     output_array_lengths: MaxOutputLengths,
-    input_array_lengths: InputArrayDataLengths,
     iter_space_and_out_lengths_version: u64,
 }
 
@@ -27,14 +26,13 @@ impl ComputeTaskMutableSpec {
     pub fn new(
         iteration_space: IterationSpace,
         output_array_lengths: MaxOutputLengths,
-        input_array_lengths: InputArrayDataLengths,
         derived: &mut ComputeTaskDerivedSpec,
         immutable: &ComputeTaskImmutableSpec,
     ) -> Self {
         let mut mutable = ComputeTaskMutableSpec {
             iteration_space,
             output_array_lengths,
-            input_array_lengths,
+
             iter_space_and_out_lengths_version: 0,
         };
         mutable.update_on_iter_space_or_max_output_lengths_change(derived, immutable);
@@ -49,9 +47,6 @@ impl ComputeTaskMutableSpec {
     }
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.iter_space_and_out_lengths_version
-    }
-    pub fn input_array_lengths(&mut self) -> &mut InputArrayDataLengths {
-        &mut self.input_array_lengths
     }
 
     /// If a parameter is None then the existing value is retained

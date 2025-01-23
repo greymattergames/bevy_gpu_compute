@@ -4,9 +4,9 @@ use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::Render
 use bevy_gpu_compute_core::{wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}, MaxOutputLengths, TypeErasedArrayInputData, TypesSpec};
 
 use crate::task::{
-    inputs::{array_type::input_vector_metadata_spec::{
+    inputs::{array_type::{input_vector_metadata_spec::{
         InputVectorMetadataDefinition, InputVectorsMetadataSpec,
-    }, config_type::config_input_metadata_spec::{ConfigInputMetadataDefinition, ConfigInputsMetadataSpec}}, outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec}, task_components::task_max_output_bytes::TaskMaxOutputBytes, task_specification::{
+    }, lengths::InputArrayDataLengths}, config_type::config_input_metadata_spec::{ConfigInputMetadataDefinition, ConfigInputsMetadataSpec}}, outputs::definitions::output_vector_metadata_spec::{OutputVectorMetadataDefinition, OutputVectorsMetadataSpec}, task_components::task_max_output_bytes::TaskMaxOutputBytes, task_specification::{
         gpu_workgroup_sizes::GpuWorkgroupSizes, gpu_workgroup_space::GpuWorkgroupSpace,
         iteration_space::IterationSpace,
     }, wgsl_code::WgslCode
@@ -183,18 +183,18 @@ impl ComputeTaskSpecification {
         self.mutate.multiple(new_iteration_space, new_max_output_array_lengths, &self.immutable, &mut self.derived);
     }
   
-    pub fn get_pipeline_consts(&self, input_data: &TypeErasedArrayInputData) -> HashMap<String, f64>{
+    pub fn get_pipeline_consts(&self, input_data_lengths: &InputArrayDataLengths) -> HashMap<String, f64>{
             let mut n: HashMap<String, f64> = HashMap::new();
             
             // input and output array lengths
             for (i, spec) in self.immutable.input_vectors_metadata_spec().get_all_metadata().iter().enumerate(){
                 if let Some(s) = spec{
-                    let length = input_data.get_length(s.name().name());
+                    let length = input_data_lengths.get(s.name().name());
                     let name = s.name().input_array_length();
                     log::info!("input_array_lengths = {:?}, for {}", length, name);
                     
                     assert!(length.is_some(), "input_array_lengths not set for input array {}, {}", i, name.clone());
-                    n.insert(name.clone(), length.unwrap() as f64);
+                    n.insert(name.clone(), *length.unwrap() as f64);
 
                 }
             }

@@ -46,11 +46,14 @@ pub fn create_bind_group(task: &mut BevyGpuComputeTask, render_device: &RenderDe
         .enumerate()
     {
         if let Some(s) = spec {
-            let buffer = task.buffers.config_input.get(i).unwrap();
-            bindings.push(wgpu::BindGroupEntry {
-                binding: s.get_binding_number(),
-                resource: buffer.as_entire_binding(),
-            });
+            if let Some(conf_in_buff) = task.buffers.config_input.get(i) {
+                bindings.push(wgpu::BindGroupEntry {
+                    binding: s.get_binding_number(),
+                    resource: conf_in_buff.as_entire_binding(),
+                });
+            } else {
+                panic!("Config input has not been set for task {}", task.name());
+            }
         }
     }
     for (i, spec) in task
