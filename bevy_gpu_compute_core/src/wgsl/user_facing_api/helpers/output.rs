@@ -1,6 +1,6 @@
 /**
  * All outputs are arrays/vectors.
- * No "get" type methods are implemented, sinc GPU operations are massively parallel, and you should not be READING from your outputs since you will have no way of knowing if another thread has already touched a certain output or not handled it yet. //todo: (need to add a link to an article explaining this)
+ * No "get" type methods are implemented, sinc GPU operations are massively parallel, and you should not be READING from your outputs since you will have no way of knowing if another thread has already touched a certain output or not handled it yet.  //todo: (need to add a link to an article explaining this)
  */
 pub struct WgslOutput {}
 impl WgslOutput {

@@ -172,7 +172,7 @@ impl BevyGpuComputeTask {
                     }
                 },
                 has_dynamic_offset: false,
-                min_binding_size: None, //todo, this should be pre-calculated for performance reasons
+                min_binding_size: None,
             },
             count: None, //only for textures
         }

@@ -6,6 +6,7 @@ pub use bevy_gpu_compute_macro::wgsl_output_vec;
 pub use bevy_gpu_compute_macro::wgsl_shader_module;
 
 //helpers when writing the shader module:
+pub use bevy_gpu_compute_core::MaxOutputLengths;
 pub use bevy_gpu_compute_core::wgsl_helpers::*;
 
 pub use crate::plugin::BevyGpuComputePlugin;

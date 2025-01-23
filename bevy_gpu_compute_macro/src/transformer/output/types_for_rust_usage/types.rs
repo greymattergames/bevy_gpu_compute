@@ -10,9 +10,9 @@ use crate::{
         custom_types::custom_type::CustomTypeKind,
         output::types_for_rust_usage::{
             config_input_data_builder::create_config_input_data_builder,
-            input_data_builder::{self, create_input_data_builder},
+            input_data_builder::create_input_data_builder,
             make_types_public::MakeTypesPublicTransformer,
-            max_output_lengths_builder::{self, create_max_output_lengths_builder},
+            max_output_lengths_builder::create_max_output_lengths_builder,
             output_data_builder::create_output_data_builder,
         },
     },

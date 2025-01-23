@@ -1,17 +1,11 @@
-use core::num;
-
 use bevy::{
     DefaultPlugins,
     app::{App, AppExit, Startup, Update},
     log,
-    prelude::{
-        Commands, EventReader, EventWriter, IntoSystemConfigs, Local, Query, Res, ResMut, Resource,
-    },
-    render::renderer::RenderDevice,
+    prelude::{EventWriter, IntoSystemConfigs, Local, Query, Res, ResMut, Resource},
 };
 use bevy_gpu_compute::prelude::*;
 mod visuals;
-use bevy_gpu_compute_core::MaxOutputLengths;
 use visuals::{BoundingCircleComponent, ColorHandles, spawn_camera, spawn_entities};
 
 fn main() {
@@ -37,14 +31,12 @@ const EXIT_AFTER_FRAMES: u32 = 2;
 
 #[derive(Resource)]
 struct State {
-    pub run_id: u128,
     pub num_entities: u32,
     pub collision_count: usize,
 }
 impl Default for State {
     fn default() -> Self {
         State {
-            run_id: 0,
             num_entities: 0,
             collision_count: 0,
         }
@@ -61,7 +53,6 @@ mod collision_detection_module {
     struct Config {
         pub radius_multiplier: f32,
     }
-    //todo prevent giving any module-level stuff a "pub" visibility
     #[wgsl_input_array]
     struct Position {
         pub v: Vec2F32,

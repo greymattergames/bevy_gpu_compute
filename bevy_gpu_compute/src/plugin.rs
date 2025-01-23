@@ -12,6 +12,7 @@ use crate::{
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BevyGpuComputeState {
     Running,
+    #[allow(dead_code)]
     Stopped,
 }
 impl Default for BevyGpuComputeState {

@@ -1,7 +1,7 @@
 use bevy::{
     ecs::system::SystemParam,
     prelude::{Commands, Entity, Res},
-    render::renderer::{RenderDevice, RenderQueue},
+    render::renderer::RenderDevice,
 };
 use bevy_gpu_compute_core::{
     MaxOutputLengths, TypesSpec,

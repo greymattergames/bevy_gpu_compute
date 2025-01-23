@@ -46,7 +46,6 @@ impl ComputeTaskSpecification {
                 
                 if i < input_definitions.len() {
                     input_definitions[i] = Some(InputVectorMetadataDefinition { binding_number: binding.entry_num, name: &a.item_type.name });
-                    //todo support variety of binding groups
                 }else {
                     panic!("Too many input arrays in wgsl_shader_module, max is {}", input_definitions.len());
                 }
@@ -64,7 +63,6 @@ impl ComputeTaskSpecification {
                 
                 if i < config_input_definitions.len() {
                     config_input_definitions[i] = Some(ConfigInputMetadataDefinition { binding_number: binding.entry_num, name: &a.name });
-                    //todo support variety of binding groups
                 }else {
                     panic!("Too many input configs in wgsl_shader_module, max is {}", config_input_definitions.len());
                 }
