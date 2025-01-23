@@ -18,7 +18,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build for ${{ matrix.crate }}
-    - run: rustup update nightly && rustup default nightly
-    - run: cargo build --verbose
-    - run: cargo test --verbose
-    - working-directory: ./${{ matrix.crate }}
+      run: |
+        rustup update nightly && rustup default nightly
+        cargo build --verbose
+        cargo test --verbose
+      working-directory: ./${{ matrix.crate }}
