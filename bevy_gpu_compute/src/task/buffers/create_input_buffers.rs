@@ -18,7 +18,12 @@ pub fn update_input_buffers(task: &mut BevyGpuComputeTask, render_device: &Rende
             let label = format!("{}-input-{}", task.name(), s.name().name());
             let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
                 label: Some(&label),
-                contents: task.input_data.as_ref().unwrap().input_bytes(i).unwrap(),
+                contents: task
+                    .input_data
+                    .as_ref()
+                    .unwrap()
+                    .input_bytes(s.name().name())
+                    .unwrap(),
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
             });
             info!(

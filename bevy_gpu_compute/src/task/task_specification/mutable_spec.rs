@@ -5,14 +5,12 @@ use crate::task::task_components::task_max_output_bytes::TaskMaxOutputBytes;
 use super::{
     derived_spec::ComputeTaskDerivedSpec, gpu_workgroup_sizes::GpuWorkgroupSizes,
     gpu_workgroup_space::GpuWorkgroupSpace, immutable_spec::ComputeTaskImmutableSpec,
-    input_array_lengths::ComputeTaskInputArrayLengths, iteration_space::IterationSpace,
-    max_output_vector_lengths::MaxOutputLengths,
+    iteration_space::IterationSpace, max_output_vector_lengths::MaxOutputLengths,
 };
 
 #[derive(Default, Debug)]
 pub struct ComputeTaskMutableSpec {
     iteration_space: IterationSpace,
-    input_array_lengths: ComputeTaskInputArrayLengths,
     output_array_lengths: MaxOutputLengths,
     iter_space_and_out_lengths_version: u64,
 }
@@ -20,14 +18,12 @@ pub struct ComputeTaskMutableSpec {
 impl ComputeTaskMutableSpec {
     pub fn new(
         iteration_space: IterationSpace,
-        input_array_lengths: ComputeTaskInputArrayLengths,
         output_array_lengths: MaxOutputLengths,
         derived: &mut ComputeTaskDerivedSpec,
         immutable: &ComputeTaskImmutableSpec,
     ) -> Self {
         let mut mutable = ComputeTaskMutableSpec {
             iteration_space,
-            input_array_lengths,
             output_array_lengths,
             iter_space_and_out_lengths_version: 0,
         };
@@ -38,17 +34,11 @@ impl ComputeTaskMutableSpec {
     pub fn iteration_space(&self) -> &IterationSpace {
         &self.iteration_space
     }
-    pub fn input_array_lengths(&self) -> &ComputeTaskInputArrayLengths {
-        &self.input_array_lengths
-    }
     pub fn output_array_lengths(&self) -> &MaxOutputLengths {
         &self.output_array_lengths
     }
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.iter_space_and_out_lengths_version
-    }
-    pub fn set_input_array_lengths(&mut self, input_array_lengths: ComputeTaskInputArrayLengths) {
-        self.input_array_lengths = input_array_lengths;
     }
 
     /// If a parameter is None then the existing value is retained

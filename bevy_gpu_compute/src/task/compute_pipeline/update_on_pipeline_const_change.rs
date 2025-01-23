@@ -29,7 +29,9 @@ pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &Re
             entry_point: Some(task.spec.wgsl_code().entry_point_function_name()),
             // this is where we specify new values for pipeline constants...
             compilation_options: PipelineCompilationOptions {
-                constants: &&task.spec.get_pipeline_consts(),
+                constants: &&task
+                    .spec
+                    .get_pipeline_consts(task.input_data.as_ref().unwrap()),
                 zero_initialize_workgroup_memory: Default::default(),
             },
             cache: None,

@@ -1,6 +1,6 @@
 #![feature(f16)]
 use bevy_gpu_compute_core::{
-    MaxOutputLengths, TypesSpec,
+    MaxOutputLengths, TypeErasedArrayOutputData, TypesSpec,
     wgsl::{
         shader_custom_type_name::ShaderCustomTypeName,
         shader_module::user_defined_portion::WgslShaderModuleUserPortion,
@@ -399,10 +399,10 @@ fn test_max_output_lengths_helper() {
         fn main(iter_pos: WgslIterationPosition) {}
     }
 
-    let max_outputs: MaxOutputLengths = test_module::MaxOutputLengthsBuilder::new()
+    let max_outputs = test_module::MaxOutputLengthsBuilder::new()
         .set_my_position(10)
         .set_debug(20)
-        .into();
+        .finish();
     assert_eq!(
         max_outputs.get_by_name(&ShaderCustomTypeName::new("MyPosition")),
         10
@@ -424,25 +424,16 @@ fn test_configs_builder() {
         type MyPosition = [f32; 2];
         #[wgsl_config]
         struct MyConfig {
-            v1: f32,
-            v2: f32,
+            pub v1: f32,
+            pub v2: f32,
         }
         fn main(iter_pos: WgslIterationPosition) {}
     }
 
-    let max_outputs: ConfigInputData<test_module::Types> =
-        test_module::MaxOutputLengthsBuilder::new()
-            .set_my_position(10)
-            .set_debug(20)
-            .into();
-    assert_eq!(
-        max_outputs.get_by_name(&ShaderCustomTypeName::new("MyPosition")),
-        10
-    );
-    assert_eq!(
-        max_outputs.get_by_name(&ShaderCustomTypeName::new("Debug")),
-        20
-    );
+    let config = test_module::ConfigInputDataBuilder::new()
+        .set_my_position([3.0, 4.0])
+        .set_my_config(test_module::MyConfig { v1: 10.0, v2: 20.0 })
+        .finish();
 }
 
 #[test]
@@ -552,4 +543,44 @@ fn test_entire_collision_shader() {
     let user_portion = WgslShaderModuleUserPortion { static_consts: vec![WgslConstAssignment { code: WgslShaderModuleSectionCode { rust_code: "const example_module_const : u32 = 42;".to_string(), wgsl_code: "const example_module_const : u32 = 42;".to_string() } }], helper_types: vec![], uniforms: vec![WgslType { name: ShaderCustomTypeName::new("Uniforms"), code: WgslShaderModuleSectionCode { rust_code: "#[wgsl_config] struct Uniforms { time : f32, resolution : Vec2F32, }".to_string(), wgsl_code: "struct Uniforms { time : f32, resolution : vec2 < f32 > , }".to_string() } }], input_arrays: vec![WgslInputArray { item_type: WgslType { name: ShaderCustomTypeName::new("Position"), code: WgslShaderModuleSectionCode { rust_code: "#[wgsl_input_array] type Position = [f32; 2];".to_string(), wgsl_code: "alias Position  = array < f32, 2 > ;".to_string() } } }, WgslInputArray { item_type: WgslType { name: ShaderCustomTypeName::new("Radius") , code: WgslShaderModuleSectionCode { rust_code: "#[wgsl_input_array] type Radius = f32;".to_string(), wgsl_code: "alias Radius  = f32;".to_string() } } }], output_arrays: vec![WgslOutputArray { item_type: WgslType { name: ShaderCustomTypeName::new("CollisionResult"), code: WgslShaderModuleSectionCode { rust_code: "#[wgsl_output_vec] struct CollisionResult { entity1 : u32, entity2 : u32, }".to_string(), wgsl_code: "struct CollisionResult { entity1 : u32, entity2 : u32, }".to_string() } }, atomic_counter_name: Some("collisionresult_counter".to_string()) }], helper_functions: vec![WgslFunction { name: "calculate_distance_squared".to_string(), code: WgslShaderModuleSectionCode { rust_code: "fn calculate_distance_squared(p1 : [f32; 2], p2 : [f32; 2]) -> f32\n{\n    let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *\n    dy;\n}".to_string(), wgsl_code: "fn calculate_distance_squared(p1 : array < f32, 2 > , p2 : array < f32, 2 >)\n-> f32\n{\n    let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *\n    dy;\n}".to_string() } }], main_function: Some(WgslFunction { name: "main".to_owned(), code: WgslShaderModuleSectionCode { rust_code: "fn main(iter_pos : WgslIterationPosition)\n{\n    let current_entity = iter_pos.x; let other_entity = iter_pos.y; if\n    current_entity >= POSITION_INPUT_ARRAY_LENGTH || other_entity >=\n    POSITION_INPUT_ARRAY_LENGTH || current_entity == other_entity ||\n    current_entity >= other_entity { return; } let current_radius =\n    radius_input_array [current_entity]; let other_radius = radius_input_array\n    [other_entity]; if current_radius <= 0.0 || other_radius <= 0.0\n    { return; } let current_pos = position_input_array [current_entity]; let\n    other_pos = position_input_array [other_entity]; let dist_squared =\n    calculate_distance_squared(current_pos, other_pos); let radius_sum =\n    current_radius + other_radius; if dist_squared < radius_sum * radius_sum\n    {\n        {\n            let collisionresult_output_array_index =\n            atomicAdd(& collisionresult_counter, 1u); if\n            collisionresult_output_array_index <\n            COLLISIONRESULT_OUTPUT_ARRAY_LENGTH\n            {\n                collisionresult_output_array\n                [collisionresult_output_array_index] = CollisionResult\n                { entity1 : current_entity, entity2 : other_entity, };\n            }\n        };\n    }\n}".to_owned(), wgsl_code: "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{\n    let current_entity = iter_pos.x; let other_entity = iter_pos.y; if\n    current_entity >= POSITION_INPUT_ARRAY_LENGTH || other_entity >=\n    POSITION_INPUT_ARRAY_LENGTH || current_entity == other_entity ||\n    current_entity >= other_entity { return; } let current_radius =\n    radius_input_array [current_entity]; let other_radius = radius_input_array\n    [other_entity]; if current_radius <= 0.0 || other_radius <= 0.0\n    { return; } let current_pos = position_input_array [current_entity]; let\n    other_pos = position_input_array [other_entity]; let dist_squared =\n    calculate_distance_squared(current_pos, other_pos); let radius_sum =\n    current_radius + other_radius; if dist_squared < radius_sum * radius_sum\n    {\n        {\n            let collisionresult_output_array_index =\n            atomicAdd(& collisionresult_counter, 1u); if\n            collisionresult_output_array_index <\n            COLLISIONRESULT_OUTPUT_ARRAY_LENGTH\n            {\n                collisionresult_output_array\n                [collisionresult_output_array_index] =
                 CollisionResult(current_entity, other_entity);\n            }\n        };\n    }\n}".to_owned() } }) };
     assert_eq!(t2, user_portion);
+}
+
+#[test]
+
+pub fn test_that_byte_conversions_work() {
+    #[wgsl_shader_module]
+    pub mod test_module {
+        use bevy_gpu_compute_core::wgsl_helpers::*;
+        use bevy_gpu_compute_macro::{wgsl_input_array, *};
+        #[wgsl_input_array]
+        struct MyPosition {
+            pub x: f32,
+            pub y: f32,
+        }
+        #[wgsl_output_array]
+        struct MyPositionOut {
+            pub x: f32,
+            pub y: f32,
+        }
+        fn main(iter_pos: WgslIterationPosition) {}
+    }
+
+    // this is the desired inputdata api:
+    let input_data = test_module::InputDataBuilder::new()
+        .set_my_position(vec![
+            test_module::MyPosition { x: 1.0, y: 2.0 },
+            test_module::MyPosition { x: 3.0, y: 4.0 },
+        ])
+        .finish();
+
+    assert_eq!(input_data.get_length("MyPosition").unwrap(), 2);
+    let mut map = input_data.get_map().clone();
+    // rename map key of "MyPosition" to "MyPositionOut"
+    let my_position = map.remove("MyPosition").unwrap();
+    map.insert("MyPositionOut".to_string(), my_position);
+    let type_erased_output_data = TypeErasedArrayOutputData::new(map);
+    let output_data = test_module::OutputDataBuilder::from(type_erased_output_data);
+    let r = output_data.my_position_out.unwrap();
+    assert_eq!(r.len(), 2);
+    assert_eq!(r[0].x, 1.0);
 }

@@ -4,36 +4,22 @@ use bevy::{
     prelude::{Commands, DespawnRecursiveExt, Entity, Mut, Query, ResMut},
     render::renderer::{RenderDevice, RenderQueue},
 };
-use bevy_gpu_compute_core::TypesSpec;
+use bevy_gpu_compute_core::{TypeErasedArrayInputData, TypeErasedConfigInputData, TypesSpec};
 
 use crate::{
-    prelude::{
-        ComputeTaskSpecification, ConfigInputData, InputData, IterationSpace, MaxOutputLengths,
-    },
-    run_ids::BevyGpuComputeRunIds,
+    prelude::{ComputeTaskSpecification, IterationSpace, MaxOutputLengths},
     task::{
         buffers::components::{
             ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
             OutputCountStagingBuffers, OutputStagingBuffers,
         },
         inputs::{
-            array_type::{
-                input_data::InputDataTrait, input_vector_metadata_spec::InputVectorsMetadataSpec,
-            },
+            array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
             config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
         },
         outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec,
         task_components::{task::BevyGpuComputeTask, task_name::TaskName},
     },
-};
-
-use super::{
-    inputs::{
-        array_type::type_erased_input_data::TypeErasedInputData,
-        config_type::type_erased_config_input_data::TypeErasedConfigInputData,
-    },
-    outputs::definitions::output_data::OutputData,
-    task_specification::input_array_lengths::ComputeTaskInputArrayLengths,
 };
 
 pub struct GpuTaskCommands {
@@ -43,10 +29,7 @@ pub struct GpuTaskCommands {
 
 pub enum GpuTaskCommand {
     SetConfigInputs(Box<TypeErasedConfigInputData>),
-    SetInputs {
-        data: Box<TypeErasedInputData>,
-        lengths: ComputeTaskInputArrayLengths,
-    },
+    SetInputs(Box<TypeErasedArrayInputData>),
     Mutate {
         iteration_space: Option<IterationSpace>,
         max_output_lengths: Option<MaxOutputLengths>,
@@ -65,23 +48,16 @@ impl GpuTaskCommands {
         self.entity
     }
     /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
-    pub fn set_config_inputs<T: TypesSpec + 'static + Send + Sync>(
-        mut self,
-        inputs: ConfigInputData<T>,
-    ) -> Self {
-        self.commands.push(GpuTaskCommand::SetConfigInputs(Box::new(
-            TypeErasedConfigInputData::new(inputs),
-        )));
+    pub fn set_config_inputs(mut self, inputs: TypeErasedConfigInputData) -> Self {
+        self.commands
+            .push(GpuTaskCommand::SetConfigInputs(Box::new(inputs)));
         self
     }
 
     /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.
-    pub fn set_inputs<T: TypesSpec + Send + Sync + 'static>(mut self, data: InputData<T>) -> Self {
-        let lengths = data.lengths();
-        self.commands.push(GpuTaskCommand::SetInputs {
-            data: Box::new(TypeErasedInputData::new(data)),
-            lengths: ComputeTaskInputArrayLengths { by_index: lengths },
-        });
+    pub fn set_inputs(mut self, data: TypeErasedArrayInputData) -> Self {
+        self.commands
+            .push(GpuTaskCommand::SetInputs(Box::new(data)));
         self
     }
     /// This queues a mutation of the task. You still MUST call `GpuTaskRunner::run_commands` for this to take effect.

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{log, prelude::{Commands, Component, Entity}, render::renderer::RenderDevice};
-use bevy_gpu_compute_core::{TypesSpec, wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}};
+use bevy_gpu_compute_core::{wgsl::shader_module::{ complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion}, TypeErasedArrayInputData, TypesSpec};
 
 use crate::task::{
     inputs::{array_type::input_vector_metadata_spec::{
@@ -12,7 +12,7 @@ use crate::task::{
     }, wgsl_code::WgslCode
 };
 
-use super::{derived_spec::ComputeTaskDerivedSpec, immutable_spec::ComputeTaskImmutableSpec, input_array_lengths::ComputeTaskInputArrayLengths, max_output_vector_lengths::MaxOutputLengths, mutable_spec::ComputeTaskMutableSpec};
+use super::{derived_spec::ComputeTaskDerivedSpec, immutable_spec::ComputeTaskImmutableSpec, max_output_vector_lengths::MaxOutputLengths, mutable_spec::ComputeTaskMutableSpec};
 
 /**
 These all used to be separate components, but this limited the user api, for example the user could not update the iteration space and then retrieve the resulting correct GpuWorkgroupSpace/Sizes in the same frame, since these updates were handled in separate systems.
@@ -136,7 +136,7 @@ impl ComputeTaskSpecification {
             TaskMaxOutputBytes::default(),
             GpuWorkgroupSizes::default(),
         );
-        let mutable= ComputeTaskMutableSpec::new(iteration_space, ComputeTaskInputArrayLengths::default(), max_output_array_lengths,&mut derived, &immutable);
+        let mutable= ComputeTaskMutableSpec::new(iteration_space, max_output_array_lengths,&mut derived, &immutable);
         ComputeTaskSpecification {
             immutable,
             mutate: mutable,
@@ -171,9 +171,7 @@ impl ComputeTaskSpecification {
     pub fn iter_space_and_out_lengths_version(&self) -> u64 {
         self.mutate.iter_space_and_out_lengths_version()
     }
-    pub fn set_input_array_lengths(&mut self, input_array_lengths: ComputeTaskInputArrayLengths) {
-        self.mutate.set_input_array_lengths(input_array_lengths);
-    }
+  
     // setters
      /// one of each event type maximum is sent per call, so this is more efficient than updating each field individually
     /// If a parameter is None then the existing value is retained
@@ -185,13 +183,13 @@ impl ComputeTaskSpecification {
         self.mutate.multiple(new_iteration_space, new_max_output_array_lengths, &self.immutable, &mut self.derived);
     }
   
-    pub fn get_pipeline_consts(&self) -> HashMap<String, f64>{
+    pub fn get_pipeline_consts(&self, input_data: &TypeErasedArrayInputData) -> HashMap<String, f64>{
             let mut n: HashMap<String, f64> = HashMap::new();
             
             // input and output array lengths
             for (i, spec) in self.immutable.input_vectors_metadata_spec().get_all_metadata().iter().enumerate(){
                 if let Some(s) = spec{
-                    let length = self.mutate.input_array_lengths().by_index[i];
+                    let length = input_data.get_length(s.name().name());
                     let name = s.name().input_array_length();
                     log::info!("input_array_lengths = {:?}, for {}", length, name);
                     

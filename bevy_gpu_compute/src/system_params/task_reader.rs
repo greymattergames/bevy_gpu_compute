@@ -6,7 +6,8 @@ use bevy::{
     render::renderer::{RenderDevice, RenderQueue},
 };
 use bevy_gpu_compute_core::{
-    TypesSpec, wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
+    OutputDataBuilderTrait, TypesSpec,
+    wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
 };
 
 use crate::{
@@ -21,8 +22,7 @@ use crate::{
         compute_pipeline::update_on_pipeline_const_change::update_compute_pipeline,
         dispatch::{create_bind_group::create_bind_group, dispatch_to_gpu::dispatch_to_gpu},
         outputs::{
-            definitions::output_data::OutputData, read_gpu_output_counts::read_gpu_output_counts,
-            read_gpu_task_outputs::read_gpu_outputs,
+            read_gpu_output_counts::read_gpu_output_counts, read_gpu_task_outputs::read_gpu_outputs,
         },
         task_commands::{GpuTaskCommand, GpuTaskCommands},
         task_components::task::BevyGpuComputeTask,
@@ -38,17 +38,17 @@ pub struct GpuTaskReader<'w, 's> {
 
 impl<'w, 's> GpuTaskReader<'w, 's> {
     /// the latest result is cleared after this call, you cannot retrieve it a second time
-    pub fn latest_results<T: TypesSpec + Send + Sync>(
+    pub fn latest_results<OutputDataBuilder: OutputDataBuilderTrait>(
         &mut self,
         name: &str,
-    ) -> Result<OutputData<T>, String> {
+    ) -> Result<OutputDataBuilder, String> {
         let mut task = self
             .tasks
             .iter_mut()
             .find(|task| task.name() == name)
             .expect("Task not found");
         let result = if let Some(d) = &task.output_data {
-            d.clone().into_typed::<T>()
+            Ok(OutputDataBuilder::from(d))
         } else {
             Err("No output data found".into())
         };

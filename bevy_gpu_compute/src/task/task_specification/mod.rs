@@ -2,7 +2,6 @@ pub mod derived_spec;
 pub mod gpu_workgroup_sizes;
 pub mod gpu_workgroup_space;
 pub mod immutable_spec;
-pub mod input_array_lengths;
 pub mod iteration_space;
 pub mod max_output_vector_lengths;
 pub mod mutable_spec;

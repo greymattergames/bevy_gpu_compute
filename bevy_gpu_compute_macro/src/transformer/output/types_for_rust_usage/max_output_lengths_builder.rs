@@ -22,6 +22,10 @@ pub fn create_max_output_lengths_builder(state: &ModuleTransformState) -> TokenS
                 }
             }
             #methods
+
+            pub fn finish(&mut self)-> MaxOutputLengths {
+                self.into()
+            }
         }
         impl Into<MaxOutputLengths> for MaxOutputLengthsBuilder {
             fn into(self) -> MaxOutputLengths {

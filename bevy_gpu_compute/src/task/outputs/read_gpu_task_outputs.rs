@@ -4,15 +4,12 @@ use bevy::{
     log,
     render::renderer::{RenderDevice, RenderQueue},
 };
-use bevy_gpu_compute_core::TypesSpec;
+use bevy_gpu_compute_core::{TypeErasedArrayOutputData, TypesSpec};
 
 use crate::task::{task_commands::GpuTaskCommands, task_components::task::BevyGpuComputeTask};
 
-use super::{
-    definitions::type_erased_output_data::TypeErasedOutputData,
-    helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec,
-};
-
+use super::helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec;
+use std::collections::HashMap;
 /**
  * We put this all into a single system because we cannot pass the buffer slice around easily.
  * */
@@ -22,7 +19,7 @@ pub fn read_gpu_outputs(
     render_device: &RenderDevice,
     render_queue: &RenderQueue,
 ) {
-    let mut type_erased_output = TypeErasedOutputData::empty();
+    let mut bytes_per_wgsl_output_type_name: HashMap<String, Vec<u8>>;
 
     task.spec
         .output_vectors_metadata_spec()
@@ -45,7 +42,7 @@ pub fn read_gpu_outputs(
                 );
                 log::info!("total_byte_size: {}", total_byte_size);
                 if total_byte_size < 1 {
-                    type_erased_output.set_output_from_bytes(i, Vec::new());
+                    bytes_per_wgsl_output_type_name.insert(m.name().name().to_string(), Vec::new());
                 } else {
                     let raw_bytes = get_gpu_output_as_bytes_vec(
                         &render_device,
@@ -56,12 +53,15 @@ pub fn read_gpu_outputs(
                     );
                     // log::info!("raw_bytes: {:?}", raw_bytes);
                     if let Some(raw_bytes) = raw_bytes {
-                        type_erased_output.set_output_from_bytes(i, raw_bytes);
+                        bytes_per_wgsl_output_type_name
+                            .insert(m.name().name().to_string(), raw_bytes);
                     } else {
                         panic!("Failed to read output from GPU");
                     }
                 }
             }
         });
-    task.output_data = Some(type_erased_output)
+    task.output_data = Some(&TypeErasedArrayOutputData::new(
+        bytes_per_wgsl_output_type_name,
+    ));
 }

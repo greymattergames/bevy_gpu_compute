@@ -64,9 +64,8 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
                     task.config_input_data = Some(*inputs);
                     update_config_input_buffers(&mut task, &self.render_device);
                 }
-                GpuTaskCommand::SetInputs { data, lengths } => {
+                GpuTaskCommand::SetInputs(data) => {
                     task.input_data = Some(*data);
-                    task.spec.set_input_array_lengths(lengths);
                     update_input_buffers(&mut task, &self.render_device);
                     create_bind_group(&mut task, &self.render_device);
                 }

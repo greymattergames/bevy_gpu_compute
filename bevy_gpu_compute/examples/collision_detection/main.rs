@@ -134,11 +134,10 @@ fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
     );
     //* There are two methods of creating the MaxOutputLengths config object: */
     // Method 1:
-    let max_output_lengths: MaxOutputLengths =
-        collision_detection_module::MaxOutputLengthsBuilder::new()
-            .set_collision_result(100)
-            .set_my_debug_info(100)
-            .into();
+    let max_output_lengths = collision_detection_module::MaxOutputLengthsBuilder::new()
+        .set_collision_result(100)
+        .set_my_debug_info(100)
+        .finish();
     // Method 2:
     let mut alternate_max_output_lengths = MaxOutputLengths::empty();
     initial_max_output_lengths.set("CollisionResult", 100);
@@ -155,11 +154,10 @@ fn delete_task(mut gpu_task_deleter: BevyGpuComputeTaskDeleter) {
     let task = gpu_task_deleter.delete("collision_detection");
 }
 fn modify_task(mut gpu_tasks: GpuTaskRunner, state: Res<State>) {
-    let max_output_lengths: MaxOutputLengths =
-        collision_detection_module::MaxOutputLengthsBuilder::new()
-            .set_collision_result((num_entities * num_entities) as usize)
-            .set_my_debug_info((num_entities * num_entities) as usize)
-            .into();
+    let max_output_lengths = collision_detection_module::MaxOutputLengthsBuilder::new()
+        .set_collision_result((num_entities * num_entities) as usize)
+        .set_my_debug_info((num_entities * num_entities) as usize)
+        .finish();
     let iteration_space =
         IterationSpace::new(state.num_entities as usize, state.num_entities as usize, 1);
     let pending_commands = gpu_tasks
@@ -216,10 +214,12 @@ fn run_task(
     gpu_tasks.run_commands(task);
 }
 
-fn handle_task_results(mut gpu_task_results: GpuTaskReader, mut state: ResMut<State>) {
-    let results =
-        gpu_task_results.latest_results::<collision_detection_module::Types>("collision_detection");
-    // log::info!("results: {:?}", results);
+fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<State>) {
+    // let results =
+    let result = gpu_task_results
+        .latest_results::<collision_detection_module::OutputDataBuilder>("collision_detection");
+
+    // log::info!("results: {:?}", results);c
     if let Ok(results) = results {
         let debug_results: Vec<collision_detection_module::MyDebugInfo> = results
             .get_output1()

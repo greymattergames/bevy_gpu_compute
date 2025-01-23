@@ -1,44 +1,22 @@
 use bevy::{
-    log,
-    prelude::{Component, Entity},
+    prelude::Component,
     render::{
         render_resource::{BindGroup, BindGroupLayout, Buffer},
         renderer::RenderDevice,
     },
 };
-use bevy_gpu_compute_core::{BlankTypesSpec, TypesSpec};
+use bevy_gpu_compute_core::{
+    TypeErasedArrayInputData, TypeErasedArrayOutputData, TypeErasedConfigInputData,
+};
 use wgpu::PipelineLayout;
 
-use crate::{
-    prelude::ConfigInputData,
-    task::{
-        buffers::components::{
-            ConfigInputBuffers, InputBuffers, OutputBuffers, OutputCountBuffers,
-            OutputCountStagingBuffers, OutputStagingBuffers,
-        },
-        compute_pipeline::cache::PipelineLruCache,
-        inputs::{
-            array_type::{
-                input_data::InputData, input_vector_metadata_spec::InputVectorsMetadataSpec,
-                type_erased_input_data::TypeErasedInputData,
-            },
-            config_type::{
-                config_input_metadata_spec::ConfigInputsMetadataSpec,
-                type_erased_config_input_data::TypeErasedConfigInputData,
-            },
-        },
-        outputs::definitions::{
-            gpu_output_counts::GpuOutputCounts,
-            output_vector_metadata_spec::OutputVectorsMetadataSpec,
-            type_erased_output_data::TypeErasedOutputData,
-        },
-        task_specification::{
-            gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
-        },
+use crate::task::{
+    compute_pipeline::cache::PipelineLruCache,
+    outputs::definitions::type_erased_output_data::TypeErasedOutputData,
+    task_specification::{
+        gpu_workgroup_space::GpuWorkgroupSpace, task_specification::ComputeTaskSpecification,
     },
 };
-
-use super::{task_name::TaskName, task_run_id::TaskRunId};
 
 /**
 A task can only run once per run of the BevyGpuComputeRunTaskSet system set
@@ -77,9 +55,9 @@ pub struct BevyGpuComputeTask {
 
     // other stuff
     pub bind_group: Option<BindGroup>,
-    pub config_input_data: Option<TypeErasedConfigInputData>,
-    pub input_data: Option<TypeErasedInputData>,
-    pub output_data: Option<TypeErasedOutputData>,
+    pub config_input_data: Option<&TypeErasedConfigInputData>,
+    pub input_data: Option<&TypeErasedArrayInputData>,
+    pub output_data: Option<&TypeErasedArrayOutputData>,
 }
 
 impl BevyGpuComputeTask {
