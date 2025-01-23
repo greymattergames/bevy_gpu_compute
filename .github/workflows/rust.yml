@@ -1,4 +1,4 @@
-name: Rust
+name: Cargo Build & Test
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build_and_test:
 
     runs-on: ubuntu-latest
     strategy:
@@ -19,15 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build for ${{ matrix.crate }}
-      run: cargo build --verbose
-      working-directory: ./${{ matrix.crate }}
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        crate: ['bevy_gpu_compute_macro', 'bevy_gpu_compute_core', 'bevy_gpu_compute']  # Replace with your actual crate directory names
-    steps:
-    - uses: actions/checkout@v4
-    - name: Run tests for ${{ matrix.crate }}
-      run: cargo test --verbose
+    - run: rustup update nightly && rustup default nightly
+    - run: cargo build --verbose
+    - run: cargo test --verbose
       working-directory: ./${{ matrix.crate }}
