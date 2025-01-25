@@ -6,10 +6,10 @@ use crate::{
     state::ModuleTransformState,
     transformer::output::{
         shader_module_object::generate_shader_module_object,
-        types_for_rust_usage::types::define_types_for_use_in_rust,
+        types_for_rust_usage::types::define_types_for_use_in_rust_and_set_binding_numbers,
     },
 };
-pub fn generate_expanded_module(state: &ModuleTransformState) -> TokenStream {
+pub fn generate_expanded_module(state: &mut ModuleTransformState) -> TokenStream {
     let module_ident: TokenStream = if let Some(c) = &state.module_ident {
         c.parse().unwrap()
     } else {
@@ -26,7 +26,7 @@ pub fn generate_expanded_module(state: &ModuleTransformState) -> TokenStream {
             "No module visibility found in transform state"
         );
     };
-    let types = define_types_for_use_in_rust(state);
+    let types = define_types_for_use_in_rust_and_set_binding_numbers(state);
     let object = generate_shader_module_object(state);
     quote!(
         #module_visibility mod #module_ident {

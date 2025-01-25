@@ -22,23 +22,18 @@ pub fn read_gpu_output_counts(
     task.configuration()
         .outputs()
         .arrays()
-        .get_all_metadata()
         .iter()
         .enumerate()
-        .for_each(|(i, spec)| {
-            if let Some(s) = spec {
-                if s.get_include_count() {
-                    log::info!("Reading count for output {}", i);
-                    let count = read_gpu_output_counts_single_output_type(
-                        render_device,
-                        render_queue,
-                        &task.buffers().output.count[i],
-                        &task.buffers().output.count_staging[i],
-                    );
-                    local_res_counts.lock().unwrap().push(Some(count as usize));
-                } else {
-                    local_res_counts.lock().unwrap().push(None);
-                }
+        .for_each(|(i, metadata)| {
+            if metadata.include_count {
+                log::info!("Reading count for output {}", i);
+                let count = read_gpu_output_counts_single_output_type(
+                    render_device,
+                    render_queue,
+                    &task.buffers().output.count[i],
+                    &task.buffers().output.count_staging[i],
+                );
+                local_res_counts.lock().unwrap().push(Some(count as usize));
             } else {
                 local_res_counts.lock().unwrap().push(None);
             }

@@ -1,6 +1,4 @@
-use bevy_gpu_compute_core::MaxOutputLengths;
-
-use crate::task::outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec;
+use bevy_gpu_compute_core::{MaxOutputLengths, OutputTypeMetadata};
 
 #[derive(Debug)]
 pub struct MaxOutputBytes(usize);
@@ -16,18 +14,15 @@ impl MaxOutputBytes {
     }
     pub fn from_max_lengths_and_spec(
         max_output_vector_lengths: &MaxOutputLengths,
-        output_vector_metadata_spec: &OutputVectorsMetadataSpec,
+        output_vector_metadata_spec: &Vec<OutputTypeMetadata>,
     ) -> Self {
-        let max_output_bytes = output_vector_metadata_spec.get_all_metadata().iter().fold(
-            0,
-            |acc, output_metadata| {
-                if let Some(m) = output_metadata {
-                    acc + max_output_vector_lengths.get_by_name(m.name()) * m.get_bytes()
-                } else {
-                    acc
-                }
-            },
-        );
+        let max_output_bytes =
+            output_vector_metadata_spec
+                .iter()
+                .fold(0, |acc, output_metadata| {
+                    acc + max_output_vector_lengths.get_by_name(&output_metadata.name)
+                        * output_metadata.bytes
+                });
         MaxOutputBytes(max_output_bytes)
     }
     pub fn get(&self) -> usize {

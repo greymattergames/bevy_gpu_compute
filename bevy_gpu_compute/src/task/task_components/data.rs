@@ -2,7 +2,7 @@ use bevy_gpu_compute_core::{
     TypeErasedArrayInputData, TypeErasedArrayOutputData, TypeErasedConfigInputData,
 };
 
-use crate::task::inputs::array_type::lengths::InputArrayDataLengths;
+use super::input_lengths::InputArrayDataLengths;
 
 pub struct TaskData {
     config_input: Option<TypeErasedConfigInputData>,

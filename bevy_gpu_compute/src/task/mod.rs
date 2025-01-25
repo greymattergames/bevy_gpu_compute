@@ -2,7 +2,6 @@ pub mod buffers;
 pub mod commands;
 pub mod compute_pipeline;
 pub mod dispatch;
-pub mod inputs;
 pub mod outputs;
 pub mod task;
 pub mod task_components;

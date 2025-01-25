@@ -16,7 +16,6 @@ use crate::{
         commands::{GpuTaskCommand, GpuTaskCommands},
         compute_pipeline::update_on_pipeline_const_change::update_compute_pipeline,
         dispatch::{create_bind_group::create_bind_group, dispatch_to_gpu::dispatch_to_gpu},
-        inputs::array_type::lengths::InputArrayDataLengths,
         outputs::{
             read_gpu_output_counts::read_gpu_output_counts, read_gpu_task_outputs::read_gpu_outputs,
         },

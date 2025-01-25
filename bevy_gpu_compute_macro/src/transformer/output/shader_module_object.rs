@@ -66,6 +66,8 @@ pub fn generate_shader_module_object(state: &ModuleTransformState) -> TokenStrea
         let ts = ToStructInitializer::wgsl_function(func);
         quote!(Some(#ts))
     });
+    let bindings_map: TokenStream =
+        ToStructInitializer::hash_map(obj.binding_numbers_by_variable_name.unwrap());
 
     quote!(
         pub fn parsed() -> WgslShaderModuleUserPortion {
@@ -95,6 +97,7 @@ pub fn generate_shader_module_object(state: &ModuleTransformState) -> TokenStrea
                 .into(),
                 // main_function: None,
                 main_function: #main_function,
+                binding_numbers_by_variable_name: Some(#bindings_map),
             }
         }
     )

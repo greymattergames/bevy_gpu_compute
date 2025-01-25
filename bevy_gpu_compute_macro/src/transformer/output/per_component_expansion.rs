@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy_gpu_compute_core::{
     wgsl::shader_custom_type_name::ShaderCustomTypeName,
     wgsl::shader_sections::{
@@ -87,6 +89,19 @@ impl ToStructInitializer {
                 atomic_counter_name: #ac
 
             }
+        )
+    }
+    pub fn hash_map(c: HashMap<String, u32>) -> TokenStream {
+        let entries: TokenStream = c
+            .iter()
+            .map(|(k, v)| {
+                quote! {
+                    (#k .to_string(), #v),
+                }
+            })
+            .collect();
+        quote!(
+            HashMap::from([#entries])
         )
     }
 }

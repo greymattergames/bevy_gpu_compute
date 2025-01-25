@@ -8,21 +8,6 @@ use bevy_gpu_compute_core::{
     },
 };
 
-use crate::task::{
-    inputs::{
-        array_type::{
-            input_vector_metadata_spec::{InputVectorMetadataDefinition, InputVectorsMetadataSpec},
-            lengths::InputArrayDataLengths,
-        },
-        config_type::config_input_metadata_spec::{
-            ConfigInputMetadataDefinition, ConfigInputsMetadataSpec,
-        },
-    },
-    outputs::definitions::output_vector_metadata_spec::{
-        OutputVectorMetadataDefinition, OutputVectorsMetadataSpec,
-    },
-};
-
 use super::{iteration_space::IterationSpace, wgsl_code::WgslCode};
 use crate::task::task_components::configuration::input_spec::InputSpec;
 use crate::task::task_components::configuration::output_spec::OutputSpec;

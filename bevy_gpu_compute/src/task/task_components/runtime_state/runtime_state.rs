@@ -11,11 +11,6 @@ use wgpu::PipelineLayout;
 
 use crate::task::{
     compute_pipeline::pipeline_cache::PipelineLruCache,
-    inputs::{
-        array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
-        config_type::config_input_metadata_spec::{self, ConfigInputsMetadataSpec},
-    },
-    outputs::definitions::output_vector_metadata_spec::{self, OutputVectorsMetadataSpec},
     task_components::configuration::configuration::TaskConfiguration,
 };
 
@@ -155,50 +150,41 @@ impl<'a> TaskRuntimeStateBuilder<'a> {
         self.task_configuration
             .inputs()
             .configs()
-            .get_all_metadata()
             .iter()
-            .for_each(|spec| {
-                if let Some(s) = spec {
-                    layouts.push(self.create_bind_group_layout_entry(
-                        s.get_binding_number(),
-                        true,
-                        true,
-                    ));
-                }
+            .for_each(|metadata| {
+                layouts.push(self.create_bind_group_layout_entry(
+                    metadata.binding_number,
+                    true,
+                    true,
+                ));
             });
         self.task_configuration
             .inputs()
             .arrays()
-            .get_all_metadata()
             .iter()
-            .for_each(|spec| {
-                if let Some(s) = spec {
-                    layouts.push(self.create_bind_group_layout_entry(
-                        s.get_binding_number(),
-                        true,
-                        false,
-                    ));
-                }
+            .for_each(|metadata| {
+                layouts.push(self.create_bind_group_layout_entry(
+                    metadata.binding_number,
+                    true,
+                    false,
+                ));
             });
         self.task_configuration
             .outputs()
             .arrays()
-            .get_all_metadata()
             .iter()
-            .for_each(|spec| {
-                if let Some(s) = spec {
+            .for_each(|metadata| {
+                layouts.push(self.create_bind_group_layout_entry(
+                    metadata.binding_number,
+                    false,
+                    false,
+                ));
+                if metadata.include_count {
                     layouts.push(self.create_bind_group_layout_entry(
-                        s.get_binding_number(),
+                        metadata.count_binding_number.unwrap(),
                         false,
                         false,
                     ));
-                    if s.get_include_count() {
-                        layouts.push(self.create_bind_group_layout_entry(
-                            s.get_count_binding_number().unwrap(),
-                            false,
-                            false,
-                        ));
-                    }
                 }
             });
         log::info!("Layouts: {:?}", layouts);

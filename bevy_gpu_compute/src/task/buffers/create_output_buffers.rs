@@ -13,47 +13,44 @@ pub fn update_output_buffers(task: &mut BevyGpuComputeTask, render_device: &Rend
         .configuration()
         .outputs()
         .arrays()
-        .get_all_metadata()
         .iter()
         .cloned()
         .collect();
-    for (i, output_spec) in metadata.iter().enumerate() {
-        if let Some(spec) = output_spec {
-            let length = task
-                .configuration()
-                .outputs()
-                .max_lengths()
-                .get_by_name(spec.name());
-            let output_size = spec.get_bytes() as u64 * length as u64;
-            let output_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some(&format!("{:}-output-{:}", task.name(), i)),
-                size: output_size,
-                usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-                mapped_at_creation: false,
+    for (i, spec) in metadata.iter().enumerate() {
+        let length = task
+            .configuration()
+            .outputs()
+            .max_lengths()
+            .get_by_name(&spec.name);
+        let output_size = spec.bytes as u64 * length as u64;
+        let output_buffer = render_device.create_buffer(&BufferDescriptor {
+            label: Some(&format!("{:}-output-{:}", task.name(), i)),
+            size: output_size,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        output_buffers.push(output_buffer);
+        let output_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some(&format!("{:}-output-staging-{:}", task.name(), i)),
+            size: output_size,
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        output_staging_buffers.push(output_staging_buffer);
+        if spec.include_count {
+            let counter_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+                label: Some(&format!("{:}-output-counter-{:}", task.name(), i)),
+                contents: bytemuck::cast_slice(&[WgslCounter { count: 0 }]),
+                usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
             });
-            output_buffers.push(output_buffer);
-            let output_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(&format!("{:}-output-staging-{:}", task.name(), i)),
-                size: output_size,
+            output_count_buffers.push(counter_buffer);
+            let counter_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(&format!("{:}-output-counter-staging-{:}", task.name(), i)),
+                size: std::mem::size_of::<WgslCounter>() as u64,
                 usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
-            output_staging_buffers.push(output_staging_buffer);
-            if spec.get_include_count() {
-                let counter_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-                    label: Some(&format!("{:}-output-counter-{:}", task.name(), i)),
-                    contents: bytemuck::cast_slice(&[WgslCounter { count: 0 }]),
-                    usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
-                });
-                output_count_buffers.push(counter_buffer);
-                let counter_staging_buffer = render_device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("{:}-output-counter-staging-{:}", task.name(), i)),
-                    size: std::mem::size_of::<WgslCounter>() as u64,
-                    usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                });
-                output_count_staging_buffers.push(counter_staging_buffer);
-            }
+            output_count_staging_buffers.push(counter_staging_buffer);
         }
     }
     let b = task.buffers_mut();

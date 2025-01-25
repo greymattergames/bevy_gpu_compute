@@ -10,7 +10,7 @@ wrapper code to remove boilerplate involved with game mechanics, physics engines
 
 # TODO:
 
-We need to trigger changes to the task IMMEDIATELY upon mutation by the TaskCommands, so that, for example the user can alter one part and then immediately see the update WorkgroupSizes based on that...
+The next major thing to complete before publishing is to move the input/output data metadata specs into the proc macro to be generated automatically without the artificial # limit
 
 ### What parts can we abstract out?
 

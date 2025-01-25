@@ -1,23 +1,20 @@
-use crate::task::inputs::{
-    array_type::input_vector_metadata_spec::InputVectorsMetadataSpec,
-    config_type::config_input_metadata_spec::ConfigInputsMetadataSpec,
-};
+use bevy_gpu_compute_core::InputTypeMetadata;
 
 #[derive(Clone, Default)]
 
 pub struct InputSpec {
-    arrays: InputVectorsMetadataSpec,
-    configs: ConfigInputsMetadataSpec,
+    arrays: Vec<InputTypeMetadata>,
+    configs: Vec<InputTypeMetadata>,
 }
 
 impl InputSpec {
-    pub fn new(arrays: InputVectorsMetadataSpec, configs: ConfigInputsMetadataSpec) -> Self {
+    pub fn new(arrays: Vec<InputTypeMetadata>, configs: Vec<InputTypeMetadata>) -> Self {
         InputSpec { arrays, configs }
     }
-    pub fn arrays(&self) -> &InputVectorsMetadataSpec {
+    pub fn arrays(&self) -> &Vec<InputTypeMetadata> {
         &self.arrays
     }
-    pub fn configs(&self) -> &ConfigInputsMetadataSpec {
+    pub fn configs(&self) -> &Vec<InputTypeMetadata> {
         &self.configs
     }
 }

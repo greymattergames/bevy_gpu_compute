@@ -1,21 +1,19 @@
-use bevy_gpu_compute_core::MaxOutputLengths;
-
-use crate::task::outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec;
+use bevy_gpu_compute_core::{MaxOutputLengths, OutputTypeMetadata};
 
 #[derive(Clone, Default)]
 
 pub struct OutputSpec {
-    arrays: OutputVectorsMetadataSpec,
+    arrays: Vec<OutputTypeMetadata>,
     max_lengths: MaxOutputLengths,
 }
 impl OutputSpec {
-    pub fn new(arrays: OutputVectorsMetadataSpec, max_lengths: MaxOutputLengths) -> Self {
+    pub fn new(arrays: Vec<OutputTypeMetadata>, max_lengths: MaxOutputLengths) -> Self {
         OutputSpec {
             arrays,
             max_lengths,
         }
     }
-    pub fn arrays(&self) -> &OutputVectorsMetadataSpec {
+    pub fn arrays(&self) -> &Vec<OutputTypeMetadata> {
         &self.arrays
     }
     pub fn max_lengths(&self) -> &MaxOutputLengths {

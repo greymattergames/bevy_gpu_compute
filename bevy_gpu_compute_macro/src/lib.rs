@@ -73,7 +73,7 @@ pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream 
     get_custom_types(&mut state);
     transform_wgsl_helper_methods(&mut state);
     parse_shader_module(&mut state);
-    let output = produce_expanded_output(&state);
+    let output = produce_expanded_output(&mut state);
     output.into()
 
     // let out_s = initialization.to_string();

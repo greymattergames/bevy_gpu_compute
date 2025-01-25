@@ -10,34 +10,26 @@ pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device:
     log::info!("Creating config input buffers for task {}", task.name());
     task.buffers_mut().config.clear();
     let mut new_buffers = Vec::new();
-    for spec in task
-        .configuration()
-        .inputs()
-        .configs()
-        .get_all_metadata()
-        .iter()
-    {
-        if let Some(s) = spec {
-            let label = format!("{}-input-{}", task.name(), s.name().name());
-            let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-                label: Some(&label),
-                contents: task
-                    .current_data()
-                    .config_input()
-                    .as_ref()
-                    .unwrap()
-                    .get_bytes(s.name().name())
-                    .unwrap(),
-                usage: BufferUsages::UNIFORM,
-            });
-            info!(
-                "Created config input buffer for task {} with label {}",
-                task.name(),
-                label
-            );
-            new_buffers.push(buffer);
-            continue;
-        }
+    for s in task.configuration().inputs().configs().iter() {
+        let label = format!("{}-input-{}", task.name(), s.name.name());
+        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            label: Some(&label),
+            contents: task
+                .current_data()
+                .config_input()
+                .as_ref()
+                .unwrap()
+                .get_bytes(s.name.name())
+                .unwrap(),
+            usage: BufferUsages::UNIFORM,
+        });
+        info!(
+            "Created config input buffer for task {} with label {}",
+            task.name(),
+            label
+        );
+        new_buffers.push(buffer);
+        continue;
     }
     task.buffers_mut().config = new_buffers;
 }
