@@ -21,7 +21,7 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
             CustomTypeKind::GpuOnlyHelperType => state
                 .result
                 .helper_types
-                .push(custom_type.clone().into_wgsl_type(&state)),
+                .push(custom_type.clone().into_wgsl_type(state)),
             CustomTypeKind::InputArray => {
                 state.custom_types.as_mut().unwrap().push(CustomType::new(
                     &custom_type.name.input_array_length(),
@@ -29,7 +29,7 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                     quote!(),
                 ));
                 state.result.input_arrays.push(WgslInputArray {
-                    item_type: custom_type.clone().into_wgsl_type(&state),
+                    item_type: custom_type.clone().into_wgsl_type(state),
                 });
             }
             CustomTypeKind::OutputArray => {
@@ -39,7 +39,7 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                     quote!(),
                 ));
                 state.result.output_arrays.push(WgslOutputArray {
-                    item_type: custom_type.clone().into_wgsl_type(&state),
+                    item_type: custom_type.clone().into_wgsl_type(state),
                     atomic_counter_name: None,
                 });
             }

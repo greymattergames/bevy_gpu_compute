@@ -6,7 +6,6 @@ pub fn remove_internal_attributes(file: String) -> String {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

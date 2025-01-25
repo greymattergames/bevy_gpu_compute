@@ -1,7 +1,7 @@
 use bevy::{log::info, render::renderer::RenderDevice};
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 pub fn update_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     task.buffers_mut().input.clear();

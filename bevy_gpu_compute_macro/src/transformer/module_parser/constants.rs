@@ -40,11 +40,7 @@ fn parse_const_assignment(
     WgslConstAssignment {
         code: WgslShaderModuleSectionCode {
             rust_code: constant.to_token_stream().to_string(),
-            wgsl_code: convert_file_to_wgsl(
-                constant.to_token_stream(),
-                &state,
-                "const".to_string(),
-            ),
+            wgsl_code: convert_file_to_wgsl(constant.to_token_stream(), state, "const".to_string()),
         },
     }
 }

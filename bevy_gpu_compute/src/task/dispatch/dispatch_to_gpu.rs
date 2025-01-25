@@ -1,6 +1,6 @@
 use bevy::render::renderer::{RenderDevice, RenderQueue};
 
-use crate::task::{compute_pipeline::pipeline_cache::PipelineKey, task::BevyGpuComputeTask};
+use crate::task::{compute_pipeline::pipeline_cache::PipelineKey, lib::BevyGpuComputeTask};
 pub fn dispatch_to_gpu(
     task: &mut BevyGpuComputeTask,
     render_device: &RenderDevice,

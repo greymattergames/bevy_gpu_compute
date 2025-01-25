@@ -104,7 +104,6 @@ pub fn generate_shader_module_object(state: &ModuleTransformState) -> TokenStrea
 }
 
 #[cfg(test)]
-
 mod test {
     use proc_macro_error::abort;
     use proc_macro2::{Span, TokenStream};

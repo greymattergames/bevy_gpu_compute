@@ -9,16 +9,12 @@ use crate::{
 };
 
 /// state for activating or deactivating the plugin
-#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BevyGpuComputeState {
+    #[default]
     Running,
     #[allow(dead_code)]
     Stopped,
-}
-impl Default for BevyGpuComputeState {
-    fn default() -> Self {
-        BevyGpuComputeState::Running
-    }
 }
 
 pub struct BevyGpuComputePlugin {

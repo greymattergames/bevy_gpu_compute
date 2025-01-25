@@ -4,9 +4,12 @@ macro_rules! impl_vector {
     ($name:ident, $type:ty, $($field:ident, $index:expr),+) => {
         #[repr(C)]
         #[derive(Debug, Clone,Copy, bytemuck::Pod, bytemuck::Zeroable)]
+        #[allow(clippy::manual_non_exhaustive)]
+// cannot use #[non_exhaustive] in a macro, and we want to force users even intra-crate to use the constructors for the matrix and vector types
         pub struct $name {
             $(pub $field: $type,)+
             _force_constructor: ()
+
         }
 
         impl $name {
@@ -14,6 +17,7 @@ macro_rules! impl_vector {
                 Self {
                     $($field,)+
                     _force_constructor: ()
+
                 }
             }
 
@@ -51,16 +55,15 @@ macro_rules! impl_vector {
 
 macro_rules! impl_vector_no_pod {
     ($name:ident, $type:ty, $($field:ident, $index:expr),+) => {
+        #[non_exhaustive]
         pub struct $name {
             $(pub $field: $type,)+
-            _force_constructor: ()
         }
 
         impl $name {
             pub fn new($($field: $type),+) -> Self {
                 Self {
                     $($field,)+
-                    _force_constructor: ()
                 }
             }
 

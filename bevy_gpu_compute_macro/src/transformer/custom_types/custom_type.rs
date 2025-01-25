@@ -53,7 +53,7 @@ impl CustomType {
             name: self.name.into(),
             code: WgslShaderModuleSectionCode {
                 rust_code: self.rust_code.to_string(),
-                wgsl_code: convert_file_to_wgsl(self.rust_code, &state, "custom_type".to_string()),
+                wgsl_code: convert_file_to_wgsl(self.rust_code, state, "custom_type".to_string()),
             },
         }
     }

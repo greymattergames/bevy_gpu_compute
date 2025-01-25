@@ -29,7 +29,7 @@ pub fn spawn_entities(
             commands.spawn((
                 create_circle_outline_components(
                     ENTITY_RADIUS,
-                    AvailableColor::GREEN,
+                    AvailableColor::Green,
                     &color_handles,
                     &mut meshes,
                 ),
@@ -92,16 +92,16 @@ fn create_circle_outline_components(
             .map(|p| [p.x, p.y, 0.0])
             .collect::<Vec<[f32; 3]>>(),
     );
-    return (Mesh2d(meshes.add(mesh).into()), MeshMaterial2d(color));
+    (Mesh2d(meshes.add(mesh)), MeshMaterial2d(color))
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub enum AvailableColor {
-    GREEN,
-    BLUE,
-    RED,
-    YELLOW,
-    BLACK,
+    Green,
+    Blue,
+    Red,
+    Yellow,
+    Black,
 }
 #[derive(Resource)]
 pub struct ColorHandles {
@@ -112,11 +112,11 @@ pub struct ColorHandles {
 impl FromWorld for ColorHandles {
     fn from_world(world: &mut World) -> Self {
         let mut colors = HashMap::new();
-        colors.insert(AvailableColor::GREEN, Color::srgb(0.0, 1.0, 0.0));
-        colors.insert(AvailableColor::BLUE, Color::srgb(0.0, 0.0, 1.0));
-        colors.insert(AvailableColor::RED, Color::srgb(1.0, 0.0, 0.0));
-        colors.insert(AvailableColor::YELLOW, Color::srgb(1.0, 1.0, 0.0));
-        colors.insert(AvailableColor::BLACK, Color::srgb(0.0, 0.0, 0.0));
+        colors.insert(AvailableColor::Green, Color::srgb(0.0, 1.0, 0.0));
+        colors.insert(AvailableColor::Blue, Color::srgb(0.0, 0.0, 1.0));
+        colors.insert(AvailableColor::Red, Color::srgb(1.0, 0.0, 0.0));
+        colors.insert(AvailableColor::Yellow, Color::srgb(1.0, 1.0, 0.0));
+        colors.insert(AvailableColor::Black, Color::srgb(0.0, 0.0, 0.0));
         let mut materials = world.resource_mut::<Assets<ColorMaterial>>();
         let mut handles = HashMap::new();
         for (color, color_value) in colors.iter() {

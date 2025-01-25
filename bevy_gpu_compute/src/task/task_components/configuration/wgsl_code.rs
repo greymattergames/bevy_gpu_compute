@@ -53,6 +53,6 @@ impl WgslCode {
             self.shader_module.is_some(),
             "Trying to retrieve shader module that doesn't exist"
         );
-        &self.shader_module.as_ref().unwrap()
+        self.shader_module.as_ref().unwrap()
     }
 }

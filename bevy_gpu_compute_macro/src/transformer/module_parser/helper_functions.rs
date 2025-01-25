@@ -4,9 +4,9 @@ use syn::{ItemFn, visit::Visit};
 
 use crate::{state::ModuleTransformState, transformer::to_wgsl_syntax::convert_file_to_wgsl};
 
-pub fn find_helper_functions(mut state: &mut ModuleTransformState) {
+pub fn find_helper_functions(state: &mut ModuleTransformState) {
     let module = state.rust_module.clone();
-    let mut extractor = HelperFunctionsExtractor::new(&mut state);
+    let mut extractor = HelperFunctionsExtractor::new(state);
     extractor.visit_item_mod(&module);
     state.rust_module = module;
 }
@@ -18,7 +18,7 @@ struct HelperFunctionsExtractor<'a> {
 impl<'ast> Visit<'ast> for HelperFunctionsExtractor<'ast> {
     fn visit_item_fn(&mut self, c: &'ast syn::ItemFn) {
         syn::visit::visit_item_fn(self, c);
-        if c.sig.ident.to_string() == "main" {
+        if c.sig.ident == "main" {
             return;
         }
         // ident from string

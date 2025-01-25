@@ -33,7 +33,6 @@ impl ToStructInitializer {
                 code: #c,
             }
         )
-        .into()
     }
 
     pub fn custom_type_name(c: ShaderCustomTypeName) -> TokenStream {

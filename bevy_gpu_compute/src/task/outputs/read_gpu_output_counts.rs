@@ -6,7 +6,7 @@ use bevy::{
 };
 use wgpu::Buffer;
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 use super::{
     definitions::wgsl_counter::WgslCounter,
@@ -48,10 +48,10 @@ fn read_gpu_output_counts_single_output_type(
     count_staging_buffer: &Buffer,
 ) -> u32 {
     let count = get_gpu_output_counter_value(
-        &render_device,
-        &render_queue,
-        &count_buffer,
-        &count_staging_buffer,
+        render_device,
+        render_queue,
+        count_buffer,
+        count_staging_buffer,
         std::mem::size_of::<WgslCounter>() as u64,
     );
     let r = count.unwrap().count;

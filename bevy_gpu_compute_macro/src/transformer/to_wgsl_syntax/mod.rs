@@ -95,10 +95,7 @@ pub fn convert_file_to_wgsl(
         );
     };
     PubRemover {}.visit_file_mut(&mut file);
-    TypeToWgslTransformer {
-        custom_types: &custom_types,
-    }
-    .visit_file_mut(&mut file);
+    TypeToWgslTransformer { custom_types }.visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);
     ExprToWgslTransformer {}.visit_file_mut(&mut file);
     let mut type_def_transformer = TypeDefToWgslTransformer {

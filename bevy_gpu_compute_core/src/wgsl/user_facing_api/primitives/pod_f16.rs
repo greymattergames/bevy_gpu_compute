@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_f16_pod() {
-        let value = PodF16::from(3.14_f32);
+        let value = PodF16::from(std::f32::consts::PI);
 
         // Test casting to bytes
         let bytes: &[u8] = bytemuck::bytes_of(&value);
@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_conversions() {
-        let original = 3.14_f32;
+        let original = std::f32::consts::PI;
         let pod = PodF16::from(original);
         let roundtrip: f32 = pod.into();
         // Note: Some precision loss is expected due to f16

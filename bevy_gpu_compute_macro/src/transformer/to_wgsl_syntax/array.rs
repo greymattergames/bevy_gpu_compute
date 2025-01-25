@@ -6,22 +6,16 @@ pub struct ArrayToWgslTransformer {}
 impl VisitMut for ArrayToWgslTransformer {
     fn visit_item_type_mut(&mut self, t: &mut syn::ItemType) {
         syn::visit_mut::visit_item_type_mut(self, t);
-        match *t.ty.clone() {
-            syn::Type::Array(arr) => {
-                let type_path = array_to_wgsl(&arr);
-                *t.ty = syn::Type::Path(type_path);
-            }
-            _ => (),
+        if let syn::Type::Array(arr) = *t.ty.clone() {
+            let type_path = array_to_wgsl(&arr);
+            *t.ty = syn::Type::Path(type_path);
         }
     }
     fn visit_pat_type_mut(&mut self, t: &mut syn::PatType) {
         syn::visit_mut::visit_pat_type_mut(self, t);
-        match *t.ty.clone() {
-            syn::Type::Array(arr) => {
-                let type_path = array_to_wgsl(&arr);
-                *t.ty = syn::Type::Path(type_path);
-            }
-            _ => (),
+        if let syn::Type::Array(arr) = *t.ty.clone() {
+            let type_path = array_to_wgsl(&arr);
+            *t.ty = syn::Type::Path(type_path);
         }
     }
 }
@@ -39,7 +33,7 @@ pub fn array_to_wgsl(arr: &syn::TypeArray) -> syn::TypePath {
     };
     let len = arr.len.clone();
 
-    return parse_quote!(array<#ident,#len>);
+    parse_quote!(array<#ident,#len>)
 }
 
 #[cfg(test)]

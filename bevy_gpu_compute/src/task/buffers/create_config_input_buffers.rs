@@ -4,7 +4,7 @@ use bevy::{
 };
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     log::info!("Creating config input buffers for task {}", task.name());

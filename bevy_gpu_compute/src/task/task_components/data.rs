@@ -4,6 +4,7 @@ use bevy_gpu_compute_core::{
 
 use super::input_lengths::InputArrayDataLengths;
 
+#[derive(Default)]
 pub struct TaskData {
     config_input: Option<TypeErasedConfigInputData>,
     input: Option<TypeErasedArrayInputData>,
@@ -11,16 +12,6 @@ pub struct TaskData {
     input_lengths: Option<InputArrayDataLengths>,
 }
 
-impl Default for TaskData {
-    fn default() -> Self {
-        TaskData {
-            config_input: None,
-            input: None,
-            output: None,
-            input_lengths: None,
-        }
-    }
-}
 impl TaskData {
     pub fn new() -> Self {
         TaskData::default()

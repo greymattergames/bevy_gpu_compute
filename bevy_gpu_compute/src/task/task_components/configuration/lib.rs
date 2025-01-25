@@ -1,13 +1,3 @@
-use std::collections::HashMap;
-
-use bevy::{log, prelude::Component, render::renderer::RenderDevice, tasks::Task};
-use bevy_gpu_compute_core::{
-    MaxOutputLengths, TypesSpec,
-    wgsl::shader_module::{
-        complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion,
-    },
-};
-
 use super::{iteration_space::IterationSpace, wgsl_code::WgslCode};
 use crate::task::task_components::configuration::input_spec::InputSpec;
 use crate::task::task_components::configuration::output_spec::OutputSpec;

@@ -6,7 +6,7 @@ use bevy::{
 };
 use bevy_gpu_compute_core::TypeErasedArrayOutputData;
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 use super::helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec;
 use std::collections::HashMap;
@@ -49,9 +49,9 @@ pub fn read_gpu_outputs(
                     .insert(metadata.name.name().to_string(), Vec::new());
             } else {
                 let raw_bytes = get_gpu_output_as_bytes_vec(
-                    &render_device,
-                    &render_queue,
-                    &out_buffer,
+                    render_device,
+                    render_queue,
+                    out_buffer,
                     staging_buffer,
                     total_byte_size as u64,
                 );

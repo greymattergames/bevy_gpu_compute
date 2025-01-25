@@ -1,7 +1,7 @@
 use bevy::{ecs::system::SystemParam, prelude::Query};
 use bevy_gpu_compute_core::OutputDataBuilderTrait;
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 #[derive(SystemParam)]
 
@@ -9,7 +9,7 @@ pub struct GpuTaskReader<'w, 's> {
     tasks: Query<'w, 's, &'static mut BevyGpuComputeTask>,
 }
 
-impl<'w, 's> GpuTaskReader<'w, 's> {
+impl GpuTaskReader<'_, '_> {
     /// the latest result is cleared after this call, you cannot retrieve it a second time
     pub fn latest_results<OutputDataBuilder: OutputDataBuilderTrait>(
         &mut self,

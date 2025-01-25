@@ -3,7 +3,7 @@ use bevy::{
     prelude::{Commands, DespawnRecursiveExt, Entity, Query},
 };
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 #[derive(SystemParam)]
 
@@ -12,7 +12,7 @@ pub struct BevyGpuComputeTaskDeleter<'w, 's> {
     tasks: Query<'w, 's, (Entity, &'static mut BevyGpuComputeTask)>,
 }
 
-impl<'w, 's> BevyGpuComputeTaskDeleter<'w, 's> {
+impl BevyGpuComputeTaskDeleter<'_, '_> {
     /// spawns all components needed for the task to run
     pub fn delete(&mut self, name: &str) {
         let (entity, _) = self

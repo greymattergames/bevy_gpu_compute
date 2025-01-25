@@ -5,9 +5,8 @@ use proc_macro_error::{proc_macro_error, set_dummy};
 use state::ModuleTransformState;
 use syn::{parse_macro_input, visit::Visit};
 use transformer::{
-    custom_types::get_all_custom_types::get_custom_types,
-    module_parser::module_parser::parse_shader_module, output::produce_expanded_output,
-    remove_doc_comments::DocCommentRemover,
+    custom_types::get_all_custom_types::get_custom_types, module_parser::lib::parse_shader_module,
+    output::produce_expanded_output, remove_doc_comments::DocCommentRemover,
     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
 };
 mod state;

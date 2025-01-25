@@ -3,7 +3,7 @@ use bevy::{
     render::{render_resource::Buffer, renderer::RenderDevice},
 };
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 /**
 Binding the buffers to the corresponding wgsl code.
@@ -18,7 +18,6 @@ For example, this might be the wgsl code:
 
 The numbers in the `@binding` are the bind group entry numbers. The `@group` is the bind group number. We are only using a single bind group in the current library version.
  */
-
 pub fn create_bind_group(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     log::info!("Creating bind group for task {}", task.name());
     let mut bindings = Vec::new();
@@ -63,5 +62,5 @@ pub fn create_bind_group(task: &mut BevyGpuComputeTask, render_device: &RenderDe
     }
     let layout = task.runtime_state().bind_group_layout();
     *task.runtime_state_mut().bind_group_mut() =
-        Some(render_device.create_bind_group(task.name(), &layout, &bindings));
+        Some(render_device.create_bind_group(task.name(), layout, &bindings));
 }

@@ -16,7 +16,7 @@ pub fn get_gpu_output_counter_value(
 ) -> Option<WgslCounter> {
     log::info!("Reading GPU output counter value");
     let mut encoder = render_device.create_command_encoder(&Default::default());
-    encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, total_byte_size);
+    encoder.copy_buffer_to_buffer(output_buffer, 0, staging_buffer, 0, total_byte_size);
     render_queue.submit(std::iter::once(encoder.finish()));
 
     let slice = staging_buffer.slice(..);
@@ -44,7 +44,7 @@ pub fn get_gpu_output_counter_value(
     };
     // reset the counter
     let mut encoder2 = render_device.create_command_encoder(&Default::default());
-    encoder2.clear_buffer(&output_buffer, 0, None);
+    encoder2.clear_buffer(output_buffer, 0, None);
     render_queue.submit(std::iter::once(encoder2.finish()));
 
     log::info!("Gpu counter result: {:?}", result);

@@ -4,6 +4,8 @@ macro_rules! impl_matrix {
     ($name:ident, $vec_type:ty, $($field:ident, $index:expr),+) => {
         #[repr(C)]
         #[derive(Debug, Clone,Copy, bytemuck::Pod, bytemuck::Zeroable)]
+        #[allow(clippy::manual_non_exhaustive)]
+// cannot use #[non_exhaustive] in a macro, and we want to force users even intra-crate to use the constructors for the matrix and vector types
         pub struct $name {
             $(pub $field: $vec_type,)+
             _force_constructor: ()
@@ -50,16 +52,15 @@ macro_rules! impl_matrix {
 }
 macro_rules! impl_matrix_no_pod {
     ($name:ident, $vec_type:ty, $($field:ident, $index:expr),+) => {
+        #[non_exhaustive]
         pub struct $name {
             $(pub $field: $vec_type,)+
-            _force_constructor: ()
         }
 
         impl $name {
             pub fn new($($field: $vec_type),+) -> Self {
                 Self {
                     $($field,)+
-                    _force_constructor: ()
                 }
             }
 
@@ -193,22 +194,22 @@ mod tests {
         let mut mat = Mat4x2Bool::new(vec1, vec2, vec3, vec4);
 
         // Test direct field access
-        assert_eq!(mat.x.x, true);
-        assert_eq!(mat.y.y, true);
-        assert_eq!(mat.z.x, true);
-        assert_eq!(mat.w.y, false);
+        assert!(mat.x.x);
+        assert!(mat.y.y);
+        assert!(mat.z.x);
+        assert!(!mat.w.y);
 
         // Test index access
-        assert_eq!(mat[0][0], true);
-        assert_eq!(mat[1][1], true);
-        assert_eq!(mat[2][0], true);
-        assert_eq!(mat[3][1], false);
+        assert!(mat[0][0]);
+        assert!(mat[1][1]);
+        assert!(mat[2][0]);
+        assert!(!mat[3][1]);
 
         // Test setters
         let new_vec = Vec2Bool::new(false, true);
         mat.set_x(new_vec);
 
-        assert_eq!(mat.x.y, true);
-        assert_eq!(mat[0][1], true);
+        assert!(mat.x.y);
+        assert!(mat[0][1]);
     }
 }

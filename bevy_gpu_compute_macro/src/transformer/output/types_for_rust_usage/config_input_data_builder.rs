@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub fn create_config_input_data_builder(state: &ModuleTransformState) -> TokenStream {
-    let methods = get_methods(&state);
+    let methods = get_methods(state);
     quote! {
         pub struct ConfigInputDataBuilder {
             bytes_per_wgsl_config_type_name: HashMap<String, Vec<u8>>,
@@ -53,7 +53,7 @@ fn get_methods(state: &ModuleTransformState) -> TokenStream {
 fn single_method(custom_type_name: CustomTypeIdents) -> TokenStream {
     let method_name: Ident = format_ident!("set_{}", custom_type_name.snake_case);
     let type_pascal_case: Ident = custom_type_name.name.clone();
-    let string_key: String = format!("{}", custom_type_name.name.to_string());
+    let string_key: String = format!("{}", custom_type_name.name);
     quote! {
         pub fn #method_name(&mut self, data: #type_pascal_case) -> &mut Self {
             self.bytes_per_wgsl_config_type_name

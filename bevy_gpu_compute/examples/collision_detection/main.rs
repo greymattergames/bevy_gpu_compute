@@ -29,18 +29,10 @@ const SPAWN_RANGE_MAX: i32 = 2;
 const ENTITY_RADIUS: f32 = 1.1;
 const EXIT_AFTER_FRAMES: u32 = 2;
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 struct State {
     pub num_entities: u32,
     pub collision_count: usize,
-}
-impl Default for State {
-    fn default() -> Self {
-        State {
-            num_entities: 0,
-            collision_count: 0,
-        }
-    }
 }
 
 #[wgsl_shader_module]
@@ -147,7 +139,7 @@ fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
 /// This is here for reference, but is not used in this example
 #[allow(dead_code)]
 fn delete_task(mut gpu_task_deleter: BevyGpuComputeTaskDeleter) {
-    let task = gpu_task_deleter.delete("collision_detection");
+    gpu_task_deleter.delete("collision_detection");
 }
 fn modify_task(mut gpu_tasks: GpuTaskRunner, state: Res<State>) {
     let num_entities = state.num_entities;
@@ -206,6 +198,7 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
 
     // log::info!("results: {:?}", results);c
     if let Ok(results) = results {
+        #[allow(unused_variables)]
         let debug_results = results.my_debug_info.unwrap();
         // log::info!("debug results: {:?}", debug_results);
         //fully type-safe results

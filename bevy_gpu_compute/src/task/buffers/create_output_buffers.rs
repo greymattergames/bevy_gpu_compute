@@ -1,7 +1,7 @@
 use bevy::render::renderer::RenderDevice;
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
-use crate::task::{outputs::definitions::wgsl_counter::WgslCounter, task::BevyGpuComputeTask};
+use crate::task::{lib::BevyGpuComputeTask, outputs::definitions::wgsl_counter::WgslCounter};
 
 pub fn update_output_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     let mut output_buffers = Vec::new();
@@ -9,13 +9,7 @@ pub fn update_output_buffers(task: &mut BevyGpuComputeTask, render_device: &Rend
     let mut output_count_buffers = Vec::new();
     let mut output_count_staging_buffers = Vec::new();
     // Collect all metadata first to release the immutable borrow
-    let metadata: Vec<_> = task
-        .configuration()
-        .outputs()
-        .arrays()
-        .iter()
-        .cloned()
-        .collect();
+    let metadata: Vec<_> = task.configuration().outputs().arrays().to_vec();
     for (i, spec) in metadata.iter().enumerate() {
         let length = task
             .configuration()

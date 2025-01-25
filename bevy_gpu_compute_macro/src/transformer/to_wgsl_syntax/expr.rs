@@ -119,9 +119,9 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
                 if path.path.segments.len() == 2 {
                     let matched = WGSL_NATIVE_TYPES
                         .iter()
-                        .find(|t| **t == path.path.segments[0].ident.to_string());
+                        .find(|t| t == &&path.path.segments[0].ident.to_string());
                     if let Some(m) = matched {
-                        if path.path.segments.last().unwrap().ident.to_string() == "new" {
+                        if path.path.segments.last().unwrap().ident == "new" {
                             // will be handled at a later stage
                             return None;
                         }
@@ -199,7 +199,7 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
         _ => {
             let message = format!(
                 "Unsupported expression type in WGSL: {}",
-                expr.to_token_stream().to_string()
+                expr.to_token_stream()
             );
             abort!(expr.span(), message)
         }

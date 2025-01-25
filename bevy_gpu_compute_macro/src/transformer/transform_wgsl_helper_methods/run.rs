@@ -39,7 +39,7 @@ fn get_special_function_method(call: &ExprCall) -> Option<WgslHelperMethodName> 
 }
 fn get_special_function_generic_type<'a>(
     call: &'a ExprCall,
-    custom_types: &'a Vec<CustomType>,
+    custom_types: &'a [CustomType],
 ) -> Option<&'a CustomType> {
     if let Expr::Path(path) = &*call.func {
         if let Some(last_seg) = path.path.segments.last() {
@@ -55,7 +55,7 @@ fn get_special_function_generic_type<'a>(
     None
 }
 
-fn replace(call: ExprCall, custom_types: &Vec<CustomType>) -> Option<TokenStream> {
+fn replace(call: ExprCall, custom_types: &[CustomType]) -> Option<TokenStream> {
     let category = get_special_function_category(&call);
     let method = get_special_function_method(&call);
     let type_name = get_special_function_generic_type(&call, custom_types);
@@ -71,7 +71,7 @@ fn replace(call: ExprCall, custom_types: &Vec<CustomType>) -> Option<TokenStream
                     method_expander_kind: None,
                 };
                 WgslHelperMethodMatcher::choose_expand_format(&mut method);
-                if let Some(_) = &method.method_expander_kind {
+                if method.method_expander_kind.is_some() {
                     let t = ToExpandedFormat::run(&method);
                     return Some(t);
                 }
@@ -97,9 +97,9 @@ impl VisitMut for HelperFunctionConverter {
     }
 }
 impl HelperFunctionConverter {
-    pub fn new(custom_types: &Vec<CustomType>) -> Self {
+    pub fn new(custom_types: &[CustomType]) -> Self {
         Self {
-            custom_types: custom_types.clone(),
+            custom_types: custom_types.to_vec(),
         }
     }
 }
@@ -118,6 +118,6 @@ pub fn transform_wgsl_helper_methods(state: &mut ModuleTransformState) {
             "Allowed types must be set before transforming helper functions"
         );
     };
-    let mut converter = HelperFunctionConverter::new(&custom_types);
+    let mut converter = HelperFunctionConverter::new(custom_types);
     converter.visit_item_mod_mut(&mut state.rust_module);
 }

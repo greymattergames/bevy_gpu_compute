@@ -1,0 +1,56 @@
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-test-macro
+        name: cargo test (bevy_gpu_compute_macro)
+        entry: bash -c 'cd bevy_gpu_compute_macro && cargo test'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-test-core
+        name: cargo test (bevy_gpu_compute_core)
+        entry: bash -c 'cd bevy_gpu_compute_core && cargo test'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-test-main
+        name: cargo test (bevy_gpu_compute)
+        entry: bash -c 'cd bevy_gpu_compute && cargo test'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-clippy-macro
+        name: cargo clippy (bevy_gpu_compute_macro)
+        entry: bash -c 'cd bevy_gpu_compute_macro && cargo clippy -- -D warnings'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-clippy-core
+        name: cargo clippy (bevy_gpu_compute_core)
+        entry: bash -c 'cd bevy_gpu_compute_core && cargo clippy -- -D warnings'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-clippy-main
+        name: cargo clippy (bevy_gpu_compute)
+        entry: bash -c 'cd bevy_gpu_compute && cargo clippy -- -D warnings'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-fmt-macro
+        name: cargo fmt (bevy_gpu_compute_macro)
+        entry: bash -c 'cd bevy_gpu_compute_macro && cargo fmt -- --check'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-fmt-core
+        name: cargo fmt (bevy_gpu_compute_core)
+        entry: bash -c 'cd bevy_gpu_compute_core && cargo fmt -- --check'
+        language: system
+        pass_filenames: false
+
+      - id: cargo-fmt-main
+        name: cargo fmt (bevy_gpu_compute)
+        entry: bash -c 'cd bevy_gpu_compute && cargo fmt -- --check'
+        language: system
+        pass_filenames: false

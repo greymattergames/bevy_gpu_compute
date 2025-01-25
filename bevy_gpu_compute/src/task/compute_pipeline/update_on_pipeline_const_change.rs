@@ -2,7 +2,7 @@ use bevy::{log, render::renderer::RenderDevice};
 
 use wgpu::{ComputePipelineDescriptor, PipelineCompilationOptions};
 
-use crate::task::task::BevyGpuComputeTask;
+use crate::task::lib::BevyGpuComputeTask;
 
 use super::pipeline_cache::PipelineKey;
 
@@ -20,18 +20,17 @@ pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &Re
         .cache
         .contains_key(&key)
     {
-        return;
     } else {
         log::info!("Creating new pipeline for task {}", task.name());
         log::info!(" layout {:?}", task.runtime_state().pipeline_layout());
         let compute_pipeline = render_device.create_compute_pipeline(&ComputePipelineDescriptor {
-            label: Some(&task.name()),
+            label: Some(task.name()),
             layout: Some(task.runtime_state().pipeline_layout()),
             module: task.configuration().shader().shader_module(),
             entry_point: Some(task.configuration().shader().entry_point_function_name()),
             // this is where we specify new values for pipeline constants...
             compilation_options: PipelineCompilationOptions {
-                constants: &&&task.get_pipeline_consts(),
+                constants: &task.get_pipeline_consts(),
                 zero_initialize_workgroup_memory: Default::default(),
             },
             cache: None,

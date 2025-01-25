@@ -111,8 +111,8 @@ pub fn user_defined_types(state: &ModuleTransformState) -> TokenStream {
                     abort!(Span::call_site(), message);
                 }
                 // make public
-                publicifier.visit_item_mut(&mut item.as_mut().unwrap());
-                podifier.visit_item_mut(&mut item.as_mut().unwrap());
+                publicifier.visit_item_mut(item.as_mut().unwrap());
+                podifier.visit_item_mut(item.as_mut().unwrap());
                 // stringify
                 let string: String = item.unwrap().to_token_stream().to_string();
                 string
@@ -135,9 +135,8 @@ pub fn uniform_types(
         .iter()
         .map(|uniform| {
             *binding_num_counter += 1;
-            binding_numbers_by_variable_name
-                .insert(uniform.name.uniform(), *binding_num_counter as u32);
-            get_single_input_type_metadata(binding_num_counter.clone(), &uniform.name.name())
+            binding_numbers_by_variable_name.insert(uniform.name.uniform(), *binding_num_counter);
+            get_single_input_type_metadata(*binding_num_counter, uniform.name.name())
         })
         .collect();
 
@@ -170,9 +169,8 @@ fn get_single_output_type_metadata(
     include_count: bool,
 ) -> TokenStream {
     let ident = Ident::new(type_name.name(), Span::call_site());
-    let next_binding_num = binding_num.clone() + 1;
-    binding_numbers_by_variable_name
-        .insert(type_name.output_array().to_string(), *binding_num as u32);
+    let next_binding_num = *binding_num + 1;
+    binding_numbers_by_variable_name.insert(type_name.output_array().to_string(), *binding_num);
     let string_type_name = type_name.name();
     let res = quote!(
         OutputTypeMetadata {
@@ -185,8 +183,7 @@ fn get_single_output_type_metadata(
     );
     if include_count {
         *binding_num += 1;
-        binding_numbers_by_variable_name
-            .insert(type_name.counter().to_string(), *binding_num as u32);
+        binding_numbers_by_variable_name.insert(type_name.counter().to_string(), *binding_num);
     }
     res
 }
@@ -203,14 +200,9 @@ pub fn input_array_types(
         .iter()
         .map(|in_arr| {
             *binding_num_counter += 1;
-            binding_numbers_by_variable_name.insert(
-                in_arr.item_type.name.input_array(),
-                *binding_num_counter as u32,
-            );
-            get_single_input_type_metadata(
-                binding_num_counter.clone(),
-                &in_arr.item_type.name.name(),
-            )
+            binding_numbers_by_variable_name
+                .insert(in_arr.item_type.name.input_array(), *binding_num_counter);
+            get_single_input_type_metadata(*binding_num_counter, in_arr.item_type.name.name())
         })
         .collect();
 

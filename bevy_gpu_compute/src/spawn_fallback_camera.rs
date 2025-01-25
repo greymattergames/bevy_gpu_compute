@@ -19,30 +19,36 @@ pub fn spawn_fallback_camera(
     mut commands: Commands,
 ) {
     let len = cameras.iter().len();
-    if len < 1 {
-        log::info!("GPU Compute: Spawning fallback camera in order to improve gpu performance.");
-        commands.spawn((
-            Camera2d,
-            OrthographicProjection {
-                near: -10.0,
-                far: 10.0,
-                scale: 1.,
-                ..OrthographicProjection::default_2d()
-            },
-            Transform::from_xyz(
-                0., 0., 10.0, // 100.0,
-            ),
-            BevyGpuComputeFallbackCamera,
-        ));
-    } else if len == 1 {
-        // do nothing
-    } else {
-        log::info!("GPU Compute: Despawning extra fallback cameras.");
-        let fallback_cam_len = fallback_cameras.iter().len();
-        if fallback_cam_len > 0 {
-            fallback_cameras.iter().for_each(|(e, _)| {
-                commands.entity(e).despawn_recursive();
-            });
+    match len {
+        0 => {
+            log::info!(
+                "GPU Compute: Spawning fallback camera in order to improve gpu performance."
+            );
+            commands.spawn((
+                Camera2d,
+                OrthographicProjection {
+                    near: -10.0,
+                    far: 10.0,
+                    scale: 1.,
+                    ..OrthographicProjection::default_2d()
+                },
+                Transform::from_xyz(
+                    0., 0., 10.0, // 100.0,
+                ),
+                BevyGpuComputeFallbackCamera,
+            ));
+        }
+        1 => {
+            // do nothing
+        }
+        _ => {
+            log::info!("GPU Compute: Despawning extra fallback cameras.");
+            let fallback_cam_len = fallback_cameras.iter().len();
+            if fallback_cam_len > 0 {
+                fallback_cameras.iter().for_each(|(e, _)| {
+                    commands.entity(e).despawn_recursive();
+                });
+            }
         }
     }
 }

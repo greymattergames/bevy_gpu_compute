@@ -23,8 +23,8 @@ impl InputArrayDataLengths {
             key.hash(&mut hasher);
             value.hash(&mut hasher);
         }
-        let hash = hasher.finish();
-        hash
+
+        hasher.finish()
     }
     pub fn get(&self, input_array_type_name: &str) -> Option<&usize> {
         self.lengths_by_input_array_type_name
@@ -33,11 +33,11 @@ impl InputArrayDataLengths {
     pub fn update_and_return_new_hash_if_changed(&mut self, other: Self) -> Option<u64> {
         let new_hash = Self::hash_map(&other.lengths_by_input_array_type_name);
         if new_hash == self.hash {
-            return None;
+            None
         } else {
             self.lengths_by_input_array_type_name = other.lengths_by_input_array_type_name;
             self.hash = new_hash;
-            return Some(new_hash);
+            Some(new_hash)
         }
     }
 

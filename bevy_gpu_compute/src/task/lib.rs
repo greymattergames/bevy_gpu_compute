@@ -1,26 +1,26 @@
 use std::collections::HashMap;
 
 use bevy::{ecs::component::Component, log, render::renderer::RenderDevice};
+use bevy_gpu_compute_core::{InputTypesMetadataTrait, OutputTypesMetadataTrait};
 use bevy_gpu_compute_core::{
-    InputTypeMetadata, MaxOutputLengths, OutputTypeMetadata, TypesSpec,
+    MaxOutputLengths, TypesSpec,
     wgsl::shader_module::{
         complete_shader_module::WgslShaderModule, user_defined_portion::WgslShaderModuleUserPortion,
     },
 };
-use bevy_gpu_compute_core::{InputTypesMetadataTrait, OutputTypesMetadataTrait};
 
 use super::task_components::{
     buffers::TaskBuffers,
     configuration::{
-        configuration::TaskConfiguration, input_spec::InputSpec, iteration_space::IterationSpace,
+        input_spec::InputSpec, iteration_space::IterationSpace, lib::TaskConfiguration,
         output_spec::OutputSpec, wgsl_code::WgslCode,
     },
     data::TaskData,
     runtime_state::{
         gpu_workgroup_sizes::GpuWorkgroupSizes,
         gpu_workgroup_space::GpuWorkgroupSpace,
+        lib::{TaskRuntimeState, TaskRuntimeStateBuilder},
         max_output_bytes::MaxOutputBytes,
-        runtime_state::{TaskRuntimeState, TaskRuntimeStateBuilder},
     },
 };
 
@@ -72,20 +72,14 @@ impl BevyGpuComputeTask {
         iteration_space: IterationSpace,
         max_output_vector_lengths: MaxOutputLengths,
     ) -> Self {
-        let config_input_metadata = ShaderModuleTypes::ConfigInputTypes::get_all();
-        let input_metadata = ShaderModuleTypes::InputArrayTypes::get_all();
-        let output_metadata = ShaderModuleTypes::OutputArrayTypes::get_all();
         let full_module = WgslShaderModule::new(wgsl_shader_module);
         log::info!(
             "wgsl: {}",
             full_module.wgsl_code(iteration_space.num_dimmensions())
         );
-        Self::create_manually(
+        Self::create_manually::<ShaderModuleTypes>(
             name,
-            &render_device,
-            input_metadata,
-            output_metadata,
-            config_input_metadata,
+            render_device,
             iteration_space,
             max_output_vector_lengths,
             WgslCode::from_string(
@@ -98,26 +92,26 @@ impl BevyGpuComputeTask {
     }
 
     /// ensure that you send relevant update events after calling this function
-    pub fn create_manually(
+    pub fn create_manually<ShaderModuleTypes: TypesSpec>(
         name: &str,
         render_device: &RenderDevice,
-        input_vectors_metadata_spec: Vec<InputTypeMetadata>,
-        output_vectors_metadata_spec: Vec<OutputTypeMetadata>,
-        config_inputs_metadata_spec: Vec<InputTypeMetadata>,
         iteration_space: IterationSpace,
         max_output_array_lengths: MaxOutputLengths,
         wgsl_code: WgslCode,
     ) -> Self {
+        let config_input_metadata = ShaderModuleTypes::ConfigInputTypes::get_all();
+        let input_metadata = ShaderModuleTypes::InputArrayTypes::get_all();
+        let output_metadata = ShaderModuleTypes::OutputArrayTypes::get_all();
         let data = TaskData::default();
         let buffers = TaskBuffers::default();
         let configuration = TaskConfiguration::new(
             wgsl_code,
             iteration_space,
-            InputSpec::new(input_vectors_metadata_spec, config_inputs_metadata_spec),
-            OutputSpec::new(output_vectors_metadata_spec, max_output_array_lengths),
+            InputSpec::new(input_metadata, config_input_metadata),
+            OutputSpec::new(output_metadata, max_output_array_lengths),
         );
         let runtime_state =
-            TaskRuntimeStateBuilder::new(&render_device, name, &configuration).build();
+            TaskRuntimeStateBuilder::new(render_device, name, &configuration).build();
         Self {
             name: name.to_string(),
             configuration,
@@ -196,8 +190,8 @@ impl BevyGpuComputeTask {
         // update task max output bytes
         self.runtime_state._internal_set_max_output_bytes(
             MaxOutputBytes::from_max_lengths_and_spec(
-                &self.configuration.outputs().max_lengths(),
-                &self.configuration.outputs().arrays(),
+                self.configuration.outputs().max_lengths(),
+                self.configuration.outputs().arrays(),
             ),
         );
         let mut wg_sizes = self.runtime_state.workgroup_sizes().clone();
@@ -209,13 +203,13 @@ impl BevyGpuComputeTask {
             .to_usize()
             != wg_sizes.num_dimmensions()
         {
-            wg_sizes = GpuWorkgroupSizes::from_iter_space(&*self.configuration.iteration_space());
+            wg_sizes = GpuWorkgroupSizes::from_iter_space(self.configuration.iteration_space());
             self.runtime_state
                 ._internal_set_workgroup_sizes(wg_sizes.clone());
         }
         self.runtime_state._internal_set_workgroup_space(
             GpuWorkgroupSpace::from_iter_space_and_wrkgrp_sizes(
-                &self.configuration.iteration_space(),
+                self.configuration.iteration_space(),
                 &wg_sizes,
             ),
         );

@@ -155,7 +155,7 @@ fn process_string_recursively(input: &str) -> String {
                     // Process any constructor before the opening parenthesis
                     if !current_constructor.is_empty() {
                         if let Some((prefix, _)) =
-                            convert_single_constructor(&current_constructor.trim())
+                            convert_single_constructor(current_constructor.trim())
                         {
                             result.push_str(&prefix);
                         } else {
@@ -195,7 +195,7 @@ fn process_string_recursively(input: &str) -> String {
                 if paren_depth == 0 {
                     if !current_constructor.is_empty() {
                         if let Some((prefix, _)) =
-                            convert_single_constructor(&current_constructor.trim())
+                            convert_single_constructor(current_constructor.trim())
                         {
                             result.push_str(&prefix);
                         } else {
@@ -221,7 +221,7 @@ fn process_string_recursively(input: &str) -> String {
 
     // Handle any remaining content
     if !current_constructor.is_empty() {
-        if let Some((prefix, _)) = convert_single_constructor(&current_constructor.trim()) {
+        if let Some((prefix, _)) = convert_single_constructor(current_constructor.trim()) {
             result.push_str(&prefix);
         } else {
             result.push_str(&current_constructor);

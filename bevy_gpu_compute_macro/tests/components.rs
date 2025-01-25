@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use bevy_gpu_compute_core::{
-    MaxOutputLengths, TypeErasedArrayOutputData, TypesSpec,
+    TypeErasedArrayOutputData, TypesSpec,
     wgsl::{
         shader_custom_type_name::ShaderCustomTypeName,
         shader_module::user_defined_portion::WgslShaderModuleUserPortion,
@@ -31,10 +31,10 @@ fn test_simple_struct() {
     }
 
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
@@ -60,10 +60,10 @@ fn test_struct_creation() {
     }
 
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
@@ -92,12 +92,12 @@ fn test_struct_creation_with_nested_transforms() {
     }
 
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
+    assert!(t2.static_consts.is_empty());
 
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
@@ -115,10 +115,10 @@ fn test_type_alias() {
     }
 
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
@@ -136,13 +136,13 @@ fn test_consts() {
     }
 
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
     assert!(t2.static_consts.len() == 1);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.static_consts.first().unwrap().code.wgsl_code,
         "const MY_CONST : i32 = 3;"
@@ -164,13 +164,13 @@ fn test_uniforms() {
         }
     }
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
     assert!(t2.uniforms.len() == 1);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.uniforms.first().unwrap().code.wgsl_code,
         "struct Uniforms { time : f32, resolution : vec2 < f32 > , }"
@@ -192,12 +192,12 @@ fn test_output_arrays() {
     }
     let t2 = test_module::parsed();
     assert!(t2.output_arrays.len() == 1);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.output_arrays.first().unwrap().item_type.code.wgsl_code,
         "struct CollisionResult { entity1 : u32, entity2 : u32, }"
@@ -225,13 +225,13 @@ fn test_helper_functions() {
         fn main(iter_pos: WgslIterationPosition) {}
     }
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
     assert!(t2.helper_functions.len() == 1);
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.helper_functions.first().unwrap().code.wgsl_code,
         "fn calculate_distance_squared(p1 : array < f32, 2 > , p2 : array < f32, 2 >)\n-> f32\n{\n    let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *\n    dy;\n}"
@@ -275,10 +275,10 @@ fn test_simple_type_transforms() {
     }
 
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
     assert!(t2.helper_types.len() == 1);
     assert_eq!(
@@ -300,13 +300,13 @@ fn test_doc_comments() {
         fn main(iter_pos: WgslIterationPosition) {}
     }
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
     assert!(t2.uniforms.len() == 1);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
 }
 #[test]
 fn test_type_casting() {
@@ -320,13 +320,13 @@ fn test_type_casting() {
         }
     }
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.main_function.unwrap().code.wgsl_code,
         "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ let x = i32(1.0); let y = f32(1); return; }"
@@ -345,13 +345,13 @@ fn test_mutable_variables() {
         }
     }
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.main_function.unwrap().code.wgsl_code,
         "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ var x = 1; var x1 = 2; x = 2; return; }"
@@ -370,14 +370,14 @@ fn test_input_arrays() {
     }
 
     let t2 = test_module::parsed();
-    assert!(t2.output_arrays.len() == 0);
+    assert!(t2.output_arrays.is_empty());
     assert!(t2.input_arrays.len() == 1);
-    assert!(t2.uniforms.len() == 0);
+    assert!(t2.uniforms.is_empty());
     // type Position = array<f32, 2>;
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
 
     assert_eq!(
         t2.input_arrays.first().unwrap().item_type.code.wgsl_code,
@@ -431,7 +431,7 @@ fn test_configs_builder() {
         }
         fn main(iter_pos: WgslIterationPosition) {}
     }
-
+    #[allow(unused_variables)]
     let config = test_module::ConfigInputDataBuilder::new()
         .set_my_position([3.0, 4.0])
         .set_my_config(test_module::MyConfig { v1: 10.0, v2: 20.0 })
@@ -453,12 +453,12 @@ fn test_output_vec() {
     }
     let t2 = test_module::parsed();
     assert!(t2.output_arrays.len() == 1);
-    assert!(t2.input_arrays.len() == 0);
-    assert!(t2.uniforms.len() == 0);
-    assert!(t2.helper_functions.len() == 0);
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.is_empty());
+    assert!(t2.helper_functions.is_empty());
     assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.len() == 0);
-    assert!(t2.helper_types.len() == 0);
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.output_arrays.first().unwrap().item_type.code.wgsl_code,
         "struct CollisionResult { entity1 : u32, entity2 : u32, }"
