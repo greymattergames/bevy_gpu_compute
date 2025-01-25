@@ -1,7 +1,7 @@
 use bevy::{ecs::system::SystemParam, prelude::Query};
 use bevy_gpu_compute_core::OutputDataBuilderTrait;
 
-use crate::task::task_components::task::BevyGpuComputeTask;
+use crate::task::task::BevyGpuComputeTask;
 
 #[derive(SystemParam)]
 
@@ -20,12 +20,12 @@ impl<'w, 's> GpuTaskReader<'w, 's> {
             .iter_mut()
             .find(|task| task.name() == name)
             .expect("Task not found");
-        let result = if let Some(d) = &task.output_data {
+        let result = if let Some(d) = &task.current_data().output() {
             Ok(OutputDataBuilder::from(d))
         } else {
             Err("No output data found".into())
         };
-        task.output_data = None;
+        task.current_data_mut().clear_output();
         result
     }
 }

@@ -3,16 +3,16 @@ use bevy_gpu_compute_core::MaxOutputLengths;
 use crate::task::outputs::definitions::output_vector_metadata_spec::OutputVectorsMetadataSpec;
 
 #[derive(Debug)]
-pub struct TaskMaxOutputBytes(usize);
+pub struct MaxOutputBytes(usize);
 
-impl Default for TaskMaxOutputBytes {
+impl Default for MaxOutputBytes {
     fn default() -> Self {
-        TaskMaxOutputBytes(0)
+        MaxOutputBytes(0)
     }
 }
-impl TaskMaxOutputBytes {
+impl MaxOutputBytes {
     pub fn new(max_output_bytes: usize) -> Self {
-        TaskMaxOutputBytes(max_output_bytes)
+        MaxOutputBytes(max_output_bytes)
     }
     pub fn from_max_lengths_and_spec(
         max_output_vector_lengths: &MaxOutputLengths,
@@ -28,7 +28,7 @@ impl TaskMaxOutputBytes {
                 }
             },
         );
-        TaskMaxOutputBytes(max_output_bytes)
+        MaxOutputBytes(max_output_bytes)
     }
     pub fn get(&self) -> usize {
         self.0

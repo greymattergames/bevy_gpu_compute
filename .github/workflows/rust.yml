@@ -17,7 +17,7 @@ jobs:
         crate: ['bevy_gpu_compute_macro', 'bevy_gpu_compute_core', 'bevy_gpu_compute'] 
     steps:
     - uses: actions/checkout@v4
-    - name: Build for ${{ matrix.crate }}
+    - name: Build and test for ${{ matrix.crate }}
       run: |
         rustup update nightly && rustup default nightly
         cargo build --verbose

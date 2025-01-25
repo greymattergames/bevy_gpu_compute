@@ -6,7 +6,7 @@ use bevy::{
 };
 use bevy_gpu_compute_core::TypeErasedArrayOutputData;
 
-use crate::task::task_components::task::BevyGpuComputeTask;
+use crate::task::task::BevyGpuComputeTask;
 
 use super::helpers::get_gpu_output_as_bytes_vec::get_gpu_output_as_bytes_vec;
 use std::collections::HashMap;
@@ -21,15 +21,16 @@ pub fn read_gpu_outputs(
 ) {
     let mut bytes_per_wgsl_output_type_name: HashMap<String, Vec<u8>> = HashMap::new();
 
-    task.spec
-        .output_vectors_metadata_spec()
+    task.configuration()
+        .outputs()
+        .arrays()
         .get_all_metadata()
         .iter()
         .enumerate()
         .for_each(|(i, metadata)| {
             if let Some(m) = metadata {
-                let out_buffer = task.buffers.output.get(i).unwrap();
-                let staging_buffer = task.buffers.output_staging.get(i).unwrap();
+                let out_buffer = task.buffers().output.main.get(i).unwrap();
+                let staging_buffer = task.buffers().output.staging.get(i).unwrap();
                 let total_byte_size = min(
                     if let Some(Some(c)) = output_counts.get(i) {
                         let size = c * m.get_bytes();
@@ -38,7 +39,11 @@ pub fn read_gpu_outputs(
                     } else {
                         usize::MAX
                     },
-                    task.spec.output_array_lengths().get_by_name(m.name()) * m.get_bytes(),
+                    task.configuration()
+                        .outputs()
+                        .max_lengths()
+                        .get_by_name(m.name())
+                        * m.get_bytes(),
                 );
                 log::info!("total_byte_size: {}", total_byte_size);
                 if total_byte_size < 1 {
@@ -61,7 +66,7 @@ pub fn read_gpu_outputs(
                 }
             }
         });
-    task.output_data = Some(TypeErasedArrayOutputData::new(
+    *task.current_data_mut().output_mut() = Some(TypeErasedArrayOutputData::new(
         bytes_per_wgsl_output_type_name,
     ));
 }

@@ -1,10 +1,9 @@
-
 use bevy::{
     ecs::system::SystemParam,
     prelude::{Commands, DespawnRecursiveExt, Entity, Query},
 };
 
-use crate::task::task_components::task::BevyGpuComputeTask;
+use crate::task::task::BevyGpuComputeTask;
 
 #[derive(SystemParam)]
 

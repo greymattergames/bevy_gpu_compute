@@ -1,41 +1,44 @@
-use bevy::{
-    log,
-    render::renderer::RenderDevice,
-};
+use bevy::{log, render::renderer::RenderDevice};
 
 use wgpu::{ComputePipelineDescriptor, PipelineCompilationOptions};
 
-use crate::task::task_components::task::BevyGpuComputeTask;
+use crate::task::task::BevyGpuComputeTask;
 
-use super::cache::PipelineKey;
+use super::pipeline_cache::PipelineKey;
 
 pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
-    if task.input_array_lengths.is_none() {
+    if task.current_data().input_lengths().is_none() {
         return;
     }
     log::info!("Updating pipeline for task {}", task.name());
     let key = PipelineKey {
-        pipeline_consts_version: task.spec.iter_space_and_out_lengths_version(),
+        pipeline_consts_version: task.configuration().version(),
     };
-    if task.pipeline_cache.cache.contains_key(&key) {
+    if task
+        .runtime_state()
+        .pipeline_cache()
+        .cache
+        .contains_key(&key)
+    {
         return;
     } else {
         log::info!("Creating new pipeline for task {}", task.name());
-        log::info!(" layout {:?}", task.pipeline_layout);
+        log::info!(" layout {:?}", task.runtime_state().pipeline_layout());
         let compute_pipeline = render_device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some(&task.name()),
-            layout: task.pipeline_layout.as_ref(),
-            module: task.spec.wgsl_code().shader_module(),
-            entry_point: Some(task.spec.wgsl_code().entry_point_function_name()),
+            layout: Some(task.runtime_state().pipeline_layout()),
+            module: task.configuration().shader().shader_module(),
+            entry_point: Some(task.configuration().shader().entry_point_function_name()),
             // this is where we specify new values for pipeline constants...
             compilation_options: PipelineCompilationOptions {
-                constants: &&task
-                    .spec
-                    .get_pipeline_consts(task.input_array_lengths.as_ref().unwrap()),
+                constants: &&&task.get_pipeline_consts(),
                 zero_initialize_workgroup_memory: Default::default(),
             },
             cache: None,
         });
-        task.pipeline_cache.cache.insert(key, compute_pipeline);
+        task.runtime_state_mut()
+            .pipeline_cache_mut()
+            .cache
+            .insert(key, compute_pipeline);
     }
 }

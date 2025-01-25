@@ -1,6 +1,7 @@
 use bevy::render::renderer::RenderDevice;
 use wgpu::{ShaderModule, ShaderModuleDescriptor, ShaderSource};
 
+#[derive(Debug)]
 pub struct WgslCode {
     code: String,
     entry_point_function_name: String,

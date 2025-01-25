@@ -6,7 +6,7 @@ use bevy::{
 };
 use wgpu::Buffer;
 
-use crate::task::task_components::task::BevyGpuComputeTask;
+use crate::task::task::BevyGpuComputeTask;
 
 use super::{
     definitions::wgsl_counter::WgslCounter,
@@ -19,8 +19,9 @@ pub fn read_gpu_output_counts(
     render_queue: &RenderQueue,
 ) -> Vec<Option<usize>> {
     let local_res_counts: Arc<Mutex<Vec<Option<usize>>>> = Arc::new(Mutex::new(Vec::new()));
-    task.spec
-        .output_vectors_metadata_spec()
+    task.configuration()
+        .outputs()
+        .arrays()
         .get_all_metadata()
         .iter()
         .enumerate()
@@ -31,8 +32,8 @@ pub fn read_gpu_output_counts(
                     let count = read_gpu_output_counts_single_output_type(
                         render_device,
                         render_queue,
-                        &task.buffers.output_count[i],
-                        &task.buffers.output_count_staging[i],
+                        &task.buffers().output.count[i],
+                        &task.buffers().output.count_staging[i],
                     );
                     local_res_counts.lock().unwrap().push(Some(count as usize));
                 } else {

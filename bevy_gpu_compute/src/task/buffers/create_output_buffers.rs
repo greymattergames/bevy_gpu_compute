@@ -1,10 +1,7 @@
 use bevy::render::renderer::RenderDevice;
 use wgpu::{BufferDescriptor, BufferUsages, util::BufferInitDescriptor};
 
-use crate::task::{
-    outputs::definitions::wgsl_counter::WgslCounter,
-    task_components::task::BevyGpuComputeTask,
-};
+use crate::task::{outputs::definitions::wgsl_counter::WgslCounter, task::BevyGpuComputeTask};
 
 pub fn update_output_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
     let mut output_buffers = Vec::new();
@@ -13,15 +10,20 @@ pub fn update_output_buffers(task: &mut BevyGpuComputeTask, render_device: &Rend
     let mut output_count_staging_buffers = Vec::new();
     // Collect all metadata first to release the immutable borrow
     let metadata: Vec<_> = task
-        .spec
-        .output_vectors_metadata_spec()
+        .configuration()
+        .outputs()
+        .arrays()
         .get_all_metadata()
         .iter()
         .cloned()
         .collect();
     for (i, output_spec) in metadata.iter().enumerate() {
         if let Some(spec) = output_spec {
-            let length = task.spec.output_array_lengths().get_by_name(spec.name());
+            let length = task
+                .configuration()
+                .outputs()
+                .max_lengths()
+                .get_by_name(spec.name());
             let output_size = spec.get_bytes() as u64 * length as u64;
             let output_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some(&format!("{:}-output-{:}", task.name(), i)),
@@ -54,8 +56,9 @@ pub fn update_output_buffers(task: &mut BevyGpuComputeTask, render_device: &Rend
             }
         }
     }
-    task.buffers.output = output_buffers;
-    task.buffers.output_staging = output_staging_buffers;
-    task.buffers.output_count = output_count_buffers;
-    task.buffers.output_count_staging = output_count_staging_buffers;
+    let b = task.buffers_mut();
+    b.output.main = output_buffers;
+    b.output.staging = output_staging_buffers;
+    b.output.count = output_count_buffers;
+    b.output.count_staging = output_count_staging_buffers;
 }

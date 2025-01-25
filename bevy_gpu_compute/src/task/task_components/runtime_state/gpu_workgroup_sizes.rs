@@ -1,6 +1,6 @@
 use bevy_gpu_compute_core::IterSpaceDimmension;
 
-use super::iteration_space::IterationSpace;
+use crate::task::task_components::configuration::iteration_space::IterationSpace;
 
 #[derive(Clone, PartialEq, Debug)]
 /// Defaults should generally not be altered. Based on this resource: https://developer.arm.com/documentation/101897/0303/Compute-shading/Workgroup-sizes
@@ -9,17 +9,6 @@ pub struct GpuWorkgroupSizes {
     y: usize,
     z: usize,
     num_dimmensions: usize,
-}
-
-impl Default for GpuWorkgroupSizes {
-    fn default() -> Self {
-        Self {
-            x: 64,
-            y: 1,
-            z: 1,
-            num_dimmensions: 1,
-        }
-    }
 }
 
 impl GpuWorkgroupSizes {

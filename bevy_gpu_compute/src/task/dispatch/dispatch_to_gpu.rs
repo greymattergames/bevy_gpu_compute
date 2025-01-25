@@ -1,9 +1,6 @@
 use bevy::render::renderer::{RenderDevice, RenderQueue};
 
-use crate::task::{
-    compute_pipeline::cache::PipelineKey,
-    task_components::task::BevyGpuComputeTask,
-};
+use crate::task::{compute_pipeline::pipeline_cache::PipelineKey, task::BevyGpuComputeTask};
 pub fn dispatch_to_gpu(
     task: &mut BevyGpuComputeTask,
     render_device: &RenderDevice,
@@ -13,14 +10,20 @@ pub fn dispatch_to_gpu(
     {
         let mut compute_pass = encoder.begin_compute_pass(&Default::default());
         let key = PipelineKey {
-            pipeline_consts_version: task.spec.iter_space_and_out_lengths_version(),
+            pipeline_consts_version: task.configuration().version(),
         };
-        compute_pass.set_pipeline(&task.pipeline_cache.cache.get(&key).unwrap());
-        compute_pass.set_bind_group(0, task.bind_group.as_ref().unwrap(), &[]);
+        compute_pass.set_pipeline(
+            task.runtime_state_mut()
+                .pipeline_cache_mut()
+                .cache
+                .get(&key)
+                .unwrap(),
+        );
+        compute_pass.set_bind_group(0, task.runtime_state().bind_group().as_ref().unwrap(), &[]);
         compute_pass.dispatch_workgroups(
-            task.num_gpu_workgroups_required.x(),
-            task.num_gpu_workgroups_required.y(),
-            task.num_gpu_workgroups_required.z(),
+            task.runtime_state().workgroup_space().x(),
+            task.runtime_state().workgroup_space().y(),
+            task.runtime_state().workgroup_space().z(),
         );
     }
     render_queue.submit(std::iter::once(encoder.finish()));

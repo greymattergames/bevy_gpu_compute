@@ -1,5 +1,6 @@
+use crate::task::task_components::configuration::iteration_space::IterationSpace;
 
-use super::{gpu_workgroup_sizes::GpuWorkgroupSizes, iteration_space::IterationSpace};
+use super::gpu_workgroup_sizes::GpuWorkgroupSizes;
 
 /**
  * Dependent on IterationSpace and WorkgroupSizes
@@ -9,11 +10,6 @@ pub struct GpuWorkgroupSpace {
     x: u32,
     y: u32,
     z: u32,
-}
-impl Default for GpuWorkgroupSpace {
-    fn default() -> Self {
-        Self { x: 1, y: 1, z: 1 }
-    }
 }
 
 impl GpuWorkgroupSpace {

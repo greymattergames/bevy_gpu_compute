@@ -13,14 +13,14 @@ use crate::{
             create_input_buffers::update_input_buffers,
             create_output_buffers::update_output_buffers,
         },
+        commands::{GpuTaskCommand, GpuTaskCommands},
         compute_pipeline::update_on_pipeline_const_change::update_compute_pipeline,
         dispatch::{create_bind_group::create_bind_group, dispatch_to_gpu::dispatch_to_gpu},
         inputs::array_type::lengths::InputArrayDataLengths,
         outputs::{
             read_gpu_output_counts::read_gpu_output_counts, read_gpu_task_outputs::read_gpu_outputs,
         },
-        task_commands::{GpuTaskCommand, GpuTaskCommands},
-        task_components::task::BevyGpuComputeTask,
+        task::BevyGpuComputeTask,
         verify_enough_memory::verify_have_enough_memory,
     },
 };
@@ -58,25 +58,15 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
             log::info!("Running command: {}", cmd);
             match cmd {
                 GpuTaskCommand::SetConfigInputs(inputs) => {
-                    task.config_input_data = Some(*inputs);
+                    task.current_data_mut().set_config_input(*inputs);
                     update_config_input_buffers(&mut task, &self.render_device);
                 }
                 GpuTaskCommand::SetInputs(data) => {
-                    let lengths = data.get_lengths().clone();
-                    task.input_data = Some(*data);
-                    if task.input_array_lengths.is_none() {
-                        task.input_array_lengths = Some(InputArrayDataLengths::new(lengths));
+                    let lengths_changed = task
+                        .current_data_mut()
+                        .set_input_and_check_lengths_changed(*data);
+                    if lengths_changed {
                         update_compute_pipeline(&mut task, &self.render_device);
-                    } else {
-                        let new_hash = task
-                            .input_array_lengths
-                            .as_mut()
-                            .unwrap()
-                            .update_and_return_new_hash_if_changed(lengths);
-                        if new_hash.is_some() {
-                            // need to update pipeline consts
-                            update_compute_pipeline(&mut task, &self.render_device);
-                        }
                     }
                     update_input_buffers(&mut task, &self.render_device);
                     create_bind_group(&mut task, &self.render_device);
@@ -85,7 +75,7 @@ impl<'w, 's> GpuTaskRunner<'w, 's> {
                     iteration_space,
                     max_output_lengths,
                 } => {
-                    task.spec.mutate(iteration_space, max_output_lengths);
+                    task.mutate(iteration_space, max_output_lengths);
                     update_compute_pipeline(&mut task, &self.render_device);
                     update_output_buffers(&mut task, &self.render_device);
                     should_recompute_memory = true;

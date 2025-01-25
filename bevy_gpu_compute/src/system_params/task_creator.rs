@@ -11,8 +11,7 @@ use bevy_gpu_compute_core::{
 use crate::{
     prelude::IterationSpace,
     task::{
-        task_components::task::BevyGpuComputeTask,
-        task_specification::task_specification::ComputeTaskSpecification,
+        task::BevyGpuComputeTask, task_components::configuration::configuration::TaskConfiguration,
     },
 };
 
@@ -57,14 +56,13 @@ impl<'w, 's> BevyGpuComputeTaskCreator<'w, 's> {
         iteration_space: IterationSpace,
         max_output_vector_lengths: MaxOutputLengths,
     ) -> Entity {
-        let task_spec = ComputeTaskSpecification::from_shader::<ShaderModuleTypes>(
+        let task = BevyGpuComputeTask::from_shader::<ShaderModuleTypes>(
             name,
             &self.render_device,
             wgsl_shader_module,
             iteration_space,
             max_output_vector_lengths,
         );
-        let task = BevyGpuComputeTask::new(&self.render_device, name, task_spec);
         self.commands.spawn(task).id()
     }
 }

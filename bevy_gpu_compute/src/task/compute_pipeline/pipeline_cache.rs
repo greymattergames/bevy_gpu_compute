@@ -1,6 +1,6 @@
 use bevy::{prelude::Component, render::render_resource::ComputePipeline};
 
-use crate::helpers::ecs::lru_cache::LruCache;
+use super::lru_cache::LruCache;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct PipelineKey {
