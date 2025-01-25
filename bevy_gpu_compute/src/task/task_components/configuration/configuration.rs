@@ -1,5 +1,3 @@
-
-
 use super::{iteration_space::IterationSpace, wgsl_code::WgslCode};
 use crate::task::task_components::configuration::input_spec::InputSpec;
 use crate::task::task_components::configuration::output_spec::OutputSpec;

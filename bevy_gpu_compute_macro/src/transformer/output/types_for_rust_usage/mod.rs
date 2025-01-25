@@ -1,5 +1,4 @@
 pub mod config_input_data_builder;
-pub mod config_input_metadata;
 pub mod input_data_builder;
 pub mod make_types_pod;
 pub mod make_types_public;

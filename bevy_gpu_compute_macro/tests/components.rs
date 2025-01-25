@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use bevy_gpu_compute_core::{
-    MaxOutputLengths, TypeErasedArrayOutputData, TypesSpec,
+    TypeErasedArrayOutputData, TypesSpec,
     wgsl::{
         shader_custom_type_name::ShaderCustomTypeName,
         shader_module::user_defined_portion::WgslShaderModuleUserPortion,
@@ -431,7 +431,7 @@ fn test_configs_builder() {
         }
         fn main(iter_pos: WgslIterationPosition) {}
     }
-
+    #[allow(unused_variables)]
     let config = test_module::ConfigInputDataBuilder::new()
         .set_my_position([3.0, 4.0])
         .set_my_config(test_module::MyConfig { v1: 10.0, v2: 20.0 })

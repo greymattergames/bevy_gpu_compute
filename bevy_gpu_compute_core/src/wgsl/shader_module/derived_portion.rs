@@ -83,7 +83,7 @@ impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
 #[cfg(test)]
 
 mod tests {
-    use std::{collections::HashMap, hash::Hash};
+    use std::collections::HashMap;
 
     use pretty_assertions::assert_eq;
 
