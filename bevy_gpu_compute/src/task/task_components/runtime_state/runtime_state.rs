@@ -1,12 +1,10 @@
 use bevy::{
-    core_pipeline::motion_blur::pipeline,
     log,
     render::{
         render_resource::{BindGroup, BindGroupLayout},
         renderer::RenderDevice,
     },
 };
-use bevy_gpu_compute_core::MaxOutputLengths;
 use wgpu::PipelineLayout;
 
 use crate::task::{

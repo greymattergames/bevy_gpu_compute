@@ -10,9 +10,7 @@ use bevy_gpu_compute_core::{
 
 use crate::{
     prelude::IterationSpace,
-    task::{
-        task::BevyGpuComputeTask, task_components::configuration::configuration::TaskConfiguration,
-    },
+    task::task::BevyGpuComputeTask,
 };
 
 #[derive(SystemParam)]
