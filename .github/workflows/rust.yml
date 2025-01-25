@@ -35,7 +35,8 @@ jobs:
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
       - name: Run cargo test
-        run: cargo test -p ${{ matrix.crate }}
+        run: cargo test
+        working-directory: ${{ matrix.crate }}
 
   clippy_check:
     name: Clippy
@@ -65,6 +66,7 @@ jobs:
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
       - name: Run clippy
         run: cargo clippy -p ${{ matrix.crate }} -- -D warnings
+        working-directory: ${{ matrix.crate }}
 
   format:
     name: Format
@@ -81,4 +83,5 @@ jobs:
         with:
           components: rustfmt
       - name: Run cargo fmt
-        run: cargo fmt -p ${{ matrix.crate }} -- --check
+        run: cargo fmt -- --check
+        working-directory: ${{ matrix.crate }}
