@@ -70,6 +70,9 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      matrix:
+        crate: ['bevy_gpu_compute_macro', 'bevy_gpu_compute_core', 'bevy_gpu_compute']
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -78,4 +81,4 @@ jobs:
         with:
           components: rustfmt
       - name: Run cargo fmt
-        run: cargo fmt --all -- --check
+        run: cargo fmt -p ${{ matrix.crate }} -- --check
