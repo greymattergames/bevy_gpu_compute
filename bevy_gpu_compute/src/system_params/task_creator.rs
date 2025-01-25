@@ -8,10 +8,7 @@ use bevy_gpu_compute_core::{
     wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
 };
 
-use crate::{
-    prelude::IterationSpace,
-    task::task::BevyGpuComputeTask,
-};
+use crate::{prelude::IterationSpace, task::task::BevyGpuComputeTask};
 
 #[derive(SystemParam)]
 
