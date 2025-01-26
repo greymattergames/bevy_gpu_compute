@@ -40,8 +40,7 @@ struct State {
 
 #[wgsl_shader_module]
 mod collision_detection_module {
-    use bevy_gpu_compute_core::wgsl_helpers::*;
-    use bevy_gpu_compute_macro::*;
+    use bevy_gpu_compute::prelude::*;
 
     #[wgsl_input_array]
     struct Position {

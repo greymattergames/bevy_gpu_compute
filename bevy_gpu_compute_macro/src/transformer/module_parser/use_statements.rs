@@ -4,7 +4,8 @@ use syn::{Item, ItemUse, spanned::Spanned, visit::Visit, visit_mut::VisitMut};
 
 use crate::state::ModuleTransformState;
 
-const VALID_USE_STATEMENT_PATHS: [&str; 2] = ["wgsl_helpers", "bevy_gpu_compute_macro"];
+const VALID_USE_STATEMENT_PATHS: [&str; 3] =
+    ["wgsl_helpers", "bevy_gpu_compute", "bevy_gpu_compute_macro"];
 
 pub fn handle_use_statements(state: &mut ModuleTransformState) {
     let mut handler = UseStatementHandler {};
