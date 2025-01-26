@@ -1,4 +1,0 @@
-target/*
-target
-compose_wgsl_module
-wgsl_wgpu_binding

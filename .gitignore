@@ -17,3 +17,9 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# personal dev tools
+*single-file.md
+crate_to_single_file.bash
+.singlefileignore
+*.code-workspace
