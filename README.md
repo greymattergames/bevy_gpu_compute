@@ -130,7 +130,9 @@ fn main(pos: WgslIterationPosition) {
 The IterationSpace defines the total size of this grid. For example:
 
 `IterationSpace::new(1000, 1, 1)` - Process 1000 items in 1D
+
 `IterationSpace::new(100, 100, 1)` - Process 10,000 items in 2D (useful for pairwise comparisons)
+
 `IterationSpace::new(10, 10, 10)` - Process 1000 items in 3D (useful for spatial algorithms)
 
 ## Input Types
@@ -152,6 +154,9 @@ struct Particle {
     velocity: Vec3F32,
 }
 ```
+
+Becomes something like `Vec<Particle>` on the GPU.
+
 ## Output Types
 ### Fixed Arrays
 When you know the exact output size:
@@ -161,6 +166,9 @@ struct GridCell {
     density: f32,
 }
 ```
+
+Becomes something like `[GridCell;N]` on the GPU.
+
 ### Dynamic Vectors
 For variable-length results (like collision detection):
 ```rust
@@ -171,11 +179,16 @@ struct Collision {
 }
 ```
 
+Becomes something like `Vec<Collision>` on the GPU.
+
+
 ## Architecture
 The library consists of three crates:
 
 `bevy_gpu_compute`: Main user-facing crate with Bevy integration
-`bevy_gpu_compute_macro`: Converts Rust code to WGSL shaders
+
+`bevy_gpu_compute_macro`: Converts Rust code to WGSL shaders, using proc-macro magic
+
 `bevy_gpu_compute_core`: Shared types and utilities
 
 ## Performance Tips
