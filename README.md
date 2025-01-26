@@ -200,6 +200,8 @@ The library consists of three crates:
 - Some Rust features like traits and generics are not supported in compute shaders
 - Maximum output sizes must be specified upfront
 - Limited to compute shaders (no graphics)
+- Requires NIGHTLY Rust (probably, I haven't tested it on `stable`)
+- Requires Bevy 15
 
 ## Contributing
 Contributions are welcome! There's still a lot to do. Submit a pull request, and I will most likely approve it.
