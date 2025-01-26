@@ -1,3 +1,7 @@
+/*
+Demonstrates all features of the BevyGpuCompute library
+ */
+
 use bevy::{
     DefaultPlugins,
     app::{App, AppExit, Startup, Update},
@@ -120,7 +124,7 @@ fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
     );
     //* There are two methods of creating the MaxOutputLengths config object: */
     // Method 1:
-    let max_output_lengths = collision_detection_module::MaxOutputLengthsBuilder::new()
+    let initial_max_output_lengths = collision_detection_module::MaxOutputLengthsBuilder::new()
         .set_collision_result(100)
         .set_my_debug_info(100)
         .finish();
@@ -130,10 +134,10 @@ fn create_task(mut gpu_task_creator: BevyGpuComputeTaskCreator) {
     alternate_max_output_lengths.set("MyDebugInfo", 100);
     //
     gpu_task_creator.create_task_from_rust_shader::<collision_detection_module::Types>(
-        "collision_detection", //todo, ensure name is unique
+        "collision_detection", // ensure name is unique
         collision_detection_module::parsed(),
         initial_iteration_space,
-        max_output_lengths,
+        initial_max_output_lengths,
     );
 }
 /// This is here for reference, but is not used in this example

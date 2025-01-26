@@ -1,7 +1,14 @@
 [package]
 name = "bevy_gpu_compute_macro"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+authors.workspace = true
+rust-version.workspace =  true
+description.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [lib]
 proc-macro = true
@@ -10,11 +17,11 @@ proc-macro-error = "1.0.4"
 proc-macro2 = "1.0.92"
 quote = "1.0.38"
 syn = { version = "2.0.94", features = ["full","visit-mut","visit"]   }
-bevy_gpu_compute_core = {path = "../bevy_gpu_compute_core"}
+bevy_gpu_compute_core = {path = "../bevy_gpu_compute_core", version ="0.1"}
 regex = "1.11.1"
-compiletest_rs = "0.11.2"
-trybuild = "1.0.101"
 bytemuck = {version = "1.21.0", features=["derive"]}
 
+
 [dev-dependencies]
+trybuild = "1.0.101"
 pretty_assertions = "1.4.1"
