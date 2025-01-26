@@ -1,20 +1,15 @@
 use bevy_gpu_compute_core::{MaxOutputLengths, OutputTypeMetadata};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MaxOutputBytes(usize);
 
-impl Default for MaxOutputBytes {
-    fn default() -> Self {
-        MaxOutputBytes(0)
-    }
-}
 impl MaxOutputBytes {
     pub fn new(max_output_bytes: usize) -> Self {
         MaxOutputBytes(max_output_bytes)
     }
     pub fn from_max_lengths_and_spec(
         max_output_vector_lengths: &MaxOutputLengths,
-        output_vector_metadata_spec: &Vec<OutputTypeMetadata>,
+        output_vector_metadata_spec: &[OutputTypeMetadata],
     ) -> Self {
         let max_output_bytes =
             output_vector_metadata_spec

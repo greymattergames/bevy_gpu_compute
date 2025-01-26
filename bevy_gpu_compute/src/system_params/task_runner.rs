@@ -16,10 +16,10 @@ use crate::{
         commands::{GpuTaskCommand, GpuTaskCommands},
         compute_pipeline::update_on_pipeline_const_change::update_compute_pipeline,
         dispatch::{create_bind_group::create_bind_group, dispatch_to_gpu::dispatch_to_gpu},
+        lib::BevyGpuComputeTask,
         outputs::{
             read_gpu_output_counts::read_gpu_output_counts, read_gpu_task_outputs::read_gpu_outputs,
         },
-        task::BevyGpuComputeTask,
         verify_enough_memory::verify_have_enough_memory,
     },
 };
@@ -33,7 +33,7 @@ pub struct GpuTaskRunner<'w, 's> {
     ram_limit: Res<'w, RamLimit>,
 }
 
-impl<'w, 's> GpuTaskRunner<'w, 's> {
+impl GpuTaskRunner<'_, '_> {
     /// get a GpuTaskCommands object, which is actually a queue of commands to be run.
     /// #### You MUST call `run_commands` on the returned object to actually run the commands.
     pub fn task(&mut self, name: &str) -> GpuTaskCommands {

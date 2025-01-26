@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub fn create_output_data_builder(state: &ModuleTransformState) -> TokenStream {
-    let (fields, init_fields, converters) = get_fields_init_fields_and_converters(&state);
+    let (fields, init_fields, converters) = get_fields_init_fields_and_converters(state);
     quote! {
         pub struct OutputDataBuilder {
             #fields
@@ -52,7 +52,7 @@ fn single_field_init_field_and_converter(
 ) -> (TokenStream, TokenStream, TokenStream) {
     let snake_name: Ident = custom_type_name.snake_case;
     let type_pascal_case: Ident = custom_type_name.name.clone();
-    let string_key: String = format!("{}", custom_type_name.name.to_string());
+    let string_key: String = format!("{}", custom_type_name.name);
     let field = quote! {
         pub #snake_name: Option<Vec<#type_pascal_case>>,
     };

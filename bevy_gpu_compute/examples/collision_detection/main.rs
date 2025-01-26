@@ -29,18 +29,10 @@ const SPAWN_RANGE_MAX: i32 = 2;
 const ENTITY_RADIUS: f32 = 1.1;
 const EXIT_AFTER_FRAMES: u32 = 2;
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 struct State {
     pub num_entities: u32,
     pub collision_count: usize,
-}
-impl Default for State {
-    fn default() -> Self {
-        State {
-            num_entities: 0,
-            collision_count: 0,
-        }
-    }
 }
 
 #[wgsl_shader_module]

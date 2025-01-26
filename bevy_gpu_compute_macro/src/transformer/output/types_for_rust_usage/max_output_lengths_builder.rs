@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub fn create_max_output_lengths_builder(state: &ModuleTransformState) -> TokenStream {
-    let methods = get_methods(&state);
+    let methods = get_methods(state);
     quote! {
         pub struct MaxOutputLengthsBuilder {
             length_per_wgsl_output_type_name: HashMap<String, usize>,
@@ -51,7 +51,7 @@ fn get_methods(state: &ModuleTransformState) -> TokenStream {
 }
 fn single_method(custom_type_name: CustomTypeIdents) -> TokenStream {
     let method_name: Ident = format_ident!("set_{}", custom_type_name.snake_case);
-    let string_key: String = format!("{}", custom_type_name.name.to_string());
+    let string_key: String = format!("{}", custom_type_name.name);
     quote! {
         pub fn #method_name(&mut self, length: usize) -> &mut Self {
             self.length_per_wgsl_output_type_name.insert(#string_key .to_string(), length);

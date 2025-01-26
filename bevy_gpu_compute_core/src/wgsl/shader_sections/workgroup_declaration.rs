@@ -3,10 +3,10 @@ pub enum WgpuShaderType {
     Vertex,
     Fragment,
 }
-impl ToString for WgpuShaderType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for WgpuShaderType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WgpuShaderType::Compute => "compute".to_string(),
+            WgpuShaderType::Compute => write!(f, "compute"),
             WgpuShaderType::Vertex => panic!("Vertex shaders not yet supported"),
             WgpuShaderType::Fragment => panic!("Fragment shaders not yet supported"),
         }
@@ -19,14 +19,15 @@ pub const WORKGROUP_SIZE_Z_VAR_NAME: &str = "_LIB_WORKGROUP_SIZE_Z";
 pub struct WgslWorkgroupDeclaration {
     pub shader_type: WgpuShaderType,
 }
-impl ToString for WgslWorkgroupDeclaration {
-    fn to_string(&self) -> String {
-        return format!(
-            "@{} @workgroup_size({}, {}, {})\n",
-            self.shader_type.to_string(),
+impl std::fmt::Display for WgslWorkgroupDeclaration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "@{} @workgroup_size({}, {}, {})",
+            self.shader_type,
             WORKGROUP_SIZE_X_VAR_NAME,
             WORKGROUP_SIZE_Y_VAR_NAME,
             WORKGROUP_SIZE_Z_VAR_NAME
-        );
+        )
     }
 }

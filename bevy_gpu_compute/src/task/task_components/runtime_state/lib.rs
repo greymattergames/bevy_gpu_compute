@@ -9,7 +9,7 @@ use wgpu::PipelineLayout;
 
 use crate::task::{
     compute_pipeline::pipeline_cache::PipelineLruCache,
-    task_components::configuration::configuration::TaskConfiguration,
+    task_components::configuration::lib::TaskConfiguration,
 };
 
 use super::{
@@ -112,7 +112,7 @@ impl<'a> TaskRuntimeStateBuilder<'a> {
         );
         let max_output_bytes = MaxOutputBytes::from_max_lengths_and_spec(
             self.task_configuration.outputs().max_lengths(),
-            &self.task_configuration.outputs().arrays(),
+            self.task_configuration.outputs().arrays(),
         );
         let pipeline_cache = PipelineLruCache::default();
         let bind_group = None;
@@ -128,20 +128,18 @@ impl<'a> TaskRuntimeStateBuilder<'a> {
         )
     }
     pub fn setup_static_runtime_state(&mut self) -> (BindGroupLayout, PipelineLayout) {
-        let bind_group_layout = Some(self.get_bind_group_layouts());
-        let pipeline_layout = Some(self.get_pipeline_layout(bind_group_layout.as_ref().unwrap()));
-        (bind_group_layout.unwrap(), pipeline_layout.unwrap())
+        let bind_group_layout = self.get_bind_group_layouts();
+        let pipeline_layout = self.get_pipeline_layout(&bind_group_layout);
+        (bind_group_layout, pipeline_layout)
     }
 
     fn get_pipeline_layout(&self, bind_group_layout: &BindGroupLayout) -> PipelineLayout {
-        let pipeline_layout =
-            self.render_device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some(self.task_name),
-                    bind_group_layouts: &[bind_group_layout],
-                    push_constant_ranges: &[],
-                });
-        pipeline_layout
+        self.render_device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some(self.task_name),
+                bind_group_layouts: &[bind_group_layout],
+                push_constant_ranges: &[],
+            })
     }
     fn get_bind_group_layouts(&self) -> BindGroupLayout {
         let mut layouts = Vec::new();
@@ -187,10 +185,9 @@ impl<'a> TaskRuntimeStateBuilder<'a> {
             });
         log::info!("Layouts: {:?}", layouts);
         // Create bind group layout once
-        let bind_group_layouts = self
-            .render_device
-            .create_bind_group_layout(Some(self.task_name), &layouts);
-        bind_group_layouts
+
+        self.render_device
+            .create_bind_group_layout(Some(self.task_name), &layouts)
     }
 
     fn create_bind_group_layout_entry(

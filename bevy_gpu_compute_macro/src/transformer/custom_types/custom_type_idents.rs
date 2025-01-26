@@ -24,7 +24,7 @@ impl CustomTypeIdents {
         }
     }
     pub fn eq(&self, other: &Ident) -> bool {
-        self.name.to_string() == *other.to_string()
+        self.name == *other
     }
     pub fn uniform(&self) -> &Ident {
         &self.lower
@@ -61,8 +61,8 @@ impl CustomTypeIdents {
     }
 }
 
-impl Into<ShaderCustomTypeName> for CustomTypeIdents {
-    fn into(self) -> ShaderCustomTypeName {
-        ShaderCustomTypeName::new(&self.name.to_string())
+impl From<CustomTypeIdents> for ShaderCustomTypeName {
+    fn from(val: CustomTypeIdents) -> Self {
+        ShaderCustomTypeName::new(&val.name.to_string())
     }
 }

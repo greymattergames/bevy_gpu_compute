@@ -8,7 +8,7 @@ use bevy_gpu_compute_core::{
     wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion,
 };
 
-use crate::{prelude::IterationSpace, task::task::BevyGpuComputeTask};
+use crate::{prelude::IterationSpace, task::lib::BevyGpuComputeTask};
 
 #[derive(SystemParam)]
 
@@ -17,7 +17,7 @@ pub struct BevyGpuComputeTaskCreator<'w, 's> {
     render_device: Res<'w, RenderDevice>,
 }
 
-impl<'w, 's> BevyGpuComputeTaskCreator<'w, 's> {
+impl BevyGpuComputeTaskCreator<'_, '_> {
     /**
      Spawns all components needed for the task to run.
      ## Generic Parameters

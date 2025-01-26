@@ -24,7 +24,7 @@ impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
         user_portion.uniforms.iter().for_each(|u| {
             bindings.push(WgslWgpuBinding::uniform(
                 0,
-                bindings_map.get(&u.name.uniform()).unwrap().clone(),
+                *bindings_map.get(&u.name.uniform()).unwrap(),
                 u.name.uniform(),
                 u.name.name(),
             ));
@@ -36,10 +36,7 @@ impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
             ));
             bindings.push(WgslWgpuBinding::input_array(
                 0,
-                bindings_map
-                    .get(&a.item_type.name.input_array())
-                    .unwrap()
-                    .clone(),
+                *bindings_map.get(&a.item_type.name.input_array()).unwrap(),
                 a.item_type.name.input_array(),
                 format!("array < {} >", a.item_type.name.name(),),
             ));
@@ -51,10 +48,7 @@ impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
             ));
             let output_array = WgslWgpuBinding::output_array(
                 0,
-                bindings_map
-                    .get(&a.item_type.name.output_array())
-                    .unwrap()
-                    .clone(),
+                *bindings_map.get(&a.item_type.name.output_array()).unwrap(),
                 a.item_type.name.output_array(),
                 format!("array < {} >", a.item_type.name.name(),),
             );
@@ -62,8 +56,8 @@ impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
 
             if let Some(counter_name) = &a.atomic_counter_name {
                 bindings.push(WgslWgpuBinding::counter(
-                    bindings_map.get(counter_name).unwrap().clone(),
-                    &a,
+                    *bindings_map.get(counter_name).unwrap(),
+                    a,
                     &output_array,
                 ));
             }
@@ -72,7 +66,7 @@ impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
             pipeline_consts,
             uniforms: Vec::new(),
             helper_functions: Vec::new(),
-            bindings: bindings,
+            bindings,
             workgroups_declaration: WgslWorkgroupDeclaration {
                 shader_type: WgpuShaderType::Compute,
             },
@@ -81,7 +75,6 @@ impl From<&WgslShaderModuleUserPortion> for WgslShaderModuleDerivedPortion {
 }
 
 #[cfg(test)]
-
 mod tests {
     use std::collections::HashMap;
 

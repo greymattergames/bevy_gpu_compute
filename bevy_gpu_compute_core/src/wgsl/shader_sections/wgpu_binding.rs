@@ -10,27 +10,25 @@ pub struct WgslWgpuBinding {
     pub name: String,
     pub type_decl: String,
 }
-impl ToString for WgslWgpuBinding {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for WgslWgpuBinding {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.buffer_type == WgpuBufferType::Uniform {
-            return format!(
-                "@group({}) @binding({}) var<{}> {}: {};\n",
-                self.group_num,
-                self.entry_num,
-                self.buffer_type.to_string(),
-                self.name,
-                self.type_decl
+            return writeln!(
+                f,
+                "@group({}) @binding({}) var<{}> {}: {};",
+                self.group_num, self.entry_num, self.buffer_type, self.name, self.type_decl
             );
         }
-        return format!(
-            "@group({}) @binding({}) var<{}, {}> {}: {};\n",
+        writeln!(
+            f,
+            "@group({}) @binding({}) var<{}, {}> {}: {};",
             self.group_num,
             self.entry_num,
-            self.buffer_type.to_string(),
-            self.access.to_string(),
+            self.buffer_type,
+            self.access,
             self.name,
             self.type_decl
-        );
+        )
     }
 }
 
@@ -52,7 +50,7 @@ impl WgslWgpuBinding {
             buffer_type: WgpuBufferType::Storage,
             access: WgpuBufferAccessMode::Read,
             name,
-            type_decl: type_decl,
+            type_decl,
         }
     }
     pub fn output_array(group_num: u32, entry_num: u32, name: String, type_decl: String) -> Self {
@@ -62,7 +60,7 @@ impl WgslWgpuBinding {
             buffer_type: WgpuBufferType::Storage,
             access: WgpuBufferAccessMode::ReadWrite,
             name,
-            type_decl: type_decl,
+            type_decl,
         }
     }
 
@@ -100,11 +98,11 @@ impl FromStr for WgpuBufferType {
         }
     }
 }
-impl ToString for WgpuBufferType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for WgpuBufferType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WgpuBufferType::Storage => "storage".to_string(),
-            WgpuBufferType::Uniform => "uniform".to_string(),
+            WgpuBufferType::Storage => write!(f, "storage"),
+            WgpuBufferType::Uniform => write!(f, "uniform"),
         }
     }
 }
@@ -123,11 +121,11 @@ impl FromStr for WgpuBufferAccessMode {
         }
     }
 }
-impl ToString for WgpuBufferAccessMode {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for WgpuBufferAccessMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WgpuBufferAccessMode::Read => "read".to_string(),
-            WgpuBufferAccessMode::ReadWrite => "read_write".to_string(),
+            WgpuBufferAccessMode::Read => write!(f, "read"),
+            WgpuBufferAccessMode::ReadWrite => write!(f, "read_write"),
         }
     }
 }

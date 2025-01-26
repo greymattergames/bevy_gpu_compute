@@ -2,7 +2,7 @@ use bevy::log;
 
 use crate::ram_limit::RamLimit;
 
-use super::task::BevyGpuComputeTask;
+use super::lib::BevyGpuComputeTask;
 
 pub fn verify_have_enough_memory(tasks: &Vec<&BevyGpuComputeTask>, ram_limit: &RamLimit) {
     let total_bytes = tasks.iter().fold(0, |sum, task| {

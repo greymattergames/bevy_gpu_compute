@@ -5,9 +5,9 @@ use proc_macro_error::abort;
 use quote::ToTokens;
 use syn::{ItemFn, spanned::Spanned, visit::Visit};
 
-pub fn find_main_function(mut state: &mut ModuleTransformState) {
+pub fn find_main_function(state: &mut ModuleTransformState) {
     let module = state.rust_module.clone();
-    let mut extractor = MainFunctionsExtractor::new(&mut state);
+    let mut extractor = MainFunctionsExtractor::new(state);
     extractor.visit_item_mod(&module);
     let main_func = if let Some(mf) = &state.result.main_function {
         mf
@@ -72,7 +72,7 @@ fn alter_global_id_argument(func_string: String) -> String {
     let mut new_func = func_string.clone();
     let mut found = false;
     for pattern in match_patterns.iter() {
-        if new_func.find(pattern).is_some() {
+        if new_func.contains(pattern) {
             found = true;
             new_func = new_func.replace(pattern, replace_pattern);
         }

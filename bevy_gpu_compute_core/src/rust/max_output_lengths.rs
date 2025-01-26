@@ -6,21 +6,15 @@ use std::collections::HashMap;
 #### But if they are too low they will cut off valid output data
 
 */
+#[derive(Default)]
 pub struct MaxOutputLengths {
     length_per_wgsl_output_type_name: HashMap<String, usize>,
-}
-impl Default for MaxOutputLengths {
-    fn default() -> Self {
-        Self {
-            length_per_wgsl_output_type_name: HashMap::default(),
-        }
-    }
 }
 
 impl MaxOutputLengths {
     pub fn new(length_per_wgsl_output_type_name: HashMap<String, usize>) -> Self {
         Self {
-            length_per_wgsl_output_type_name: length_per_wgsl_output_type_name,
+            length_per_wgsl_output_type_name,
         }
     }
     pub fn empty() -> Self {
@@ -37,7 +31,7 @@ impl MaxOutputLengths {
             output_item_name.name(),
             self.length_per_wgsl_output_type_name
         );
-        return self.length_per_wgsl_output_type_name[output_item_name.name()];
+        self.length_per_wgsl_output_type_name[output_item_name.name()]
     }
     pub fn set(&mut self, output_type_name: &str, length: usize) {
         self.length_per_wgsl_output_type_name

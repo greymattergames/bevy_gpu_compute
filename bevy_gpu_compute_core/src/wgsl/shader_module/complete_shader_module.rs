@@ -10,7 +10,7 @@ impl WgslShaderModule {
         let library_portion = WgslShaderModuleDerivedPortion::from(&module);
         WgslShaderModule {
             user_portion: module,
-            library_portion: library_portion,
+            library_portion,
         }
     }
     pub fn wgsl_code(&self, iter_space_dimmensions: IterSpaceDimmension) -> String {
@@ -86,6 +86,6 @@ trait _PushStrWNewline {
 impl _PushStrWNewline for String {
     fn push_str_w_newline(&mut self, s: &str) {
         self.push_str(s);
-        self.push_str("\n");
+        self.push('\n');
     }
 }

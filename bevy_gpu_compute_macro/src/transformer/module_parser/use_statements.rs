@@ -16,13 +16,10 @@ struct UseStatementHandler {}
 impl VisitMut for UseStatementHandler {
     fn visit_item_mut(&mut self, i: &mut Item) {
         syn::visit_mut::visit_item_mut(self, i);
-        match i {
-            Item::Use(use_stmt) => {
-                validate_use_statement(&use_stmt);
-                // remove the use statement
-                *i = Item::Verbatim(quote! {})
-            }
-            _ => {}
+        if let Item::Use(use_stmt) = i {
+            validate_use_statement(use_stmt);
+            // remove the use statement
+            *i = Item::Verbatim(quote! {})
         }
     }
 }
@@ -44,7 +41,7 @@ struct SingleUseStatementHandler {
     found: bool,
 }
 
-impl<'ast> Visit<'ast> for SingleUseStatementHandler {
+impl Visit<'_> for SingleUseStatementHandler {
     fn visit_use_path(&mut self, i: &syn::UsePath) {
         syn::visit::visit_use_path(self, i);
         if VALID_USE_STATEMENT_PATHS.contains(&i.ident.to_string().as_str()) {

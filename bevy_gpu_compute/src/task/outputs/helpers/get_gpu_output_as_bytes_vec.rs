@@ -10,7 +10,7 @@ pub fn get_gpu_output_as_bytes_vec(
     total_byte_size: u64,
 ) -> Option<Vec<u8>> {
     let mut encoder = render_device.create_command_encoder(&Default::default());
-    encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, total_byte_size);
+    encoder.copy_buffer_to_buffer(output_buffer, 0, staging_buffer, 0, total_byte_size);
     render_queue.submit(std::iter::once(encoder.finish()));
 
     let slice = staging_buffer.slice(0..total_byte_size);

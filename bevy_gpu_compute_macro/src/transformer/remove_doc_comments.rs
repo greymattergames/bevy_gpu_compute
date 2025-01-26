@@ -2,7 +2,7 @@ use proc_macro_error::abort;
 use syn::{spanned::Spanned, visit::Visit};
 
 pub struct DocCommentRemover {}
-impl<'ast> Visit<'ast> for DocCommentRemover {
+impl Visit<'_> for DocCommentRemover {
     fn visit_attribute(&mut self, attr: &syn::Attribute) {
         syn::visit::visit_attribute(self, attr);
         if let Some(ident) = attr.path().get_ident() {
