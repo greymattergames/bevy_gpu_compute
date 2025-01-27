@@ -106,7 +106,7 @@ fn run_task(mut gpu_tasks: GpuTaskRunner, entities: Query<&BoundingCircleCompone
     gpu_tasks.run_commands(task);
 }
 
-fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<State>) {
+fn handle_task_results(mut gpu_task_reader: GpuTaskReader) {
     let results = gpu_task_reader
         .latest_results::<collision_detection_module::OutputDataBuilder>("collision_detection");
     if let Ok(results) = results {
