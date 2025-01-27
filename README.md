@@ -21,8 +21,12 @@ This library enables you to easily offload computationally intensive tasks to th
 ## Quick Start
 
 1. Add to your project:
+
 `cargo add bevy_gpu_compute`
-2. Define your compute shader in Rust:
+AND
+`cargo add bevy_gpu_compute_core`
+
+3. Define your compute shader in Rust:
 ```rust
 #[wgsl_shader_module]
 mod collision_detection_module {
