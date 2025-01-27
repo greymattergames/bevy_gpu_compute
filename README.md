@@ -11,6 +11,13 @@ This library enables you to easily offload computationally intensive tasks to th
 - 🎮 Seamless integration with Bevy ECS
 - 🛠️ Simple declarative API using attributes
 
+## Fast!
+#### 50% better performance compared to CPU, in this real-world performance comparison: [gpu_collision_detection_bevy](https://github.com/Sheldonfrith/gpu_collision_detection_bevy).
+
+
+![image](https://github.com/user-attachments/assets/8e1b7eb4-f705-4e37-ac22-59214bad2ac1)
+
+
 ## Quick Start
 
 1. Add to your project:
