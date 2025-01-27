@@ -1,0 +1,1 @@
+Proc-macro attributes that convert a shader written in rust to a WGSL shader and also collect all metadata necessary to allow the main crate `bevy_gpu_compute` to automatically handle all the backend tasks and resources.
