@@ -11,16 +11,26 @@ This library enables you to easily offload computationally intensive tasks to th
 - 🎮 Seamless integration with Bevy ECS
 - 🛠️ Simple declarative API using attributes
 
+## Fast!
+#### 50% better performance compared to CPU, in this real-world performance comparison: [gpu_collision_detection_bevy](https://github.com/Sheldonfrith/gpu_collision_detection_bevy).
+
+
+![image](https://github.com/user-attachments/assets/8e1b7eb4-f705-4e37-ac22-59214bad2ac1)
+
+
 ## Quick Start
 
 1. Add to your project:
+
 `cargo add bevy_gpu_compute`
-2. Define your compute shader in Rust:
+AND
+`cargo add bevy_gpu_compute_core`
+
+3. Define your compute shader in Rust:
 ```rust
 #[wgsl_shader_module]
 mod collision_detection_module {
-    use bevy_gpu_compute_core::wgsl_helpers::*;
-    use bevy_gpu_compute_macro::*;
+    use bevy_gpu_compute::prelude::*;
 
     #[wgsl_input_array]
     struct Position {
@@ -96,7 +106,7 @@ fn run_task(mut gpu_tasks: GpuTaskRunner, entities: Query<&BoundingCircleCompone
     gpu_tasks.run_commands(task);
 }
 
-fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<State>) {
+fn handle_task_results(mut gpu_task_reader: GpuTaskReader) {
     let results = gpu_task_reader
         .latest_results::<collision_detection_module::OutputDataBuilder>("collision_detection");
     if let Ok(results) = results {
@@ -211,3 +221,4 @@ Contributions are welcome! There's still a lot to do. Submit a pull request, and
 - Documentation improvements
 - `bevy_gpu_compute_macro` crate needs code cleanup
 - `bevy_gpu_compute_macro` support more wgsl features like pointers
+- Support batching strategies to work around max storage buffer size limitations
