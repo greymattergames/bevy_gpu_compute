@@ -98,15 +98,18 @@ mod collision_detection_module {
         // index = y * width + x
         let debug_index = other_entity * WgslVecInput::vec_len::<Radius>() as u32 + current_entity;
         let is_collision = dist_squared < rad_sum_sq;
-        WgslOutput::set::<MyDebugInfo>(debug_index, MyDebugInfo {
-            entity1: current_entity,
-            entity2: other_entity,
-            counter_value: WgslOutput::len::<CollisionResult>() as u32,
-            is_collision: is_collision as i32,
-            dist_squared: dist_squared,
-            rad_sum_sq: rad_sum_sq,
-            rad_mult: WgslConfigInput::get::<Config>().radius_multiplier,
-        });
+        WgslOutput::set::<MyDebugInfo>(
+            debug_index,
+            MyDebugInfo {
+                entity1: current_entity,
+                entity2: other_entity,
+                counter_value: WgslOutput::len::<CollisionResult>() as u32,
+                is_collision: is_collision as i32,
+                dist_squared: dist_squared,
+                rad_sum_sq: rad_sum_sq,
+                rad_mult: WgslConfigInput::get::<Config>().radius_multiplier,
+            },
+        );
         if is_collision {
             WgslOutput::push::<CollisionResult>(CollisionResult {
                 entity1: current_entity,

@@ -672,10 +672,11 @@ fn test_functions_exposed_for_rust() {
         &mut output_collisions,
     );
     // results are in the mutated "output_collisions"...
-    assert_eq!(output_collisions, vec![
-        example_shader_module::CollisionResult {
+    assert_eq!(
+        output_collisions,
+        vec![example_shader_module::CollisionResult {
             entity1: 0,
             entity2: 1
-        }
-    ]);
+        }]
+    );
 }
