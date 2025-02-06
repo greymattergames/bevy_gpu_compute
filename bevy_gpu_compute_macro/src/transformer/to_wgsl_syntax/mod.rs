@@ -52,10 +52,10 @@ use crate::state::ModuleTransformState;
   that they are listed in when defining the struct type
 
 - Array(ExprArray):
-    supported, but with different syntax. in wgsl it becomes `array<f32, 3>`
+  supported, but with different syntax. in wgsl it becomes `array<f32, 3>`
 
 - Types:
-    - f32, f16, i32, u32, bool, vec2, vec3, vec4, mat2x2, mat3x3, mat4x4
+  - f32, f16, i32, u32, bool, vec2, vec3, vec4, mat2x2, mat3x3, mat4x4
   */
 mod array;
 mod expr;
