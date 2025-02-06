@@ -42,7 +42,6 @@ impl<'ast> Visit<'ast> for MainFunctionsExtractor<'ast> {
         if self.for_cpu {
             self.state.result_for_cpu.main_function =
                 Some(parse_main_fn(c, self.state, self.for_cpu));
-            
         } else {
             self.state.result.main_function = Some(parse_main_fn(c, self.state, self.for_cpu));
         }

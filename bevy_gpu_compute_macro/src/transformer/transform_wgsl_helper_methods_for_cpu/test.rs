@@ -4,9 +4,7 @@ mod tests {
         state::ModuleTransformState,
         transformer::{
             custom_types::custom_type::{CustomType, CustomTypeKind},
-            transform_wgsl_helper_methods_for_cpu::{
-                 run::transform_wgsl_helper_methods_for_cpu,
-            },
+            transform_wgsl_helper_methods_for_cpu::run::transform_wgsl_helper_methods_for_cpu,
         },
     };
 
@@ -23,7 +21,8 @@ mod tests {
                 }
             }
         };
-        let expected_output = "mod test { fn example () { let x = position_input_array . len () . try_into () . unwrap () ; } }";
+        let expected_output =
+            "mod test { fn example () { let x = position_input_array . len () as u32 ; } }";
         let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
             &format_ident!("Position"),
@@ -110,7 +109,8 @@ mod tests {
                 }
             }
         };
-        let expected_output = "mod test { fn example () { let x = collisionresult_output_array . len () . try_into () . unwrap () ; } }";
+        let expected_output =
+            "mod test { fn example () { let x = collisionresult_output_array . len () as u32 ; } }";
 
         let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
@@ -139,7 +139,8 @@ mod tests {
                 }
             }
         };
-        let expected_output = "mod test { fn example () { let x = collisionresult_output_array . len () . try_into () . unwrap () ; } }";
+        let expected_output =
+            "mod test { fn example () { let x = collisionresult_output_array . len () as u32 ; } }";
 
         let mut state = ModuleTransformState::empty(input, "".to_string());
         let custom_types = vec![CustomType::new(
