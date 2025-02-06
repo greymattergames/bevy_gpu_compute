@@ -78,8 +78,8 @@ mod collision_detection_module {
         let current_entity = iter_pos.x;
         let other_entity = iter_pos.y;
         // Early exit conditions
-        let out_of_bounds = current_entity >= WgslVecInput::vec_len::<Position>()
-            || other_entity >= WgslVecInput::vec_len::<Position>();
+        let out_of_bounds = current_entity >= WgslVecInput::vec_len::<Position>() as u32
+            || other_entity >= WgslVecInput::vec_len::<Position>() as u32;
         if out_of_bounds || current_entity == other_entity || current_entity >= other_entity {
             return;
         }
@@ -96,12 +96,12 @@ mod collision_detection_module {
             * MY_CONST as f32;
         let rad_sum_sq = radius_sum * radius_sum;
         // index = y * width + x
-        let debug_index = other_entity * WgslVecInput::vec_len::<Radius>() + current_entity;
+        let debug_index = other_entity * WgslVecInput::vec_len::<Radius>() as u32 + current_entity;
         let is_collision = dist_squared < rad_sum_sq;
         WgslOutput::set::<MyDebugInfo>(debug_index, MyDebugInfo {
             entity1: current_entity,
             entity2: other_entity,
-            counter_value: WgslOutput::len::<CollisionResult>(),
+            counter_value: WgslOutput::len::<CollisionResult>() as u32,
             is_collision: is_collision as i32,
             dist_squared: dist_squared,
             rad_sum_sq: rad_sum_sq,

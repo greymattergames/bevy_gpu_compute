@@ -662,7 +662,7 @@ fn test_functions_exposed_for_rust() {
     let input_radii: Vec<example_shader_module::Radius> = vec![10.0, 10.0];
     let mut output_collisions: Vec<example_shader_module::CollisionResult> = vec![];
     // run the main function
-    let main_test = example_shader_module::on_cpu::main(
+    example_shader_module::on_cpu::main(
         WgslIterationPosition { x: 0, y: 1, z: 1 },
         config,
         input_positions,

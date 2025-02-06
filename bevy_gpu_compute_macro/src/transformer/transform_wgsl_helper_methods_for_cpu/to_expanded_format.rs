@@ -4,7 +4,6 @@ use proc_macro2::TokenStream;
 use quote::ToTokens;
 use quote::quote;
 
-
 use super::helper_method::WgslHelperMethod;
 
 pub enum ToExpandedFormatMethodKind {
@@ -31,7 +30,7 @@ impl ToExpandedFormat {
             Some(ToExpandedFormatMethodKind::InputLen) => {
                 let var_name = method.t_def.name.input_array();
                 quote! {
-                    #var_name .len() .try_into().unwrap()
+                    #var_name .len() as u32
                 }
             }
             Some(ToExpandedFormatMethodKind::InputVal) => {
@@ -59,13 +58,13 @@ impl ToExpandedFormat {
                 // this may be a bit confusing, because the MaxLengths have no effect on the CPU side, but for now this I believe is the simplest way to handle things
                 let var_name = method.t_def.name.output_array();
                 quote! {
-                    #var_name .len() .try_into().unwrap()
+                    #var_name .len() as u32
                 }
             }
             Some(ToExpandedFormatMethodKind::OutputLen) => {
                 let var_name = method.t_def.name.output_array();
                 quote! {
-                    #var_name .len() .try_into().unwrap()
+                    #var_name .len() as u32
                 }
             }
             Some(ToExpandedFormatMethodKind::OutputSet) => {
