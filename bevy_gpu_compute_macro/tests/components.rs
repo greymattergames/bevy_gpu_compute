@@ -652,16 +652,18 @@ fn test_functions_exposed_for_rust() {
             }
         }
     }
+
+    // you can now use any helper functions in the module like this:
     let f1_test = example_shader_module::on_cpu::calculate_distance_squared([1.0, 2.0], [3.0, 4.0]);
     assert_eq!(f1_test, 8.0);
 
-    //* The main function is designed to mutate GPU buffers, so we have to replicate this for a cpu version by requiring those same inputs to be passed as parameters to the main function */
+    //* The main function is designed to mutate GPU buffers in WGSL, so we have to replicate this for a cpu version by requiring those same inputs to be passed as parameters to the main function */
     // setup inputs and outputs for main function:
     let config = example_shader_module::Config { example_value: 3. };
     let input_positions: Vec<example_shader_module::Position> = vec![[1.0, 2.0], [3.0, 4.0]];
     let input_radii: Vec<example_shader_module::Radius> = vec![10.0, 10.0];
     let mut output_collisions: Vec<example_shader_module::CollisionResult> = vec![];
-    // run the main function
+    // run the main function, you can see that its signature has been changed to include all the stuff that would normally be in GPU buffers as direct function parameters
     example_shader_module::on_cpu::main(
         WgslIterationPosition { x: 0, y: 1, z: 1 },
         config,
