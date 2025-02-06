@@ -10,6 +10,7 @@ This library enables you to easily offload computationally intensive tasks to th
 - 🔄 Automatic resource management - no manual GPU buffer handling  
 - 🎮 Seamless integration with Bevy ECS
 - 🛠️ Simple declarative API using attributes
+- 1️⃣ DRY shaders, single source for both GPU and CPU if needed ([EXAMPLE HERE](https://github.com/Sheldonfrith/bevy_gpu_compute/blob/6bb154eea90ceb4373bbea116145fa8d23b465be/bevy_gpu_compute_macro/tests/components.rs#L597))
 
 ## Fast!
 #### 50% better performance compared to CPU, in this real-world performance comparison: [gpu_collision_detection_bevy](https://github.com/Sheldonfrith/gpu_collision_detection_bevy).
