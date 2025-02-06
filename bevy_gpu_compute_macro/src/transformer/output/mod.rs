@@ -5,6 +5,7 @@ use quote::quote;
 use unaltered_module::generate_unaltered_module;
 
 mod expanded_module;
+mod module_for_cpu;
 mod per_component_expansion;
 mod shader_module_object;
 mod types_for_rust_usage;

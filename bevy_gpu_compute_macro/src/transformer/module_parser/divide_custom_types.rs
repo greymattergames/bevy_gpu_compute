@@ -18,10 +18,16 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
     };
     for custom_type in custom_types.iter() {
         match custom_type.kind {
-            CustomTypeKind::GpuOnlyHelperType => state
-                .result
-                .helper_types
-                .push(custom_type.clone().into_wgsl_type(state)),
+            CustomTypeKind::GpuOnlyHelperType => {
+                state
+                    .result
+                    .helper_types
+                    .push(custom_type.clone().into_wgsl_type(state));
+                state
+                    .result_for_cpu
+                    .helper_types
+                    .push(custom_type.clone().into_wgsl_type(state));
+            }
             CustomTypeKind::InputArray => {
                 state.custom_types.as_mut().unwrap().push(CustomType::new(
                     &custom_type.name.input_array_length(),
@@ -29,6 +35,9 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                     quote!(),
                 ));
                 state.result.input_arrays.push(WgslInputArray {
+                    item_type: custom_type.clone().into_wgsl_type(state),
+                });
+                state.result_for_cpu.input_arrays.push(WgslInputArray {
                     item_type: custom_type.clone().into_wgsl_type(state),
                 });
             }
@@ -39,6 +48,10 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                     quote!(),
                 ));
                 state.result.output_arrays.push(WgslOutputArray {
+                    item_type: custom_type.clone().into_wgsl_type(state),
+                    atomic_counter_name: None,
+                });
+                state.result_for_cpu.output_arrays.push(WgslOutputArray {
                     item_type: custom_type.clone().into_wgsl_type(state),
                     atomic_counter_name: None,
                 });
@@ -53,11 +66,21 @@ pub fn divide_custom_types_by_category(state: &mut ModuleTransformState) {
                     item_type: custom_type.clone().into_wgsl_type(state),
                     atomic_counter_name: Some(custom_type.name.counter().to_string()),
                 });
+                state.result_for_cpu.output_arrays.push(WgslOutputArray {
+                    item_type: custom_type.clone().into_wgsl_type(state),
+                    atomic_counter_name: Some(custom_type.name.counter().to_string()),
+                });
             }
-            CustomTypeKind::Uniform => state
-                .result
-                .uniforms
-                .push(custom_type.clone().into_wgsl_type(state)),
+            CustomTypeKind::Uniform => {
+                state
+                    .result
+                    .uniforms
+                    .push(custom_type.clone().into_wgsl_type(state));
+                state
+                    .result_for_cpu
+                    .uniforms
+                    .push(custom_type.clone().into_wgsl_type(state));
+            }
             CustomTypeKind::ArrayLengthVariable => {
                 // do nothing
             }

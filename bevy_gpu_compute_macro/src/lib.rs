@@ -8,6 +8,7 @@ use transformer::{
     custom_types::get_all_custom_types::get_custom_types, module_parser::lib::parse_shader_module,
     output::produce_expanded_output, remove_doc_comments::DocCommentRemover,
     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
+    transform_wgsl_helper_methods_for_cpu::run::transform_wgsl_helper_methods_for_cpu,
 };
 mod state;
 mod transformer;
@@ -71,6 +72,7 @@ pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream 
     let mut state = ModuleTransformState::empty(module, content);
     get_custom_types(&mut state);
     transform_wgsl_helper_methods(&mut state);
+    transform_wgsl_helper_methods_for_cpu(&mut state);
     parse_shader_module(&mut state);
     let output = produce_expanded_output(&mut state);
     output.into()

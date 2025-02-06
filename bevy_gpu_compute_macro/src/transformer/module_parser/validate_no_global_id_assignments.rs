@@ -20,8 +20,8 @@ fn check_for_global_id_assignment(assign: &ExprAssign) {
     // Check direct assignments to global_id
     if let syn::Expr::Path(path) = &*assign.left {
         if let Some(ident) = path.path.segments.last() {
-            if ident.ident == "global_id" {
-                abort!(assign.span(), "Cannot assign to global_id");
+            if ident.ident == "iter_pos" {
+                abort!(assign.span(), "Cannot assign to iter_pos");
             }
         }
     }
@@ -29,8 +29,8 @@ fn check_for_global_id_assignment(assign: &ExprAssign) {
     if let syn::Expr::Field(field) = &*assign.left {
         if let syn::Expr::Path(path) = &*field.base {
             if let Some(ident) = path.path.segments.last() {
-                if ident.ident == "global_id" {
-                    abort!(assign.span(), "Cannot assign to global_id components");
+                if ident.ident == "iter_pos" {
+                    abort!(assign.span(), "Cannot assign to iter_pos components");
                 }
             }
         }

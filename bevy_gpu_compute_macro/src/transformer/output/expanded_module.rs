@@ -5,6 +5,7 @@ use quote::quote;
 use crate::{
     state::ModuleTransformState,
     transformer::output::{
+        module_for_cpu::lib::generate_module_for_cpu_usage,
         shader_module_object::generate_shader_module_object,
         types_for_rust_usage::types::define_types_for_use_in_rust_and_set_binding_numbers,
     },
@@ -28,6 +29,7 @@ pub fn generate_expanded_module(state: &mut ModuleTransformState) -> TokenStream
     };
     let types = define_types_for_use_in_rust_and_set_binding_numbers(state);
     let object = generate_shader_module_object(state);
+    let module_for_cpu = generate_module_for_cpu_usage(state);
     quote!(
         #module_visibility mod #module_ident {
             use bevy_gpu_compute_core::wgsl::shader_sections::*; //todo, make this less brittle, how?
@@ -41,6 +43,8 @@ pub fn generate_expanded_module(state: &mut ModuleTransformState) -> TokenStream
             #types
 
             #object
+
+            #module_for_cpu
         }
     )
 }

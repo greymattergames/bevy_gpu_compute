@@ -10,6 +10,7 @@ const VALID_USE_STATEMENT_PATHS: [&str; 3] =
 pub fn handle_use_statements(state: &mut ModuleTransformState) {
     let mut handler = UseStatementHandler {};
     handler.visit_item_mod_mut(&mut state.rust_module);
+    handler.visit_item_mod_mut(&mut state.rust_module_for_cpu);
 }
 
 struct UseStatementHandler {}

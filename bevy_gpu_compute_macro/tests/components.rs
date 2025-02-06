@@ -11,6 +11,7 @@ use bevy_gpu_compute_core::{
             WgslShaderModuleSectionCode, WgslType,
         },
     },
+    wgsl_helpers::WgslIterationPosition,
 };
 use bevy_gpu_compute_macro::wgsl_shader_module;
 use pretty_assertions::assert_eq;
@@ -148,34 +149,6 @@ fn test_consts() {
         "const MY_CONST : i32 = 3;"
     );
 }
-#[test]
-fn test_uniforms() {
-    #[wgsl_shader_module]
-    pub mod test_module {
-        use bevy_gpu_compute_core::wgsl_helpers::*;
-        use bevy_gpu_compute_macro::wgsl_config;
-        #[wgsl_config]
-        struct Uniforms {
-            time: f32,
-            resolution: Vec2F32,
-        }
-        fn main(iter_pos: WgslIterationPosition) {
-            let time = WgslConfigInput::get::<Uniforms>().time;
-        }
-    }
-    let t2 = test_module::parsed();
-    assert!(t2.output_arrays.is_empty());
-    assert!(t2.input_arrays.is_empty());
-    assert!(t2.uniforms.len() == 1);
-    assert!(t2.helper_functions.is_empty());
-    assert!(t2.main_function.is_some());
-    assert!(t2.static_consts.is_empty());
-    assert!(t2.helper_types.is_empty());
-    assert_eq!(
-        t2.uniforms.first().unwrap().code.wgsl_code,
-        "struct Uniforms { time : f32, resolution : vec2 < f32 > , }"
-    );
-}
 
 #[test]
 fn test_output_arrays() {
@@ -237,10 +210,6 @@ fn test_helper_functions() {
         "fn calculate_distance_squared(p1 : array < f32, 2 > , p2 : array < f32, 2 >)\n-> f32\n{\n    let dx = p1 [0] - p2 [0]; let dy = p1 [1] - p2 [1]; return dx * dx + dy *\n    dy;\n}"
     );
 }
-
-#[test]
-
-fn t() {}
 
 #[test]
 // expect a panic
@@ -592,4 +561,119 @@ pub fn test_that_byte_conversions_work() {
     let r = output_data.my_position_out.unwrap();
     assert_eq!(r.len(), 2);
     assert_eq!(r[0].x, 1.0);
+}
+
+#[test]
+fn test_uniforms() {
+    #[wgsl_shader_module]
+    pub mod test_module {
+        use bevy_gpu_compute_core::wgsl_helpers::*;
+        use bevy_gpu_compute_macro::wgsl_config;
+        #[wgsl_config]
+        struct Uniforms {
+            time: f32,
+            resolution: Vec2F32,
+        }
+        fn main(iter_pos: WgslIterationPosition) {
+            let time = WgslConfigInput::get::<Uniforms>().time;
+        }
+    }
+    let t2 = test_module::parsed();
+    assert!(t2.output_arrays.is_empty());
+    assert!(t2.input_arrays.is_empty());
+    assert!(t2.uniforms.len() == 1);
+    assert!(t2.helper_functions.is_empty());
+    assert!(t2.main_function.is_some());
+    assert!(t2.static_consts.is_empty());
+    assert!(t2.helper_types.is_empty());
+    assert_eq!(
+        t2.uniforms.first().unwrap().code.wgsl_code,
+        "struct Uniforms { time : f32, resolution : vec2 < f32 > , }"
+    );
+}
+
+#[test]
+
+fn test_functions_exposed_for_rust() {
+    #[wgsl_shader_module]
+    pub mod example_shader_module {
+        use bevy_gpu_compute_core::wgsl_helpers::*;
+        use bevy_gpu_compute_macro::*;
+        const example_module_const: u32 = 42;
+        #[wgsl_config]
+        struct Config {
+            pub example_value: f32,
+        }
+        #[wgsl_input_array]
+        type Position = [f32; 2];
+        #[wgsl_input_array]
+        type Radius = f32;
+        //* user output vectors
+        #[wgsl_output_vec]
+        #[derive(PartialEq)]
+        struct CollisionResult {
+            pub entity1: u32,
+            pub entity2: u32,
+        }
+        pub fn calculate_distance_squared(p1: [f32; 2], p2: [f32; 2]) -> f32 {
+            let dx = p1[0] - p2[0];
+            let dy = p1[1] - p2[1];
+            return dx * dx + dy * dy;
+        }
+        pub fn main(iter_pos: WgslIterationPosition) {
+            //* USER GENERATED LOGIC
+            let current_entity = iter_pos.x;
+            let other_entity = iter_pos.y;
+            // Early exit if invalid entity or zero radius
+            if current_entity >= WgslVecInput::vec_len::<Position>()
+                || other_entity >= WgslVecInput::vec_len::<Position>()
+                || current_entity == other_entity
+                || current_entity >= other_entity
+            {
+                return;
+            }
+            let current_radius =
+                WgslVecInput::vec_val::<Radius>(current_entity) + example_module_const as f32;
+            let other_radius = WgslVecInput::vec_val::<Radius>(other_entity)
+                + WgslConfigInput::get::<Config>().example_value as f32;
+            if current_radius <= 0.0 || other_radius <= 0.0 {
+                return;
+            }
+            let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
+            let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
+            let dist_squared = calculate_distance_squared(current_pos, other_pos);
+            let radius_sum = current_radius + other_radius;
+            // Compare squared distances to avoid sqrt
+            if dist_squared < radius_sum * radius_sum {
+                WgslOutput::push::<CollisionResult>(CollisionResult {
+                    entity1: current_entity,
+                    entity2: other_entity,
+                });
+            }
+        }
+    }
+    let f1_test = example_shader_module::on_cpu::calculate_distance_squared([1.0, 2.0], [3.0, 4.0]);
+    assert_eq!(f1_test, 8.0);
+
+    //* The main function is designed to mutate GPU buffers, so we have to replicate this for a cpu version by requiring those same inputs to be passed as parameters to the main function */
+    // setup inputs and outputs for main function:
+    let config = example_shader_module::Config { example_value: 3. };
+    let input_positions: Vec<example_shader_module::Position> = vec![[1.0, 2.0], [3.0, 4.0]];
+    let input_radii: Vec<example_shader_module::Radius> = vec![10.0, 10.0];
+    let mut output_collisions: Vec<example_shader_module::CollisionResult> = vec![];
+    // run the main function
+    let main_test = example_shader_module::on_cpu::main(
+        WgslIterationPosition { x: 0, y: 1, z: 1 },
+        config,
+        input_positions,
+        input_radii,
+        &mut output_collisions,
+    );
+    // results are in the mutated "output_collisions"...
+    assert_eq!(output_collisions, vec![
+        example_shader_module::CollisionResult {
+            entity1: 0,
+            entity2: 1
+        }
+    ]);
 }

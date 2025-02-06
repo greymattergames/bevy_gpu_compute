@@ -7,8 +7,11 @@ use syn::{ItemFn, spanned::Spanned, visit::Visit};
 
 pub fn find_main_function(state: &mut ModuleTransformState) {
     let module = state.rust_module.clone();
-    let mut extractor = MainFunctionsExtractor::new(state);
+    let mut extractor = MainFunctionsExtractor::new(state, false);
     extractor.visit_item_mod(&module);
+    let module_for_cpu = state.rust_module_for_cpu.clone();
+    let mut extractor_for_cpu = MainFunctionsExtractor::new(state, true);
+    extractor_for_cpu.visit_item_mod(&module_for_cpu);
     let main_func = if let Some(mf) = &state.result.main_function {
         mf
     } else {
@@ -22,6 +25,7 @@ pub fn find_main_function(state: &mut ModuleTransformState) {
 struct MainFunctionsExtractor<'a> {
     count: usize,
     state: &'a mut ModuleTransformState,
+    for_cpu: bool,
 }
 
 impl<'ast> Visit<'ast> for MainFunctionsExtractor<'ast> {
@@ -35,27 +39,41 @@ impl<'ast> Visit<'ast> for MainFunctionsExtractor<'ast> {
         if self.count > 1 {
             abort!(c.sig.ident.span(), "Only one main function is allowed");
         }
-        self.state.result.main_function = Some(parse_main_fn(c, self.state));
+        if self.for_cpu {
+            self.state.result_for_cpu.main_function =
+                Some(parse_main_fn(c, self.state, self.for_cpu));
+            
+        } else {
+            self.state.result.main_function = Some(parse_main_fn(c, self.state, self.for_cpu));
+        }
     }
 }
 
 impl<'ast> MainFunctionsExtractor<'ast> {
-    pub fn new(state: &'ast mut ModuleTransformState) -> Self {
-        MainFunctionsExtractor { count: 0, state }
+    pub fn new(state: &'ast mut ModuleTransformState, for_cpu: bool) -> Self {
+        MainFunctionsExtractor {
+            count: 0,
+            state,
+            for_cpu,
+        }
     }
 }
 
-fn parse_main_fn(func: &ItemFn, state: &ModuleTransformState) -> WgslFunction {
+fn parse_main_fn(func: &ItemFn, state: &ModuleTransformState, for_cpu: bool) -> WgslFunction {
     let func_clone = func.clone();
     // alter the main function argument
     WgslFunction {
         code: WgslShaderModuleSectionCode {
             rust_code: func_clone.to_token_stream().to_string(),
-            wgsl_code: alter_global_id_argument(convert_file_to_wgsl(
-                func_clone.to_token_stream(),
-                state,
-                "main".to_string(),
-            )),
+            wgsl_code: if for_cpu {
+                "".to_string()
+            } else {
+                alter_global_id_argument(convert_file_to_wgsl(
+                    func_clone.to_token_stream(),
+                    state,
+                    "main".to_string(),
+                ))
+            },
         },
         name: func_clone.sig.ident.to_string(),
     }
