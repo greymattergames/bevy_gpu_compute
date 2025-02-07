@@ -10,6 +10,7 @@ pub fn generate_module_for_cpu_usage(state: &ModuleTransformState) -> TokenStrea
     let main_func = generate_main_func(state);
     let consts = generate_module_level_consts(state);
     quote!(
+        pub use on_cpu::*;
         pub mod on_cpu {
             use super::*;
             use bevy_gpu_compute_core::wgsl_helpers::*;

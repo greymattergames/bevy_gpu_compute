@@ -654,7 +654,7 @@ fn test_functions_exposed_for_rust() {
     }
 
     // you can now use any helper functions in the module like this:
-    let f1_test = example_shader_module::on_cpu::calculate_distance_squared([1.0, 2.0], [3.0, 4.0]);
+    let f1_test = example_shader_module::calculate_distance_squared([1.0, 2.0], [3.0, 4.0]);
     assert_eq!(f1_test, 8.0);
 
     //* The main function is designed to mutate GPU buffers in WGSL, so we have to replicate this for a cpu version by requiring those same inputs to be passed as parameters to the main function */
