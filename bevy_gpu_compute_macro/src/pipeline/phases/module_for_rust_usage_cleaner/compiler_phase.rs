@@ -2,7 +2,6 @@ use crate::pipeline::{
     compilation_unit::CompilationUnit, compile_error::CompileError,
     phases::compiler_phase::CompilerPhase,
 };
-use quote::quote;
 
 use super::{
     alter_main_function_for_cpu_usage::mutate_main_function_for_cpu_usage,

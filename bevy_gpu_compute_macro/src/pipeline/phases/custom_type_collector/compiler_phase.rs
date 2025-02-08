@@ -1,6 +1,6 @@
 use crate::pipeline::phases::custom_type_collector::collect::collect_custom_types;
 use crate::pipeline::{
-    compilation_metadata::CompilationMetadata, compilation_unit::CompilationUnit,
+    compilation_unit::CompilationUnit,
     compile_error::CompileError, phases::compiler_phase::CompilerPhase,
 };
 

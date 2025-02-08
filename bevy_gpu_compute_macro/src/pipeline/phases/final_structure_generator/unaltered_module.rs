@@ -1,7 +1,6 @@
-use proc_macro_error::abort;
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
-use syn::{ItemMod, parse};
+use syn::ItemMod;
 
 /// make a module that is not intended to be viewed or accessed just to allow the rust compiler to run and find any potential errors in the original code that might be missed elsewhere in our macro if we remove or alter parts of the original code.
 pub fn generate_unaltered_module(original_module: &ItemMod) -> TokenStream {

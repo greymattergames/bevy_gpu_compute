@@ -1,6 +1,6 @@
 use proc_macro_error::abort;
-use quote::{ToTokens, quote};
-use syn::{Item, ItemMod, ItemUse, spanned::Spanned, visit::Visit, visit_mut::VisitMut};
+use quote::ToTokens;
+use syn::{Item, ItemMod, ItemUse, spanned::Spanned, visit::Visit};
 
 const VALID_USE_STATEMENT_PATHS: [&str; 3] =
     ["wgsl_helpers", "bevy_gpu_compute", "bevy_gpu_compute_macro"];

@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
 use bevy_gpu_compute_core::wgsl::{
-    self, shader_custom_type_name::ShaderCustomTypeName,
+    shader_custom_type_name::ShaderCustomTypeName,
     shader_module::user_defined_portion::WgslShaderModuleUserPortion,
 };
-use proc_macro_error::abort;
 use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, quote};
-use syn::{Ident, parse2, visit_mut::VisitMut};
+use quote::quote;
+use syn::Ident;
 
 use crate::pipeline::phases::custom_type_collector::custom_type::CustomType;
 

@@ -10,7 +10,7 @@ use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy};
 use quote::ToTokens;
 // use state::ModuleTransformState;
-use syn::{parse_macro_input, visit::Visit};
+use syn::parse_macro_input;
 mod pipeline;
 /**
 ## *Please read this documentation carefully, especially if you are getting errors that you don't understand!*

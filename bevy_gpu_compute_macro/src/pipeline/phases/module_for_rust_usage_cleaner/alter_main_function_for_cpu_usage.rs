@@ -1,6 +1,5 @@
 use bevy_gpu_compute_core::wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion;
-use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, quote};
+use proc_macro2::Span;
 use syn::{FnArg, Ident, ItemFn, visit_mut::VisitMut};
 
 pub fn mutate_main_function_for_cpu_usage(

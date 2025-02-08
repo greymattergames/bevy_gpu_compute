@@ -1,6 +1,4 @@
 use bevy_gpu_compute_core::wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion;
-use proc_macro_error::abort;
-use quote::ToTokens;
 
 use crate::pipeline::phases::custom_type_collector::custom_type::CustomType;
 

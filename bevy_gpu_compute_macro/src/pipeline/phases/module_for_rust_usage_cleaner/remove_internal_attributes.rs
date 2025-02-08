@@ -1,4 +1,4 @@
-use syn::{ItemStruct, parse_quote, visit_mut::VisitMut};
+use syn::visit_mut::VisitMut;
 const INTERNAL_ATTRIBUTE_NAMES: [&str; 4] = [
     "wgsl_config",
     "wgsl_input_array",
