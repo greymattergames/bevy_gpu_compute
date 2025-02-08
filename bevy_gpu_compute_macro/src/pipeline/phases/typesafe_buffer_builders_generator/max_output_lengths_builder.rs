@@ -37,7 +37,7 @@ pub fn create_max_output_lengths_builder(custom_types: &Vec<CustomType>) -> Toke
         }
     }
 }
-fn get_methods(custom_types: &Vec<CustomType>) -> TokenStream {
+fn get_methods(custom_types: &[CustomType]) -> TokenStream {
     custom_types
         .iter()
         .filter(|c| c.kind == CustomTypeKind::OutputArray || c.kind == CustomTypeKind::OutputVec)

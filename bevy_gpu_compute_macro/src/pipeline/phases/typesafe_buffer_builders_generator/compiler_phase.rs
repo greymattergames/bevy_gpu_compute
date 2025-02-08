@@ -1,7 +1,4 @@
-use crate::pipeline::{
-    compilation_unit::CompilationUnit, compile_error::CompileError,
-    phases::compiler_phase::CompilerPhase,
-};
+use crate::pipeline::{compilation_unit::CompilationUnit, phases::compiler_phase::CompilerPhase};
 use quote::quote;
 
 use super::{
@@ -14,7 +11,7 @@ use super::{
 pub struct TypesafeBufferBuildersGenerator;
 
 impl CompilerPhase for TypesafeBufferBuildersGenerator {
-    fn execute(&self, input: &mut CompilationUnit) -> Result<(), CompileError> {
+    fn execute(&self, input: &mut CompilationUnit) {
         let config_input = create_config_input_data_builder(input.custom_types());
         let array_input = create_input_data_builder(input.custom_types());
         let array_output = create_output_data_builder(input.custom_types());
@@ -25,6 +22,5 @@ impl CompilerPhase for TypesafeBufferBuildersGenerator {
             #array_output
             #output_lengths
         });
-        Ok(())
     }
 }

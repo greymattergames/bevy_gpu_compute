@@ -3,7 +3,7 @@ use syn::{ExprAssign, spanned::Spanned, visit::Visit};
 
 pub fn validate_no_iter_pos_assignments(original_rust_module: &syn::ItemMod) {
     let mut checker = IterPosAssignmentChecker {};
-    checker.visit_item_mod(&original_rust_module);
+    checker.visit_item_mod(original_rust_module);
 }
 
 struct IterPosAssignmentChecker {}

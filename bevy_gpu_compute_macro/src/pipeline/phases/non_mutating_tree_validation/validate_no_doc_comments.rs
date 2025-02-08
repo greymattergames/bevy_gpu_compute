@@ -3,7 +3,7 @@ use syn::{spanned::Spanned, visit::Visit};
 
 pub fn validate_no_doc_comments(original_rust_module: &syn::ItemMod) {
     let mut checker = DocCommentChecker {};
-    checker.visit_item_mod(&original_rust_module);
+    checker.visit_item_mod(original_rust_module);
 }
 struct DocCommentChecker {}
 impl Visit<'_> for DocCommentChecker {

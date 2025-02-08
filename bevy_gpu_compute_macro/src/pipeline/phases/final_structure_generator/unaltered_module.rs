@@ -22,6 +22,7 @@ pub fn generate_unaltered_module(original_module: &ItemMod) -> TokenStream {
     let content_combined: TokenStream = content.into_iter().collect();
     let new_ident = format_ident!("_internal_{}", original_ident);
     quote! {
+        #[allow(dead_code, unused_variables, unused_imports)]
         mod #new_ident {
             #content_combined
         }

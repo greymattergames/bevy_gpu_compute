@@ -82,6 +82,7 @@ impl VisitMut for InternalAttributesRemover {
 mod tests {
     use super::*;
     use quote::ToTokens;
+    use syn::parse_quote;
     #[test]
     fn test_remove_internal_attributes() {
         let mut input: syn::ItemMod = parse_quote! {

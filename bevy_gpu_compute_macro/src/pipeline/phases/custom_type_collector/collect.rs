@@ -42,6 +42,6 @@ impl CustomTypesCollector {
 
 pub fn collect_custom_types(original_rust_module: &syn::ItemMod) -> Vec<CustomType> {
     let mut types_collector = CustomTypesCollector::new();
-    types_collector.visit_item_mod(&original_rust_module);
+    types_collector.visit_item_mod(original_rust_module);
     types_collector.custom_types
 }

@@ -12,13 +12,13 @@ pub fn parse_main_function(
     custom_types: &Vec<CustomType>,
 ) -> WgslFunction {
     let mut extractor = MainFunctionsExtractor::new(custom_types);
-    extractor.visit_item_mod(&rust_module_transformed_for_gpu);
-    let main_func = if let Some(mf) = extractor.result {
+    extractor.visit_item_mod(rust_module_transformed_for_gpu);
+    
+    if let Some(mf) = extractor.result {
         mf
     } else {
         abort!(Span::call_site(), "No main function found");
-    };
-    main_func
+    }
 }
 
 struct MainFunctionsExtractor<'a> {

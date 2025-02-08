@@ -8,10 +8,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::Ident;
 
-use crate::pipeline::phases::custom_type_collector::custom_type::CustomType;
-
 pub fn define_types_for_use_in_rust_and_set_binding_numbers(
-    custom_types: &Vec<CustomType>,
     wgsl_shader_module: &mut WgslShaderModuleUserPortion,
 ) -> TokenStream {
     // order needs to be consistent -> input_configs -> input_arrays -> output_arrays

@@ -1,4 +1,3 @@
-
 use crate::pipeline::phases::custom_type_collector::custom_type::CustomType;
 use bevy_gpu_compute_core::wgsl::shader_module::user_defined_portion::WgslShaderModuleUserPortion;
 use proc_macro2::TokenStream;

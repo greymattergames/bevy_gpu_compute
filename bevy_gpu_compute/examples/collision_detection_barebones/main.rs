@@ -75,7 +75,7 @@ mod collision_detection_module {
         let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
         let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
         let dist_squared = calculate_distance_squared(current_pos.v, other_pos.v);
-        let radius_sum = (current_radius + other_radius);
+        let radius_sum = current_radius + other_radius;
         let rad_sum_sq = radius_sum * radius_sum;
         let is_collision = dist_squared < rad_sum_sq;
         if is_collision {

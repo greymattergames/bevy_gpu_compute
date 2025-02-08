@@ -1,6 +1,7 @@
-use crate::pipeline::{compilation_unit::CompilationUnit, compile_error::CompileError};
+use crate::pipeline::compilation_unit::CompilationUnit;
 
 pub trait CompilerPhase {
     /// using mutation for performance reasons
-    fn execute(&self, input: &mut CompilationUnit) -> Result<(), CompileError>;
+    /// Also not returning a result since we should try to use macro_error abort to give proper span info when possible
+    fn execute(&self, input: &mut CompilationUnit);
 }

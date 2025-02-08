@@ -66,7 +66,7 @@ pub fn generate_shader_module_object(
             .main_function
             .as_ref()
             .map_or(quote!(None), |func| {
-                let ts = ToStructInitializer::wgsl_function(&func);
+                let ts = ToStructInitializer::wgsl_function(func);
                 quote!(Some(#ts))
             });
     let bindings_map: TokenStream = ToStructInitializer::hash_map(

@@ -10,7 +10,7 @@ pub fn extract_helper_functions(
     custom_types: &Vec<CustomType>,
 ) -> Vec<WgslFunction> {
     let mut extractor = HelperFunctionsExtractor::new(custom_types);
-    extractor.visit_item_mod(&rust_module_transformed_for_gpu);
+    extractor.visit_item_mod(rust_module_transformed_for_gpu);
     extractor.results
 }
 

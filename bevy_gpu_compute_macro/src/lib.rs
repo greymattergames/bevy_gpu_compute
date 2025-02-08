@@ -1,15 +1,8 @@
 #![feature(allocator_api)]
 
 use pipeline::lib::CompilerPipeline;
-// use pipeline::{
-//     custom_types::get_all_custom_types::get_custom_types, module_parser::lib::parse_shader_module,
-//     output::produce_expanded_output, remove_doc_comments::DocCommentRemover,
-//     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
-// };
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy};
-use quote::ToTokens;
-// use state::ModuleTransformState;
 use syn::parse_macro_input;
 mod pipeline;
 /**
@@ -67,7 +60,7 @@ pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream 
     set_dummy(item.clone().into());
     let module = parse_macro_input!(item as syn::ItemMod);
     let compiler_pipeline = CompilerPipeline::default();
-    compiler_pipeline.compile(module).to_token_stream().into()
+    compiler_pipeline.compile(module).into()
 }
 
 /// used to help this library figure out what to do with user-defined types

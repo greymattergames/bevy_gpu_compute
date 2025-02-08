@@ -7,7 +7,7 @@ const VALID_USE_STATEMENT_PATHS: [&str; 3] =
 
 pub fn validate_use_statements(original_rust_module: &ItemMod) {
     let mut handler = UseStatementHandler {};
-    handler.visit_item_mod(&original_rust_module);
+    handler.visit_item_mod(original_rust_module);
 }
 
 struct UseStatementHandler {}

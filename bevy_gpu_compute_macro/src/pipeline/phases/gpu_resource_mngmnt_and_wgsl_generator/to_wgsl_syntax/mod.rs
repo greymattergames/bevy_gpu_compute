@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use array::ArrayToWgslTransformer;
 use expr::ExprToWgslTransformer;
+use implicit_to_explicit_return::ImplicitToExplicitReturnTransformer;
 use local_var::replace_let_mut_with_var;
 use proc_macro_error::abort;
 use proc_macro2::{Span, TokenStream};
@@ -59,6 +60,7 @@ use crate::pipeline::phases::custom_type_collector::custom_type::CustomType;
   */
 mod array;
 mod expr;
+mod implicit_to_explicit_return;
 mod local_var;
 pub mod remove_attributes;
 mod remove_pub_from_struct_def;
@@ -90,6 +92,7 @@ pub fn convert_file_to_wgsl(
     TypeToWgslTransformer { custom_types }.visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);
     ExprToWgslTransformer {}.visit_file_mut(&mut file);
+    ImplicitToExplicitReturnTransformer {}.visit_file_mut(&mut file);
     let mut type_def_transformer = TypeDefToWgslTransformer {
         replacements: HashMap::new(),
     };

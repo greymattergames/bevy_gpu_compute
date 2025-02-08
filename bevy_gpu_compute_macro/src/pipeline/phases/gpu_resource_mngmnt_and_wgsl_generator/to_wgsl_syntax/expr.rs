@@ -1,6 +1,6 @@
 use proc_macro_error::abort;
 use quote::ToTokens;
-use syn::{Expr, ExprCall, parse_quote, parse2, spanned::Spanned, visit_mut::VisitMut};
+use syn::{Expr, ExprCall, LitFloat, parse_quote, parse2, spanned::Spanned, visit_mut::VisitMut};
 
 use crate::pipeline::allowed_types::WGSL_NATIVE_TYPES;
 
@@ -20,7 +20,46 @@ impl VisitMut for ExprToWgslTransformer {
 pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
     #[allow(unused_variables)]
     match expr {
-        syn::Expr::Lit(lit) => None,
+        syn::Expr::Lit(lit) => match &lit.lit {
+            // to handle things like 3.4_f32
+            // if the suffix is u32 then write it as a type cast like u32(digits), same for f32, and i32 and f16
+            syn::Lit::Float(l) => {
+                // must either have no suffix, in which case we do nothing, or have f32 as the suffix
+                let suffix = l.suffix();
+                if suffix.is_empty() || suffix == "f" {
+                    return None;
+                } else if suffix == "f32" {
+                    let value = l.base10_digits();
+                    let value = LitFloat::new(value, l.span());
+                    return Some(parse_quote!(f32(#value)));
+                } else {
+                    abort!(
+                        l.span(),
+                        "Unsupported float suffix in WGSL: ".to_owned() + suffix
+                    );
+                }
+            }
+            syn::Lit::Int(l) => {
+                let suffix = l.suffix();
+                if suffix.is_empty() || suffix == "u" || suffix == "i" {
+                    return None;
+                } else if suffix == "u32" {
+                    let value = l.base10_digits();
+                    let value = LitFloat::new(value, l.span());
+                    return Some(parse_quote!(u32(#value)));
+                } else if suffix == "i32" {
+                    let value = l.base10_digits();
+                    let value = LitFloat::new(value, l.span());
+                    return Some(parse_quote!(i32(#value)));
+                } else {
+                    abort!(
+                        l.span(),
+                        "Unsupported integer suffix in WGSL: ".to_owned() + suffix
+                    );
+                }
+            }
+            _ => None,
+        },
         syn::Expr::Array(array) => {
             abort!(array.span(), "Array literals are not supported in WGSL")
         }

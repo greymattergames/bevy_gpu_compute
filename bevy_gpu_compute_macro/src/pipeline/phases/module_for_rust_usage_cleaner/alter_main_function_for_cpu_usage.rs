@@ -15,23 +15,23 @@ pub fn mutate_main_function_for_cpu_usage(
 struct MainFunctionMutator<'a> {
     wgsl_shader_module_parsed: &'a WgslShaderModuleUserPortion,
 }
-impl<'a> VisitMut for MainFunctionMutator<'a> {
+impl VisitMut for MainFunctionMutator<'_> {
     fn visit_item_fn_mut(&mut self, c: &mut syn::ItemFn) {
         syn::visit_mut::visit_item_fn_mut(self, c);
         let name = c.sig.ident.to_string();
         if name != "main" {
             return;
         }
-        alter_main_function_for_cpu_usage(&self.wgsl_shader_module_parsed, c);
+        alter_main_function_for_cpu_usage(self.wgsl_shader_module_parsed, c);
     }
 }
 
 fn alter_main_function_for_cpu_usage(
     wgsl_shader_module_parsed: &WgslShaderModuleUserPortion,
-    mut main_func: &mut ItemFn,
+    main_func: &mut ItemFn,
 ) {
-    add_params_to_main(wgsl_shader_module_parsed, &mut main_func);
-    add_array_lengths_to_main(wgsl_shader_module_parsed, &mut main_func);
+    add_params_to_main(wgsl_shader_module_parsed, main_func);
+    add_array_lengths_to_main(wgsl_shader_module_parsed, main_func);
 }
 
 fn add_params_to_main(

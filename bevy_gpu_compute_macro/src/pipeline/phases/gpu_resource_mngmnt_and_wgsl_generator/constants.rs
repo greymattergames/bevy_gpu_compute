@@ -14,7 +14,7 @@ pub fn extract_constants(
     custom_types: &Vec<CustomType>,
 ) -> Vec<WgslConstAssignment> {
     let mut extractor = ConstantsExtractor::new(custom_types);
-    extractor.visit_item_mod(&rust_module_transformed_for_gpu);
+    extractor.visit_item_mod(rust_module_transformed_for_gpu);
     extractor.results
 }
 

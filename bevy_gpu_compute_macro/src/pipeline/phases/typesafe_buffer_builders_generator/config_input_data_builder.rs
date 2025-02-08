@@ -40,7 +40,7 @@ pub fn create_config_input_data_builder(custom_types: &Vec<CustomType>) -> Token
         }
     }
 }
-fn get_methods(custom_types: &Vec<CustomType>) -> TokenStream {
+fn get_methods(custom_types: &[CustomType]) -> TokenStream {
     custom_types
         .iter()
         .filter(|c| c.kind == CustomTypeKind::Uniform)

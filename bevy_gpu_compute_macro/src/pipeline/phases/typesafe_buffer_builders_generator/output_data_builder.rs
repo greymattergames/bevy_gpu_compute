@@ -34,7 +34,7 @@ pub fn create_output_data_builder(custom_types: &Vec<CustomType>) -> TokenStream
     }
 }
 fn get_fields_init_fields_and_converters(
-    custom_types:& Vec<CustomType>,
+    custom_types: &[CustomType],
 ) -> (TokenStream, TokenStream, TokenStream) {
     custom_types
         .iter()

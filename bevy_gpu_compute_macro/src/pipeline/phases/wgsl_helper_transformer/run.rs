@@ -9,12 +9,14 @@ use syn::{
 use crate::pipeline::phases::custom_type_collector::custom_type::CustomType;
 
 use super::{
-    erroneous_usage_finder::ErroneousUsageFinder, helper_method::WgslHelperMethod, parse::parse_possible_wgsl_helper, to_expanded_format::ToExpandedFormat, to_expanded_format_for_cpu::ToExpandedFormatForCpu
+    erroneous_usage_finder::ErroneousUsageFinder, helper_method::WgslHelperMethod,
+    parse::parse_possible_wgsl_helper, to_expanded_format::ToExpandedFormat,
+    to_expanded_format_for_cpu::ToExpandedFormatForCpu,
 };
 
 /// Rust's normal type checking will ensure that these helper functions are using correctly defined types
 pub fn transform_wgsl_helper_methods(
-    custom_types: &Vec<CustomType>,
+    custom_types: &[CustomType],
     rust_module: &mut ItemMod,
     for_cpu: bool,
 ) {

@@ -42,7 +42,7 @@ pub fn create_input_data_builder(custom_types: &Vec<CustomType>) -> TokenStream 
         }
     }
 }
-fn get_methods(custom_types: &Vec<CustomType>) -> TokenStream {
+fn get_methods(custom_types: &[CustomType]) -> TokenStream {
     custom_types
         .iter()
         .filter(|c| c.kind == CustomTypeKind::InputArray)
