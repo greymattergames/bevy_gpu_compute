@@ -20,9 +20,9 @@ impl CompilerPhase for FinalStructureGenerator {
             input.typesafe_buffer_builders(),
         );
         input.set_compiled_tokens(quote!(
-            #unaltered_module_to_ensure_complete_rust_compiler_checks
+            // #unaltered_module_to_ensure_complete_rust_compiler_checks
 
-            #user_facing_module
+            // #user_facing_module
         ));
         Ok(())
     }

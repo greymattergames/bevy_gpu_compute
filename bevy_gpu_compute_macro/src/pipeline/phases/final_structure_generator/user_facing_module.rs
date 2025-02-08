@@ -32,13 +32,13 @@ pub fn generate_user_facing_module(
         .1
         /* this may produce an error, if things aren't working, restructure this... since it may not be able to parse all these items into a single syn::Item */
         .push(parse_quote! (
-                #required_imports
+                // #required_imports
 
-                #generated_types
+                // #generated_types
 
-                #generated_shader_module_object
+                // #generated_shader_module_object
 
-                #builders
+                // #builders
         ));
     module_to_add_to.into_token_stream()
 }
