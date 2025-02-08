@@ -4,7 +4,7 @@ use bevy_gpu_compute_core::wgsl::shader_sections::{WgslShaderModuleSectionCode, 
 use proc_macro2::TokenStream;
 use syn::{Attribute, Ident};
 
-use crate::pipeline::to_wgsl_syntax::convert_file_to_wgsl;
+use crate::pipeline::phases::gpu_resource_mngmnt_and_wgsl_generator::to_wgsl_syntax::convert_file_to_wgsl;
 
 use super::custom_type_idents::CustomTypeIdents;
 
@@ -48,7 +48,7 @@ impl CustomType {
             rust_code: type_def_code,
         }
     }
-    pub fn into_wgsl_type(self, custom_types: Vec<CustomType>) -> WgslType {
+    pub fn into_wgsl_type(self, custom_types: &Vec<CustomType>) -> WgslType {
         WgslType {
             name: self.name.into(),
             code: WgslShaderModuleSectionCode {

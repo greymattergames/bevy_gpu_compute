@@ -4,7 +4,7 @@ use quote::{ToTokens, format_ident, quote};
 use syn::{ItemMod, parse};
 
 /// make a module that is not intended to be viewed or accessed just to allow the rust compiler to run and find any potential errors in the original code that might be missed elsewhere in our macro if we remove or alter parts of the original code.
-pub fn generate_unaltered_module(original_module: ItemMod) -> TokenStream {
+pub fn generate_unaltered_module(original_module: &ItemMod) -> TokenStream {
     let original_ident = &original_module.ident;
     let content: Vec<TokenStream> = if let Some(content) = &original_module.content {
         content
