@@ -7,11 +7,11 @@ use super::{
     to_expanded_format::ToExpandedFormatMethodKind,
 };
 
-pub struct WgslHelperMethod<'a> {
+pub struct WgslHelperMethod {
     pub category: WgslHelperCategory,
     pub method: WgslHelperMethodName,
-    pub t_def: &'a CustomType,
-    pub arg1: Option<&'a Expr>,
-    pub arg2: Option<&'a Expr>,
+    pub t_def: CustomType,
+    pub arg1: Option<Expr>,
+    pub arg2: Option<Expr>,
     pub method_expander_kind: Option<ToExpandedFormatMethodKind>,
 }

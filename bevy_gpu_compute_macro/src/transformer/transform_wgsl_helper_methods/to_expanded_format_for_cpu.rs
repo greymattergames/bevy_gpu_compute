@@ -5,20 +5,10 @@ use quote::ToTokens;
 use quote::quote;
 
 use super::helper_method::WgslHelperMethod;
+use super::to_expanded_format::ToExpandedFormatMethodKind;
 
-pub enum ToExpandedFormatMethodKind {
-    ConfigGet,
-    InputLen,
-    InputVal,
-    OutputPush,
-    OutputLen,
-
-    OutputMaxLen,
-    OutputSet,
-}
-
-pub struct ToExpandedFormat {}
-impl ToExpandedFormat {
+pub struct ToExpandedFormatForCpu {}
+impl ToExpandedFormatForCpu {
     pub fn run(method: &WgslHelperMethod) -> TokenStream {
         match method.method_expander_kind {
             Some(ToExpandedFormatMethodKind::ConfigGet) => {
@@ -35,7 +25,7 @@ impl ToExpandedFormat {
             }
             Some(ToExpandedFormatMethodKind::InputVal) => {
                 let name = method.t_def.name.input_array();
-                let index = if let Some(a1) = method.arg1 {
+                let index = if let Some(a1) = &method.arg1 {
                     a1
                 } else {
                     abort!(Span::call_site(), "arg1 is None for input value method")
@@ -45,9 +35,9 @@ impl ToExpandedFormat {
                 }
             }
             Some(ToExpandedFormatMethodKind::OutputPush) => {
-                let t_def = method.t_def;
+                let t_def = &method.t_def;
                 let arr = t_def.name.output_array();
-                let value = if let Some(a1) = method.arg1 {
+                let value = if let Some(a1) = &method.arg1 {
                     a1
                 } else {
                     abort!(Span::call_site(), "arg1 is None for output push method")
@@ -69,12 +59,12 @@ impl ToExpandedFormat {
             }
             Some(ToExpandedFormatMethodKind::OutputSet) => {
                 let arr = method.t_def.name.output_array().to_token_stream();
-                let index = if let Some(a1) = method.arg1 {
+                let index = if let Some(a1) = &method.arg1 {
                     a1
                 } else {
                     abort!(Span::call_site(), "arg1 is None for output set method")
                 };
-                let value = if let Some(a2) = method.arg2 {
+                let value = if let Some(a2) = &method.arg2 {
                     a2
                 } else {
                     abort!(Span::call_site(), "arg2 is None for output set method")

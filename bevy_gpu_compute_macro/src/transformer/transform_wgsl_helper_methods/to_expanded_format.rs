@@ -12,9 +12,21 @@ pub enum ToExpandedFormatMethodKind {
     InputVal,
     OutputPush,
     OutputLen,
-
     OutputMaxLen,
     OutputSet,
+}
+impl ToExpandedFormatMethodKind {
+    pub fn valid_outside_main(&self) -> bool {
+        match self {
+            ToExpandedFormatMethodKind::ConfigGet
+            | ToExpandedFormatMethodKind::InputVal
+            | ToExpandedFormatMethodKind::OutputPush
+            | ToExpandedFormatMethodKind::OutputSet => false,
+            ToExpandedFormatMethodKind::OutputLen
+            | ToExpandedFormatMethodKind::OutputMaxLen
+            | ToExpandedFormatMethodKind::InputLen => true,
+        }
+    }
 }
 
 pub struct ToExpandedFormat {}
@@ -32,7 +44,7 @@ impl ToExpandedFormat {
             }
             Some(ToExpandedFormatMethodKind::InputVal) => {
                 let name = method.t_def.name.input_array();
-                let index = if let Some(a1) = method.arg1 {
+                let index = if let Some(a1) = &method.arg1 {
                     a1
                 } else {
                     abort!(Span::call_site(), "arg1 is None for input value method")
@@ -42,12 +54,12 @@ impl ToExpandedFormat {
                 }
             }
             Some(ToExpandedFormatMethodKind::OutputPush) => {
-                let t_def = method.t_def;
+                let t_def = &method.t_def;
                 let counter = t_def.name.counter();
                 let arr = t_def.name.output_array();
                 let len = t_def.name.output_array_length();
                 let index = t_def.name.index();
-                let value = if let Some(a1) = method.arg1 {
+                let value = if let Some(a1) = &method.arg1 {
                     a1
                 } else {
                     abort!(Span::call_site(), "arg1 is None for output push method")
@@ -73,12 +85,12 @@ impl ToExpandedFormat {
             }
             Some(ToExpandedFormatMethodKind::OutputSet) => {
                 let arr = method.t_def.name.output_array().to_token_stream();
-                let index = if let Some(a1) = method.arg1 {
+                let index = if let Some(a1) = &method.arg1 {
                     a1
                 } else {
                     abort!(Span::call_site(), "arg1 is None for output set method")
                 };
-                let value = if let Some(a2) = method.arg2 {
+                let value = if let Some(a2) = &method.arg2 {
                     a2
                 } else {
                     abort!(Span::call_site(), "arg2 is None for output set method")

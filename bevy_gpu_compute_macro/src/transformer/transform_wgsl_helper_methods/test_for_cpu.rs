@@ -4,7 +4,7 @@ mod tests {
         state::ModuleTransformState,
         transformer::{
             custom_types::custom_type::{CustomType, CustomTypeKind},
-            transform_wgsl_helper_methods_for_cpu::run::transform_wgsl_helper_methods_for_cpu,
+            transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
         },
     };
 
@@ -30,7 +30,7 @@ mod tests {
             TokenStream::new(),
         )];
         state.custom_types = Some(custom_types);
-        transform_wgsl_helper_methods_for_cpu(&mut state);
+        transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
         let result = state.rust_module_for_cpu.to_token_stream().to_string();
         println!("{}", result);
         assert_eq!(
@@ -60,7 +60,7 @@ mod tests {
             TokenStream::new(),
         )];
         state.custom_types = Some(custom_types);
-        transform_wgsl_helper_methods_for_cpu(&mut state);
+        transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
         let result = state.rust_module_for_cpu.to_token_stream().to_string();
         println!("{}", result);
         assert_eq!(
@@ -89,7 +89,7 @@ mod tests {
             TokenStream::new(),
         )];
         state.custom_types = Some(custom_types);
-        transform_wgsl_helper_methods_for_cpu(&mut state);
+        transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
         let result = state.rust_module_for_cpu.to_token_stream().to_string();
 
         println!("{}", result);
@@ -119,7 +119,7 @@ mod tests {
             TokenStream::new(),
         )];
         state.custom_types = Some(custom_types);
-        transform_wgsl_helper_methods_for_cpu(&mut state);
+        transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
         let result = state.rust_module_for_cpu.to_token_stream().to_string();
 
         println!("{}", result);
@@ -149,7 +149,7 @@ mod tests {
             TokenStream::new(),
         )];
         state.custom_types = Some(custom_types);
-        transform_wgsl_helper_methods_for_cpu(&mut state);
+        transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
         let result = state.rust_module_for_cpu.to_token_stream().to_string();
 
         println!("{}", result);
@@ -179,7 +179,7 @@ mod tests {
             TokenStream::new(),
         )];
         state.custom_types = Some(custom_types);
-        transform_wgsl_helper_methods_for_cpu(&mut state);
+        transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
         let result = state.rust_module_for_cpu.to_token_stream().to_string();
 
         println!("{}", result);
@@ -207,7 +207,7 @@ mod tests {
             TokenStream::new(),
         )];
         state.custom_types = Some(custom_types);
-        transform_wgsl_helper_methods_for_cpu(&mut state);
+        transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
         let result = state.rust_module_for_cpu.to_token_stream().to_string();
 
         println!("{}", result);
