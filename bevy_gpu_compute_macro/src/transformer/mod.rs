@@ -5,4 +5,3 @@ pub mod output;
 pub mod remove_doc_comments;
 pub mod to_wgsl_syntax;
 pub mod transform_wgsl_helper_methods;
-pub mod transform_wgsl_helper_methods_for_cpu;

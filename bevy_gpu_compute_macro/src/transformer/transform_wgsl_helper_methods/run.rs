@@ -1,123 +1,110 @@
-use proc_macro_error::abort;
 use proc_macro2::TokenStream;
 
 use syn::{
-    Expr, ExprCall, GenericArgument, PathArguments, Type, parse_quote,
+    Expr, ItemFn, ItemMod, parse_quote,
+    visit::Visit,
     visit_mut::{self, VisitMut},
 };
 
-use crate::{
-    state::ModuleTransformState,
-    transformer::{
-        custom_types::custom_type::CustomType,
-        transform_wgsl_helper_methods::{
-            helper_method::WgslHelperMethod, to_expanded_format::ToExpandedFormat,
-        },
+use crate::transformer::{
+    custom_types::custom_type::CustomType,
+    transform_wgsl_helper_methods::{
+        helper_method::WgslHelperMethod, to_expanded_format::ToExpandedFormat,
     },
 };
 
 use super::{
-    category::WgslHelperCategory, matcher::WgslHelperMethodMatcher,
-    method_name::WgslHelperMethodName,
+    erroneous_usage_finder::ErroneousUsageFinder, parse::parse_possible_wgsl_helper,
+    to_expanded_format_for_cpu::ToExpandedFormatForCpu,
 };
 
-fn get_special_function_category(call: &ExprCall) -> Option<WgslHelperCategory> {
-    if let Expr::Path(path) = &*call.func {
-        if let Some(first_seg) = path.path.segments.first() {
-            return WgslHelperCategory::from_ident(first_seg.ident.clone());
+/// Rust's normal type checking will ensure that these helper functions are using correctly defined types
+pub fn transform_wgsl_helper_methods(
+    custom_types: &Option<Vec<CustomType>>,
+    rust_module: &mut ItemMod,
+    for_cpu: bool,
+) {
+    assert!(custom_types.is_some(), "Allowed types must be defined");
+    let custom_types = if let Some(ct) = &custom_types {
+        ct
+    } else {
+        panic!("Allowed types must be set before transforming helper functions");
+    };
+    let mut converter = WgslHelperExpressionConverter::new(custom_types, for_cpu);
+    converter.visit_item_mod_mut(rust_module);
+    if !for_cpu {
+        let mut error_finder = ErroneousUsageFinder::new(custom_types);
+        error_finder.visit_item_mod(rust_module);
+    }
+}
+
+struct WgslHelperExpressionConverter {
+    custom_types: Vec<CustomType>,
+    in_main_func: bool,
+    nesting_level: u32,
+    for_cpu: bool,
+}
+
+impl VisitMut for WgslHelperExpressionConverter {
+    fn visit_item_fn_mut(&mut self, node: &mut ItemFn) {
+        if node.sig.ident == "main" && self.nesting_level == 0 {
+            self.in_main_func = true;
+            self.nesting_level += 1;
+            visit_mut::visit_item_fn_mut(self, node);
+            self.nesting_level -= 1;
+            self.in_main_func = false;
+        } else {
+            // For any other function, just increment nesting level and continue
+            self.nesting_level += 1;
+            visit_mut::visit_item_fn_mut(self, node);
+            self.nesting_level -= 1;
         }
     }
-    None
-}
-fn get_special_function_method(call: &ExprCall) -> Option<WgslHelperMethodName> {
-    if let Expr::Path(path) = &*call.func {
-        if let Some(last_seg) = path.path.segments.last() {
-            return WgslHelperMethodName::from_ident(last_seg.ident.clone());
-        }
-    }
-    None
-}
-fn get_special_function_generic_type<'a>(
-    call: &'a ExprCall,
-    custom_types: &'a [CustomType],
-) -> Option<&'a CustomType> {
-    if let Expr::Path(path) = &*call.func {
-        if let Some(last_seg) = path.path.segments.last() {
-            if let PathArguments::AngleBracketed(args) = &last_seg.arguments {
-                if let Some(GenericArgument::Type(Type::Path(type_path))) = args.args.first() {
-                    if let Some(last_seg) = type_path.path.segments.last() {
-                        return custom_types.iter().find(|t| t.name.eq(&last_seg.ident));
+    fn visit_expr_mut(&mut self, expr: &mut Expr) {
+        if self.nesting_level > 0 {
+            let in_main = self.in_main_func && self.nesting_level == 1;
+            if let Expr::Call(call) = expr {
+                let helper_method = parse_possible_wgsl_helper(call, &self.custom_types);
+                if let Some(method) = helper_method {
+                    if self.for_cpu {
+                        let replacement = process_wgsl_helper_for_cpu(method);
+                        *expr = parse_quote!(#replacement);
+                    } else {
+                        let replacement = process_wgsl_helper(method, in_main);
+                        *expr = parse_quote!(#replacement);
                     }
                 }
             }
         }
-    }
-    None
-}
-
-fn replace(call: ExprCall, custom_types: &[CustomType]) -> Option<TokenStream> {
-    let category = get_special_function_category(&call);
-    let method = get_special_function_method(&call);
-    let type_name = get_special_function_generic_type(&call, custom_types);
-    if let Some(cat) = category {
-        if let Some(met) = method {
-            if let Some(ty) = type_name {
-                let mut method = WgslHelperMethod {
-                    category: cat,
-                    method: met,
-                    t_def: ty,
-                    arg1: call.args.first(),
-                    arg2: call.args.get(1),
-                    method_expander_kind: None,
-                };
-                WgslHelperMethodMatcher::choose_expand_format(&mut method);
-                if method.method_expander_kind.is_some() {
-                    let t = ToExpandedFormat::run(&method);
-                    return Some(t);
-                }
-            }
-        }
-    }
-    None
-}
-
-struct HelperFunctionConverter {
-    custom_types: Vec<CustomType>,
-}
-
-impl VisitMut for HelperFunctionConverter {
-    fn visit_expr_mut(&mut self, expr: &mut Expr) {
+        // Continue visiting child nodes
         visit_mut::visit_expr_mut(self, expr);
-        if let Expr::Call(call) = expr {
-            let replacement = replace(call.clone(), &self.custom_types);
-            if let Some(r) = replacement {
-                *expr = parse_quote!(#r);
-            }
-        }
     }
 }
-impl HelperFunctionConverter {
-    pub fn new(custom_types: &[CustomType]) -> Self {
+impl WgslHelperExpressionConverter {
+    pub fn new(custom_types: &[CustomType], for_cpu: bool) -> Self {
         Self {
             custom_types: custom_types.to_vec(),
+            in_main_func: false,
+            nesting_level: 0,
+            for_cpu,
         }
     }
 }
 
-/// Rust's normal type checking will ensure that these helper functions are using correctly defined types
-pub fn transform_wgsl_helper_methods(state: &mut ModuleTransformState) {
-    assert!(
-        state.custom_types.is_some(),
-        "Allowed types must be defined"
-    );
-    let custom_types = if let Some(ct) = &state.custom_types {
-        ct
-    } else {
-        abort!(
-            state.rust_module.ident.span(),
-            "Allowed types must be set before transforming helper functions"
+fn process_wgsl_helper(helper_method: WgslHelperMethod, in_main_func: bool) -> TokenStream {
+    if !helper_method
+        .method_expander_kind
+        .as_ref()
+        .unwrap()
+        .valid_outside_main()
+        && !in_main_func
+    {
+        panic!(
+            "WGSL helpers that read from inputs or write to outputs (`bevy_gpu_compute_core::wgsl_helpers`) can only be used inside the main function. It is technically possible to pass in entire input arrays, configs, or output arrays to helper functions, but considering the performance implications, it is not recommended. Instead interact with your inputs and outputs in the main function and pass in only the necessary data to the helper functions."
         );
-    };
-    let mut converter = HelperFunctionConverter::new(custom_types);
-    converter.visit_item_mod_mut(&mut state.rust_module);
+    }
+    ToExpandedFormat::run(&helper_method)
+}
+fn process_wgsl_helper_for_cpu(helper_method: WgslHelperMethod) -> TokenStream {
+    ToExpandedFormatForCpu::run(&helper_method)
 }

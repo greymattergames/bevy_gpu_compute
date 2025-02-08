@@ -82,9 +82,11 @@ mod tests {
 
     use crate::{
         IterSpaceDimmension,
-        wgsl::shader_custom_type_name::ShaderCustomTypeName,
-        wgsl::shader_module::complete_shader_module::WgslShaderModule,
-        wgsl::shader_sections::{WgslInputArray, WgslOutputArray, WgslShaderModuleSectionCode},
+        wgsl::{
+            shader_custom_type_name::ShaderCustomTypeName,
+            shader_module::complete_shader_module::WgslShaderModule,
+            shader_sections::{WgslInputArray, WgslOutputArray, WgslShaderModuleSectionCode},
+        },
     };
 
     use super::*;

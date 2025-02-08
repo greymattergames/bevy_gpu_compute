@@ -5,7 +5,7 @@ use proc_macro_error::abort;
 use quote::ToTokens;
 use syn::{ItemFn, spanned::Spanned, visit::Visit};
 
-pub fn find_main_function(state: &mut ModuleTransformState) {
+pub fn parse_main_function(state: &mut ModuleTransformState) {
     let module = state.rust_module.clone();
     let mut extractor = MainFunctionsExtractor::new(state, false);
     extractor.visit_item_mod(&module);
