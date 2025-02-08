@@ -164,9 +164,6 @@ fn modify_task_config_inputs(mut count: Local<u32>, mut gpu_tasks: GpuTaskRunner
     let radius_multiplier =
         (EXIT_AFTER_FRAMES as i32 - *count as i32) as f32 / EXIT_AFTER_FRAMES as f32;
     log::info!("rad_mult: {}", radius_multiplier);
-    // below needs to simplify
-    // let mut config = ConfigInputData::<collision_detection_module::Types>::empty();
-    // config.set_input0(collision_detection_module::Config { radius_multiplier });
 
     let configs = collision_detection_module::ConfigInputDataBuilder::new()
         .set_config(collision_detection_module::Config { radius_multiplier })

@@ -1,16 +1,16 @@
 #![feature(allocator_api)]
 
+// use pipeline::{
+//     custom_types::get_all_custom_types::get_custom_types, module_parser::lib::parse_shader_module,
+//     output::produce_expanded_output, remove_doc_comments::DocCommentRemover,
+//     transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
+// };
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy};
-use state::ModuleTransformState;
+// use state::ModuleTransformState;
 use syn::{parse_macro_input, visit::Visit};
-use transformer::{
-    custom_types::get_all_custom_types::get_custom_types, module_parser::lib::parse_shader_module,
-    output::produce_expanded_output, remove_doc_comments::DocCommentRemover,
-    transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
-};
-mod state;
-mod transformer;
+mod pipeline;
+println!("{}", std::env::var("RUSTFLAGS").unwrap_or_default());
 /**
 ## *Please read this documentation carefully, especially if you are getting errors that you don't understand!*
 

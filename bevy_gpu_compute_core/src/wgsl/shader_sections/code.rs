@@ -2,6 +2,5 @@
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WgslShaderModuleSectionCode {
-    pub rust_code: String,
     pub wgsl_code: String,
 }
