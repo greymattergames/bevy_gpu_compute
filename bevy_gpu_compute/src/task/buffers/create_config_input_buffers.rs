@@ -1,5 +1,5 @@
 use bevy::{
-    log::{self, info},
+    log::{self},
     render::renderer::RenderDevice,
 };
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
@@ -7,7 +7,7 @@ use wgpu::{BufferUsages, util::BufferInitDescriptor};
 use crate::task::lib::BevyGpuComputeTask;
 
 pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
-    log::info!("Creating config input buffers for task {}", task.name());
+    log::trace!("Creating config input buffers for task {}", task.name());
     task.buffers_mut().config.clear();
     let mut new_buffers = Vec::new();
     for s in task.configuration().inputs().configs().iter() {
@@ -23,7 +23,7 @@ pub fn update_config_input_buffers(task: &mut BevyGpuComputeTask, render_device:
                 .unwrap(),
             usage: BufferUsages::UNIFORM,
         });
-        info!(
+        log::trace!(
             "Created config input buffer for task {} with label {}",
             task.name(),
             label

@@ -54,7 +54,7 @@ impl GpuTaskRunner<'_, '_> {
             .expect("Task entity not found");
         let mut should_recompute_memory = false;
         for cmd in commands.commands {
-            log::info!("Running command: {}", cmd);
+            log::trace!("Running command: {}", cmd);
             match cmd {
                 GpuTaskCommand::SetConfigInputs(inputs) => {
                     task.current_data_mut().set_config_input(*inputs);

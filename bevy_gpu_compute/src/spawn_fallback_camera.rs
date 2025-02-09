@@ -21,7 +21,7 @@ pub fn spawn_fallback_camera(
     let len = cameras.iter().len();
     match len {
         0 => {
-            log::info!(
+            log::debug!(
                 "GPU Compute: Spawning fallback camera in order to improve gpu performance."
             );
             commands.spawn((
@@ -42,7 +42,7 @@ pub fn spawn_fallback_camera(
             // do nothing
         }
         _ => {
-            log::info!("GPU Compute: Despawning extra fallback cameras.");
+            log::trace!("GPU Compute: Despawning extra fallback cameras.");
             let fallback_cam_len = fallback_cameras.iter().len();
             if fallback_cam_len > 0 {
                 fallback_cameras.iter().for_each(|(e, _)| {

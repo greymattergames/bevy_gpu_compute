@@ -15,7 +15,14 @@ for crate in "${crates[@]}"; do
     echo "Running cargo test..."
     cargo test
     
+    
+    
     cd ..
 done
+
+cd bevy_gpu_compute
+echo "Running example ..."
+cargo run --example collision_detection_demonstration
+cd ..
 
 echo "All checks completed!"

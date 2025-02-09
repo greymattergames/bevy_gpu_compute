@@ -1,4 +1,7 @@
-use bevy::{log::info, render::renderer::RenderDevice};
+use bevy::{
+    log::{self},
+    render::renderer::RenderDevice,
+};
 use wgpu::{BufferUsages, util::BufferInitDescriptor};
 
 use crate::task::lib::BevyGpuComputeTask;
@@ -20,7 +23,7 @@ pub fn update_input_buffers(task: &mut BevyGpuComputeTask, render_device: &Rende
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
         new_buffers.push(buffer);
-        info!(
+        log::trace!(
             "Created input buffer for task {} with label {}",
             task.name(),
             label

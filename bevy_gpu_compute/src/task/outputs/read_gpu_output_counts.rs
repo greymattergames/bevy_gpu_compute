@@ -26,7 +26,7 @@ pub fn read_gpu_output_counts(
         .enumerate()
         .for_each(|(i, metadata)| {
             if metadata.include_count {
-                log::info!("Reading count for output {}", i);
+                log::trace!("Reading count for output {}", i);
                 let count = read_gpu_output_counts_single_output_type(
                     render_device,
                     render_queue,
@@ -55,6 +55,6 @@ fn read_gpu_output_counts_single_output_type(
         std::mem::size_of::<WgslCounter>() as u64,
     );
     let r = count.unwrap().count;
-    log::info!("Read count: {}", r);
+    log::debug!("Read length of output vec on gpu: {}", r);
     r
 }

@@ -19,7 +19,7 @@ For example, this might be the wgsl code:
 The numbers in the `@binding` are the bind group entry numbers. The `@group` is the bind group number. We are only using a single bind group in the current library version.
  */
 pub fn create_bind_group(task: &mut BevyGpuComputeTask, render_device: &RenderDevice) {
-    log::info!("Creating bind group for task {}", task.name());
+    log::trace!("Creating bind group for task {}", task.name());
     let mut bindings = Vec::new();
     for (i, s) in task.configuration().inputs().configs().iter().enumerate() {
         if let Some(conf_in_buff) = task.buffers().config.get(i) {

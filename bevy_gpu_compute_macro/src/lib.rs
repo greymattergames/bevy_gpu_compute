@@ -1,16 +1,10 @@
 #![feature(allocator_api)]
 
+use pipeline::lib::CompilerPipeline;
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy};
-use state::ModuleTransformState;
-use syn::{parse_macro_input, visit::Visit};
-use transformer::{
-    custom_types::get_all_custom_types::get_custom_types, module_parser::lib::parse_shader_module,
-    output::produce_expanded_output, remove_doc_comments::DocCommentRemover,
-    transform_wgsl_helper_methods::run::transform_wgsl_helper_methods,
-};
-mod state;
-mod transformer;
+use syn::parse_macro_input;
+mod pipeline;
 /**
 ## *Please read this documentation carefully, especially if you are getting errors that you don't understand!*
 
@@ -63,23 +57,10 @@ let x = my_vec3.x();
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn wgsl_shader_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    // println!("Entered shader_module proc macro");
     set_dummy(item.clone().into());
-    let content = item.to_string();
     let module = parse_macro_input!(item as syn::ItemMod);
-    DocCommentRemover {}.visit_item_mod(&module);
-    let mut state = ModuleTransformState::empty(module, content);
-    get_custom_types(&mut state);
-    transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module, false);
-    transform_wgsl_helper_methods(&state.custom_types, &mut state.rust_module_for_cpu, true);
-    parse_shader_module(&mut state);
-    let output = produce_expanded_output(&mut state);
-    output.into()
-
-    // let out_s = initialization.to_string();
-    // quote!(struct S {};#out_s).into()
-    // output the original rust as well, to allow for correct syntax/ compile checking on it
-    // quote!({}).into()
+    let compiler_pipeline = CompilerPipeline::default();
+    compiler_pipeline.compile(module).into()
 }
 
 /// used to help this library figure out what to do with user-defined types

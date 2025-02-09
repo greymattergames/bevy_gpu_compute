@@ -32,7 +32,7 @@ pub fn read_gpu_outputs(
             let total_byte_size = min(
                 if let Some(Some(c)) = output_counts.get(i) {
                     let size = c * metadata.bytes;
-                    log::info!("using output count to size buffer, size: {}", size);
+                    log::trace!("using output count to size buffer, size: {}", size);
                     size
                 } else {
                     usize::MAX
@@ -43,7 +43,7 @@ pub fn read_gpu_outputs(
                     .get_by_name(&metadata.name)
                     * metadata.bytes,
             );
-            log::info!("total_byte_size: {}", total_byte_size);
+            log::trace!("total_byte_size: {}", total_byte_size);
             if total_byte_size < 1 {
                 bytes_per_wgsl_output_type_name
                     .insert(metadata.name.name().to_string(), Vec::new());
@@ -55,7 +55,6 @@ pub fn read_gpu_outputs(
                     staging_buffer,
                     total_byte_size as u64,
                 );
-                // log::info!("raw_bytes: {:?}", raw_bytes);
                 if let Some(raw_bytes) = raw_bytes {
                     bytes_per_wgsl_output_type_name
                         .insert(metadata.name.name().to_string(), raw_bytes);

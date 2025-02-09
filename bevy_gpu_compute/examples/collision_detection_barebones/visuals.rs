@@ -13,7 +13,7 @@ use bevy::{
     utils::default,
 };
 
-use crate::{ENTITY_RADIUS, SPAWN_RANGE_MAX, SPAWN_RANGE_MIN, State};
+use crate::{ENTITY_RADIUS, EXPECTED_NUM_ENTITIES, SPAWN_RANGE_MAX, SPAWN_RANGE_MIN, State};
 
 #[derive(Debug, Component)]
 pub struct BoundingCircleComponent(pub BoundingCircle);
@@ -46,6 +46,7 @@ pub fn spawn_entities(
         }
     }
     log::info!("total of {} entities spawned", count);
+    assert!(count == EXPECTED_NUM_ENTITIES);
     state.num_entities = count;
 }
 

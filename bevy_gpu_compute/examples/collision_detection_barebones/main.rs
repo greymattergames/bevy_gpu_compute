@@ -26,16 +26,20 @@ fn main() {
         .add_systems(Update, (handle_task_results, exit_and_show_results).chain())
         .run();
 }
-
+// constants used to produce predictable collision results
 const SPAWN_RANGE_MIN: i32 = -2;
 const SPAWN_RANGE_MAX: i32 = 2;
 const ENTITY_RADIUS: f32 = 1.1;
-const EXIT_AFTER_FRAMES: u32 = 2;
+const EXIT_AFTER_FRAMES: u32 = 3;
+// expected results
+const EXPECTED_NUM_ENTITIES: u32 = 16;
+// 16 entities 100% intersecting should produce 120 collisions
+const EXPECTED_COLLISIONS_PER_FRAME: usize = 58;
 
 #[derive(Resource, Default)]
 struct State {
     pub num_entities: u32,
-    pub collision_count: usize,
+    pub collisions_per_frame: Vec<usize>,
 }
 
 #[wgsl_shader_module]
@@ -75,7 +79,7 @@ mod collision_detection_module {
         let current_pos = WgslVecInput::vec_val::<Position>(current_entity);
         let other_pos = WgslVecInput::vec_val::<Position>(other_entity);
         let dist_squared = calculate_distance_squared(current_pos.v, other_pos.v);
-        let radius_sum = (current_radius + other_radius);
+        let radius_sum = current_radius + other_radius;
         let rad_sum_sq = radius_sum * radius_sum;
         let is_collision = dist_squared < rad_sum_sq;
         if is_collision {
@@ -141,15 +145,18 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
         // your logic here
         let count = collision_results.len();
         log::info!("collisions this frame: {}", count);
-        log::info!("collision_results: {:?}", collision_results);
-        state.collision_count += count;
+        log::trace!("collision_results: {:?}", collision_results);
+        assert!(count == EXPECTED_COLLISIONS_PER_FRAME);
+        state.collisions_per_frame.push(count);
     }
 }
 
 // when the local variable "count" goes above a certain number (representing frame count), exit the app
 fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: EventWriter<AppExit>) {
     if *count > EXIT_AFTER_FRAMES {
-        log::info!("collisions count: {}", state.collision_count);
+        let total_collisions = state.collisions_per_frame.iter().sum::<usize>();
+        log::trace!("total collisions count at exit: {}", total_collisions);
+        log::info!("Example completed successfully");
         exit.send(AppExit::Success);
     }
     *count += 1;
