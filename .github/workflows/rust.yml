@@ -13,7 +13,7 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     strategy:
       matrix:
         crate: ['bevy_gpu_compute_macro', 'bevy_gpu_compute_core', 'bevy_gpu_compute']
@@ -41,7 +41,7 @@ jobs:
   clippy_check:
     name: Clippy
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     strategy:
       matrix:
         crate: ['bevy_gpu_compute_macro', 'bevy_gpu_compute_core', 'bevy_gpu_compute']
@@ -71,7 +71,7 @@ jobs:
   format:
     name: Format
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     strategy:
       matrix:
         crate: ['bevy_gpu_compute_macro', 'bevy_gpu_compute_core', 'bevy_gpu_compute']
@@ -85,3 +85,31 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt -- --check
         working-directory: ${{ matrix.crate }}
+  
+  examples:
+    name: Run examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        example: ['collision_detection_demonstration']
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-example-bevy_gpu_compute-${{ hashFiles('**/Cargo.toml') }}
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install Dependencies
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+      - name: Run cargo examples
+        run: cargo run --example ${{ matrix.example }}
+        working-directory: bevy_gpu_compute

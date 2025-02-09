@@ -1,4 +1,5 @@
 #![feature(f16)]
+#![allow(clippy::all)]
 use std::collections::HashMap;
 
 use bevy_gpu_compute_core::{
@@ -277,16 +278,16 @@ fn test_type_casting_and_implicit_returns() {
     #[wgsl_shader_module]
     pub mod test_module {
         use bevy_gpu_compute_core::wgsl_helpers::*;
+        #[allow(clippy::unnecessary_cast)]
         fn helper() -> f32 {
             let x = 1 as f32;
             let y = 3.5_f32;
             let z = 54.4f32;
             if true { y + z } else { x }
         }
+        #[allow(unused_variables)]
         fn main(iter_pos: WgslIterationPosition) {}
     }
-    let z = 54.4f32;
-
     let t2 = test_module::parsed();
     assert!(t2.output_arrays.is_empty());
     assert!(t2.input_arrays.is_empty());
@@ -304,11 +305,11 @@ fn test_mutable_variables() {
     #[wgsl_shader_module]
     pub mod test_module {
         use bevy_gpu_compute_core::wgsl_helpers::*;
+        #[allow(unused_assignments)]
         fn main(iter_pos: WgslIterationPosition) {
             let mut x = 1;
             let x1 = x;
             x = 2;
-            return;
         }
     }
     let t2 = test_module::parsed();
@@ -321,7 +322,7 @@ fn test_mutable_variables() {
     assert!(t2.helper_types.is_empty());
     assert_eq!(
         t2.main_function.unwrap().code.wgsl_code,
-        "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ var x = 1; let x1 = x; x = 2; return; }"
+        "fn main(@builtin(global_invocation_id) iter_pos: vec3<u32>)\n{ var x = 1; let x1 = x; x = 2; }"
     );
 }
 

@@ -27,7 +27,7 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
                 // must either have no suffix, in which case we do nothing, or have f32 as the suffix
                 let suffix = l.suffix();
                 if suffix.is_empty() || suffix == "f" {
-                    return None;
+                    None
                 } else if suffix == "f32" {
                     let value = l.base10_digits();
                     let value = LitFloat::new(value, l.span());
@@ -42,7 +42,7 @@ pub fn expr_to_wgsl(expr: &syn::Expr) -> Option<Expr> {
             syn::Lit::Int(l) => {
                 let suffix = l.suffix();
                 if suffix.is_empty() || suffix == "u" || suffix == "i" {
-                    return None;
+                    None
                 } else if suffix == "u32" {
                     let value = l.base10_digits();
                     let value = LitFloat::new(value, l.span());

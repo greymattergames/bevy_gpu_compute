@@ -13,7 +13,7 @@ pub fn parse_main_function(
 ) -> WgslFunction {
     let mut extractor = MainFunctionsExtractor::new(custom_types);
     extractor.visit_item_mod(rust_module_transformed_for_gpu);
-    
+
     if let Some(mf) = extractor.result {
         mf
     } else {

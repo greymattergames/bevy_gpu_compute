@@ -9,7 +9,7 @@ use crate::pipeline::{
     },
 };
 
-pub fn create_config_input_data_builder(custom_types: &Vec<CustomType>) -> TokenStream {
+pub fn create_config_input_data_builder(custom_types: &[CustomType]) -> TokenStream {
     let methods = get_methods(custom_types);
     quote! {
         pub struct ConfigInputDataBuilder {

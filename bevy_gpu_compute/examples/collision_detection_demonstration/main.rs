@@ -250,6 +250,7 @@ fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: Eve
             "unexpected collision count for frame 2: {}",
             state.collisions_per_frame[2]
         );
+        log::info!("Example completed successfully");
         exit.send(AppExit::Success);
     }
     *count += 1;

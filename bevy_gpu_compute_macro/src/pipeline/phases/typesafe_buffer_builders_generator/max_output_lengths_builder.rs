@@ -7,7 +7,7 @@ use crate::pipeline::phases::custom_type_collector::{
     custom_type_idents::CustomTypeIdents,
 };
 
-pub fn create_max_output_lengths_builder(custom_types: &Vec<CustomType>) -> TokenStream {
+pub fn create_max_output_lengths_builder(custom_types: &[CustomType]) -> TokenStream {
     let methods = get_methods(custom_types);
     quote! {
         pub struct MaxOutputLengthsBuilder {

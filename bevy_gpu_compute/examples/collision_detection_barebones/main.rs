@@ -156,6 +156,7 @@ fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: Eve
     if *count > EXIT_AFTER_FRAMES {
         let total_collisions = state.collisions_per_frame.iter().sum::<usize>();
         log::trace!("total collisions count at exit: {}", total_collisions);
+        log::info!("Example completed successfully");
         exit.send(AppExit::Success);
     }
     *count += 1;
