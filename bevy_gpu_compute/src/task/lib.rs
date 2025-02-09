@@ -73,8 +73,8 @@ impl BevyGpuComputeTask {
         max_output_vector_lengths: MaxOutputLengths,
     ) -> Self {
         let full_module = WgslShaderModule::new(wgsl_shader_module);
-        log::info!(
-            "wgsl: {}",
+        log::debug!(
+            "generated wgsl code : {}",
             full_module.wgsl_code(iteration_space.num_dimmensions())
         );
         Self::create_manually::<ShaderModuleTypes>(
@@ -164,7 +164,7 @@ impl BevyGpuComputeTask {
                 .unwrap()
                 .get(metadata.name.name());
             let name = metadata.name.input_array_length();
-            log::info!("input_array_lengths = {:?}, for {}", length, name);
+            log::debug!("input_array_lengths = {:?}, for {}", length, name);
             assert!(
                 length.is_some(),
                 "input_array_lengths not set for input array {}, {}",
@@ -182,7 +182,7 @@ impl BevyGpuComputeTask {
                     .get_by_name(&metadata.name) as f64,
             );
         }
-        log::info!("pipeline consts  = {:?}", n);
+        log::debug!("pipeline consts  = {:?}", n);
         n
     }
 

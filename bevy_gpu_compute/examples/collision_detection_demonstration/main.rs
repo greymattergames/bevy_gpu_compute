@@ -163,7 +163,6 @@ fn modify_task(mut gpu_tasks: GpuTaskRunner, state: Res<State>) {
 fn modify_task_config_inputs(mut count: Local<u32>, mut gpu_tasks: GpuTaskRunner) {
     let radius_multiplier =
         (EXIT_AFTER_FRAMES as i32 - *count as i32) as f32 / EXIT_AFTER_FRAMES as f32;
-    log::info!("rad_mult: {}", radius_multiplier);
 
     let configs = collision_detection_module::ConfigInputDataBuilder::new()
         .set_config(collision_detection_module::Config { radius_multiplier })
@@ -199,17 +198,16 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
     let results = gpu_task_reader
         .latest_results::<collision_detection_module::OutputDataBuilder>("collision_detection");
 
-    // log::info!("results: {:?}", results);c
     if let Ok(results) = results {
         #[allow(unused_variables)]
         let debug_results = results.my_debug_info.unwrap();
-        // log::info!("debug results: {:?}", debug_results);
+        log::debug!("debug results: {:?}", debug_results);
         //fully type-safe results
         let collision_results = results.collision_result.unwrap();
         // your logic here
         let count = collision_results.len();
         log::info!("collisions this frame: {}", count);
-        log::info!("collision_results: {:?}", collision_results);
+        log::trace!("collision_results: {:?}", collision_results);
         state.collision_count += count;
     }
 }
@@ -217,7 +215,7 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
 // when the local variable "count" goes above a certain number (representing frame count), exit the app
 fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: EventWriter<AppExit>) {
     if *count > EXIT_AFTER_FRAMES {
-        log::info!("collisions count: {}", state.collision_count);
+        log::trace!("total collisions count at exit: {}", state.collision_count);
         exit.send(AppExit::Success);
     }
     *count += 1;

@@ -141,7 +141,7 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
         // your logic here
         let count = collision_results.len();
         log::info!("collisions this frame: {}", count);
-        log::info!("collision_results: {:?}", collision_results);
+        log::trace!("collision_results: {:?}", collision_results);
         state.collision_count += count;
     }
 }
@@ -149,7 +149,7 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
 // when the local variable "count" goes above a certain number (representing frame count), exit the app
 fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: EventWriter<AppExit>) {
     if *count > EXIT_AFTER_FRAMES {
-        log::info!("collisions count: {}", state.collision_count);
+        log::debug!("total collisions count on exit: {}", state.collision_count);
         exit.send(AppExit::Success);
     }
     *count += 1;

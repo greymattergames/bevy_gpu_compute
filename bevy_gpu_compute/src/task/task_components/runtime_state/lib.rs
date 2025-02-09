@@ -183,9 +183,7 @@ impl<'a> TaskRuntimeStateBuilder<'a> {
                     ));
                 }
             });
-        log::info!("Layouts: {:?}", layouts);
-        // Create bind group layout once
-
+        log::debug!("Bind group layouts: {:?}", layouts);
         self.render_device
             .create_bind_group_layout(Some(self.task_name), &layouts)
     }

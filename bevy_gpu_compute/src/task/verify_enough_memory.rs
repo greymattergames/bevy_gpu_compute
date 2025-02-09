@@ -10,15 +10,12 @@ pub fn verify_have_enough_memory(tasks: &Vec<&BevyGpuComputeTask>, ram_limit: &R
     });
     let available_memory = ram_limit.total_mem;
     if total_bytes as f32 > available_memory as f32 * 0.9 {
-        log::error!("Not enough memory to store all gpu compute task outputs");
-        log::info!(
-            "Available memory: {} GB",
-            available_memory as f32 / 1024.0 / 1024.0 / 1024.0
-        );
-        log::info!(
-            "Max Output size: {} GB",
+        log::error!(
+            "Not enough memory to store all gpu compute task outputs. Available memory: {} GB, Max Output size: {} GB",
+            available_memory as f32 / 1024.0 / 1024.0 / 1024.0,
             total_bytes as f32 / 1024.0 / 1024.0 / 1024.0
         );
+
         panic!("Not enough memory to store all gpu compute task outputs");
     }
 }

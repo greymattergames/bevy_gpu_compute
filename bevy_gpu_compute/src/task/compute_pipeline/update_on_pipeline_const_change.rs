@@ -10,7 +10,7 @@ pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &Re
     if task.current_data().input_lengths().is_none() {
         return;
     }
-    log::info!("Updating pipeline for task {}", task.name());
+    log::trace!("Updating pipeline for task {}", task.name());
     let key = PipelineKey {
         pipeline_consts_version: task.configuration().version(),
     };
@@ -21,8 +21,11 @@ pub fn update_compute_pipeline(task: &mut BevyGpuComputeTask, render_device: &Re
         .contains_key(&key)
     {
     } else {
-        log::info!("Creating new pipeline for task {}", task.name());
-        log::info!(" layout {:?}", task.runtime_state().pipeline_layout());
+        log::trace!("Creating new pipeline for task {}", task.name());
+        log::trace!(
+            "pipeline layout {:?}",
+            task.runtime_state().pipeline_layout()
+        );
         let compute_pipeline = render_device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some(task.name()),
             layout: Some(task.runtime_state().pipeline_layout()),
