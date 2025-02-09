@@ -23,6 +23,8 @@ pub fn generate_unaltered_module(state: &ModuleTransformState) -> TokenStream {
     let content: TokenStream = state.get_original_content().parse().unwrap();
     quote!(
     #module_visibility mod #module_ident {
+        use super::*;
+
         #content
     })
 }

@@ -65,16 +65,14 @@ impl WgslShaderModule {
         } else {
             wgsl.push_str_w_newline("@compute @workgroup_size(4, 4, 4)");
         }
-        wgsl.push_str_w_newline(
-            &self
-                .user_portion
-                .main_function
-                .as_ref()
-                .unwrap()
-                .code
-                .wgsl_code
-                .clone(),
-        );
+        if let Some(main_function) = &self.user_portion.main_function {
+            wgsl.push_str_w_newline(
+                &main_function
+                    .code
+                    .wgsl_code
+                    .clone(),
+            );
+        }
         wgsl
     }
 }

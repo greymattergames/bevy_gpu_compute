@@ -18,7 +18,21 @@ pub fn parse_shader_module(state: &mut ModuleTransformState) {
         );
     }
     find_main_function(state);
-    handle_use_statements(state);
+    parse_module(state);
+}
+
+pub fn parse_library_module(state: &mut ModuleTransformState) {
+    if state.rust_module.content.is_none() {
+        abort!(
+            state.rust_module.ident.span(),
+            "Shader module must have a body"
+        );
+    }
+    parse_module(state);
+}
+
+pub fn parse_module(state: &mut ModuleTransformState) {
+    // handle_use_statements(state);
     state.module_ident = Some(state.rust_module.ident.to_string());
     state.module_visibility = Some(state.rust_module.vis.to_token_stream().to_string());
     check_module_for_global_id_assignment(state);

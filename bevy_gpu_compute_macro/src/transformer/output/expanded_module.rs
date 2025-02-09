@@ -32,6 +32,8 @@ pub fn generate_expanded_module(state: &mut ModuleTransformState) -> TokenStream
     let module_for_cpu = generate_module_for_cpu_usage(state);
     quote!(
         #module_visibility mod #module_ident {
+            use super::*;
+
             use bevy_gpu_compute_core::wgsl::shader_sections::*; //todo, make this less brittle, how?
             use bevy_gpu_compute_core::wgsl::shader_custom_type_name::*;
             use bevy_gpu_compute_core::wgsl_helpers::*;

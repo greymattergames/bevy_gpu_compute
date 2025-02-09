@@ -1,4 +1,4 @@
-use crate::state::ModuleTransformState;
+use crate::{state::ModuleTransformState, transformer::output::module_for_cpu};
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
 use syn::{FnArg, Ident, ItemFn};
@@ -7,7 +7,11 @@ pub fn generate_module_for_cpu_usage(state: &ModuleTransformState) -> TokenStrea
     // all helper functions need to be publicly exposed here
     // and the main function needs to be rewritten to use parameter inputs, and then exposed here as well
     let helper_funcs = generate_helper_funcs(state);
-    let main_func = generate_main_func(state);
+    let main_func = if state.result_for_cpu.main_function.is_some() {
+        generate_main_func(state)
+    } else {
+        quote!()
+    };
     let consts = generate_module_level_consts(state);
     quote!(
         pub use on_cpu::*;

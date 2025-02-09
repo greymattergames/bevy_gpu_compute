@@ -19,7 +19,7 @@ impl VisitMut for UseStatementHandler {
     fn visit_item_mut(&mut self, i: &mut Item) {
         syn::visit_mut::visit_item_mut(self, i);
         if let Item::Use(use_stmt) = i {
-            validate_use_statement(use_stmt);
+            // validate_use_statement(use_stmt);
             // remove the use statement
             *i = Item::Verbatim(quote! {})
         }

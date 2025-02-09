@@ -94,6 +94,7 @@ pub fn convert_file_to_wgsl(
             "Allowed types must be set before converting to wgsl"
         );
     };
+    UseRemover {}.visit_file_mut(&mut file);
     PubRemover {}.visit_file_mut(&mut file);
     TypeToWgslTransformer { custom_types }.visit_file_mut(&mut file);
     ArrayToWgslTransformer {}.visit_file_mut(&mut file);
@@ -113,4 +114,20 @@ pub fn convert_file_to_wgsl(
     string_version = convert_wgsl_builtin_constructors(string_version);
     string_version = replace_let_mut_with_var(&string_version);
     string_version
+}
+
+pub struct UseRemover{}
+
+use syn::Item;
+use quote::quote;
+
+impl VisitMut for UseRemover {
+    fn visit_item_mut(&mut self, i: &mut Item) {
+        syn::visit_mut::visit_item_mut(self, i);
+        if let Item::Use(use_stmt) = i {
+            // validate_use_statement(use_stmt);
+            // remove the use statement
+            *i = Item::Verbatim(quote! {})
+        }
+    }
 }
