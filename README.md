@@ -220,6 +220,5 @@ Contributions are welcome! There's still a lot to do. Submit a pull request, and
 - More examples
 - Better error messages
 - Documentation improvements
-- `bevy_gpu_compute_macro` crate needs code cleanup
 - `bevy_gpu_compute_macro` support more wgsl features like pointers
 - Support batching strategies to work around max storage buffer size limitations
