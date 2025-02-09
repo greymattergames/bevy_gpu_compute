@@ -11,6 +11,7 @@ impl CompilerPhase for NonMutatingTreeValidation {
     fn execute(&self, input: &mut CompilationUnit) {
         validate_no_doc_comments(input.original_rust_module());
         validate_no_iter_pos_assignments(input.original_rust_module());
-        validate_use_statements(input.original_rust_module());
+        // removed for brain bacon's experiment
+        // validate_use_statements(input.original_rust_module());
     }
 }

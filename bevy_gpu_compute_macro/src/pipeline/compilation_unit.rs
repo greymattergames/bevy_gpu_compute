@@ -15,7 +15,7 @@ pub struct CompilationUnit {
 }
 
 impl CompilationUnit {
-    pub fn new(original_rust_module: syn::ItemMod) -> Self {
+    pub fn new(original_rust_module: syn::ItemMod, main_func_required: bool) -> Self {
         CompilationUnit {
             original_rust_module,
             rust_module_for_cpu: None,
@@ -25,8 +25,12 @@ impl CompilationUnit {
                 custom_types: None,
                 wgsl_module_user_portion: None,
                 typesafe_buffer_builders: None,
+                main_func_required,
             },
         }
+    }
+    pub fn main_func_required(&self) -> bool {
+        self.metadata.main_func_required
     }
     pub fn rust_module_for_gpu(&self) -> &syn::ItemMod {
         if self.rust_module_for_gpu.is_none() {

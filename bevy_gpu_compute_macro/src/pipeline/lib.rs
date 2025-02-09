@@ -31,8 +31,8 @@ impl Default for CompilerPipeline {
     }
 }
 impl CompilerPipeline {
-    pub fn compile(&self, module: syn::ItemMod) -> TokenStream {
-        let mut unit = CompilationUnit::new(module);
+    pub fn compile(&self, module: syn::ItemMod, main_func_required: bool) -> TokenStream {
+        let mut unit = CompilationUnit::new(module, main_func_required);
         for phase in &self.phases {
             phase.execute(&mut unit);
         }
