@@ -4,8 +4,8 @@ Demonstrates all features of the BevyGpuCompute library
 
 use bevy::{
     DefaultPlugins,
-    app::{App, AppExit, Startup, Update},
-    log,
+    app::{App, AppExit, PluginGroup, Startup, Update},
+    log::{self, LogPlugin},
     prelude::{EventWriter, IntoSystemConfigs, Local, Query, Res, ResMut, Resource},
 };
 use bevy_gpu_compute::prelude::*;
@@ -15,7 +15,10 @@ use visuals::{BoundingCircleComponent, ColorHandles, spawn_camera, spawn_entitie
 fn main() {
     let mut binding = App::new();
     let _app = binding
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(LogPlugin {
+            level: log::Level::INFO,
+            ..Default::default()
+        }))
         .add_plugins(BevyGpuComputePlugin::default())
         .init_resource::<ColorHandles>()
         .init_resource::<State>()
@@ -28,15 +31,25 @@ fn main() {
         .run();
 }
 
+// constants used to produce predictable collision results
 const SPAWN_RANGE_MIN: i32 = -2;
 const SPAWN_RANGE_MAX: i32 = 2;
-const ENTITY_RADIUS: f32 = 1.1;
-const EXIT_AFTER_FRAMES: u32 = 2;
+const ENTITY_RADIUS: f32 = 100.1;
+const RADIUS_MULTIPLIER_FRAME_0: f32 = 1.0;
+const RADIUS_MULTIPLIER_FRAME_1: f32 = 0.01;
+const RADIUS_MULTIPLIER_FRAME_2: f32 = 0.002;
+const EXIT_AFTER_FRAMES: u32 = 3;
+// expected results
+const EXPECTED_NUM_ENTITIES: u32 = 16;
+// 16 entities 100% intersecting should produce 120 collisions
+const EXPECTED_COLLISIONS_FRAME_0: usize = 120;
+const EXPECTED_COLLISIONS_FRAME_1: usize = 58;
+const EXPECTED_COLLISIONS_FRAME_2: usize = 0;
 
 #[derive(Resource, Default)]
 struct State {
     pub num_entities: u32,
-    pub collision_count: usize,
+    pub collisions_per_frame: Vec<usize>,
 }
 
 #[wgsl_shader_module]
@@ -161,9 +174,13 @@ fn modify_task(mut gpu_tasks: GpuTaskRunner, state: Res<State>) {
     gpu_tasks.run_commands(pending_commands);
 }
 fn modify_task_config_inputs(mut count: Local<u32>, mut gpu_tasks: GpuTaskRunner) {
-    let radius_multiplier =
-        (EXIT_AFTER_FRAMES as i32 - *count as i32) as f32 / EXIT_AFTER_FRAMES as f32;
-
+    let radius_multiplier = if *count <= 0 {
+        RADIUS_MULTIPLIER_FRAME_0
+    } else if *count == 1 {
+        RADIUS_MULTIPLIER_FRAME_1
+    } else {
+        RADIUS_MULTIPLIER_FRAME_2
+    };
     let configs = collision_detection_module::ConfigInputDataBuilder::new()
         .set_config(collision_detection_module::Config { radius_multiplier })
         .finish();
@@ -208,14 +225,31 @@ fn handle_task_results(mut gpu_task_reader: GpuTaskReader, mut state: ResMut<Sta
         let count = collision_results.len();
         log::info!("collisions this frame: {}", count);
         log::trace!("collision_results: {:?}", collision_results);
-        state.collision_count += count;
+        state.collisions_per_frame.push(count);
     }
 }
 
 // when the local variable "count" goes above a certain number (representing frame count), exit the app
 fn exit_and_show_results(mut count: Local<u32>, state: Res<State>, mut exit: EventWriter<AppExit>) {
     if *count > EXIT_AFTER_FRAMES {
-        log::trace!("total collisions count at exit: {}", state.collision_count);
+        let total_collisions = state.collisions_per_frame.iter().sum::<usize>();
+        log::trace!("total collisions count at exit: {}", total_collisions);
+        // verify results are what we expect
+        assert_eq!(
+            state.collisions_per_frame[0], EXPECTED_COLLISIONS_FRAME_0,
+            "unexpected collision count for frame 0: {}",
+            state.collisions_per_frame[0]
+        );
+        assert_eq!(
+            state.collisions_per_frame[1], EXPECTED_COLLISIONS_FRAME_1,
+            "unexpected collision count for frame 1: {}",
+            state.collisions_per_frame[1]
+        );
+        assert_eq!(
+            state.collisions_per_frame[2], EXPECTED_COLLISIONS_FRAME_2,
+            "unexpected collision count for frame 2: {}",
+            state.collisions_per_frame[2]
+        );
         exit.send(AppExit::Success);
     }
     *count += 1;
